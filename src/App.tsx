@@ -1,4 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
+import packageJson from '../package.json';
 import TitleBar from './components/TitleBar';
 import Sidebar from './components/Sidebar';
 // Lazy‑loaded components
@@ -281,7 +282,7 @@ export default function App() {
               title="Nhấp để kiểm tra bản cập nhật mới nhất"
             >
               <RefreshCw id="update-spinner" className="w-3 h-3" />
-              v1.2.1 - Active
+              v{packageJson.version} - Active
             </button>
           </div>
         </div>
