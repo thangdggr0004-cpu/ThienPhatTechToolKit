@@ -56,8 +56,16 @@ export default function AutoUpdater() {
             </button>
           </h4>
           <p className="text-xs text-slate-600 mt-1 mb-2">
-            Phiên bản <strong>v{updateInfo.latestVersion}</strong> đã được phát hành.
+            Phiên bản <strong>v{updateInfo.latestVersion}</strong> đã sẵn sàng!
           </p>
+          
+          {updateInfo.releaseNotes && (
+            <div className="bg-blue-50/50 rounded border border-blue-100 p-2 text-[11px] text-slate-700 mb-3 max-h-24 overflow-y-auto whitespace-pre-wrap">
+              <span className="font-semibold text-blue-800 block mb-1">Nội dung cập nhật:</span>
+              {updateInfo.releaseNotes}
+            </div>
+          )}
+
           
           {downloading && (
             <div className="mb-3">
