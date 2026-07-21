@@ -67,12 +67,28 @@ export default function App() {
   });
   
   const [ecoMode, setEcoMode] = useState<boolean>(() => {
-    return localStorage.getItem('ecoMode') === 'true';
+    const saved = localStorage.getItem('ecoMode');
+    if (saved !== null) return saved === 'true';
+    
+    // Auto detect low end (Smarter algorithm)
+    const cores = navigator.hardwareConcurrency || 8;
+    const mem = (navigator as any).deviceMemory || 8;
+    
+    // Only auto-enable if BOTH are low, or RAM is critically low
+    const isLowEnd = (cores <= 4 && mem <= 4) || mem <= 2;
+    
+    if (isLowEnd) {
+      localStorage.setItem('ecoHintAutoDetected', 'true');
+    }
+    return isLowEnd;
   });
 
   const [showEcoHint, setShowEcoHint] = useState<boolean>(() => {
     return localStorage.getItem('ecoHintShown') !== 'true';
   });
+
+  // Track if we auto-enabled it so the hint can reflect that
+  const isAutoDetected = localStorage.getItem('ecoHintAutoDetected') === 'true';
 
 
   useEffect(() => {
@@ -224,7 +240,10 @@ export default function App() {
               <div className="absolute bottom-10 right-20 w-64 bg-slate-800 border border-slate-700 p-3 rounded-lg shadow-2xl animate-fade-in-up z-50">
                 <div className="text-white text-[11px] font-sans leading-relaxed">
                   <span className="font-bold text-emerald-400 block mb-1">Mẹo tối ưu hiệu năng:</span>
-                  Nếu máy tính quá yếu (như Surface Go, Celeron), hãy <span className="font-bold text-emerald-300 cursor-pointer" onClick={() => setEcoMode(true)}>Bật tính năng Eco Mode</span> để tắt các hiệu ứng đồ họa, giúp phần mềm chạy siêu nhẹ nhé!
+                  {isAutoDetected 
+                    ? <span>Phát hiện máy cấu hình thấp (RAM &lt;= 4GB hoặc CPU yếu), Tool đã <span className="font-bold text-emerald-300">tự động bật Eco Mode</span> để giảm lag. Nếu bạn muốn trải nghiệm giao diện đồ hoạ đẹp, hãy tắt nút Eco ở bên dưới!</span>
+                    : <span>Nếu máy tính quá yếu (như Surface Go, Celeron), hãy <span className="font-bold text-emerald-300 cursor-pointer" onClick={() => setEcoMode(true)}>Bật tính năng Eco Mode</span> để tắt các hiệu ứng đồ họa, giúp phần mềm chạy siêu nhẹ nhé!</span>
+                  }
                 </div>
                 <div className="mt-2 flex justify-end">
                   <button 
