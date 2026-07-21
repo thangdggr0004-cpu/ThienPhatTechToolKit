@@ -1677,56 +1677,54 @@ Write-Output "OK"
 
         const file = fs.createWriteStream(destPath);
 
-        const request = https.get(downloadUrl, (response) => {
-          if (response.statusCode === 301 || response.statusCode === 302) {
-             // Handle redirect for Github releases
-             https.get(response.headers.location, (res) => {
-                handleResponse(res);
-             }).on('error', (err) => {
-                const win = BrowserWindow.getAllWindows()[0];
-                if (win) win.webContents.send('updater-event', { type: 'error', error: err.message });
-                resolve({ success: false, error: err.message });
-             });
-             return;
-          }
-          handleResponse(response);
-        });
-
-        function handleResponse(res) {
-          const totalBytes = parseInt(res.headers['content-length'], 10);
-          let downloadedBytes = 0;
-
-          res.on('data', (chunk) => {
-            downloadedBytes += chunk.length;
-            const percent = totalBytes ? Math.round((downloadedBytes / totalBytes) * 100) : 0;
-            const win = BrowserWindow.getAllWindows()[0];
-            if (win) {
-              win.webContents.send('updater-event', { 
-                type: 'download-progress', 
-                progress: { percent } 
-              });
+        const downloadFile = (url) => {
+          const request = https.get(url, (res) => {
+            if (res.statusCode === 301 || res.statusCode === 302) {
+               downloadFile(res.headers.location);
+               return;
             }
-          });
+            
+            if (res.statusCode !== 200) {
+               fs.unlink(destPath, () => {});
+               const win = BrowserWindow.getAllWindows()[0];
+               if (win) win.webContents.send('updater-event', { type: 'error', error: 'HTTP ' + res.statusCode });
+               resolve({ success: false, error: 'HTTP ' + res.statusCode });
+               return;
+            }
 
-          res.pipe(file);
+            const totalBytes = parseInt(res.headers['content-length'] || '0', 10);
+            let downloadedBytes = 0;
 
-          file.on('finish', () => {
-            file.close();
+            res.on('data', (chunk) => {
+              downloadedBytes += chunk.length;
+              const percent = totalBytes ? Math.round((downloadedBytes / totalBytes) * 100) : 0;
+              const win = BrowserWindow.getAllWindows()[0];
+              if (win) {
+                win.webContents.send('updater-event', { 
+                  type: 'download-progress', 
+                  progress: { percent } 
+                });
+              }
+            });
+
+            res.pipe(file);
+
+            file.on('finish', () => {
+              file.close();
+              const win = BrowserWindow.getAllWindows()[0];
+              if (win) win.webContents.send('updater-event', { type: 'update-downloaded' });
+              resolve({ success: true });
+            });
+          }).on('error', (err) => {
+            fs.unlink(destPath, () => {});
             const win = BrowserWindow.getAllWindows()[0];
-            if (win) win.webContents.send('updater-event', { type: 'update-downloaded' });
-            resolve({ success: true });
+            if (win) win.webContents.send('updater-event', { type: 'error', error: err.message });
+            resolve({ success: false, error: err.message });
           });
-        }
+          downloadRequest = request;
+        };
 
-        request.on('error', (err) => {
-          fs.unlink(destPath, () => {});
-          const win = BrowserWindow.getAllWindows()[0];
-          if (win) win.webContents.send('updater-event', { type: 'error', error: err.message });
-          resolve({ success: false, error: err.message });
-        });
-        
-        downloadRequest = request;
-
+        downloadFile(downloadUrl);
       } catch (err) {
         resolve({ success: false, error: err.toString() });
       }

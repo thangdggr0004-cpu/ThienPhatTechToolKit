@@ -1,5 +1,5 @@
 {
-  "version": "1.2.5",
-  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest/download/ThienPhatTechToolkit.1.2.5.exe",
-  "releaseNotes": "- Trả lại thiết lập mặc định TẮT cho Eco Mode, không còn tự ý bật gây mất hiệu ứng hình ảnh."
+  "version": "1.2.6",
+  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest/download/ThienPhatTechToolkit.1.2.6.exe",
+  "releaseNotes": "- Hoàn thiện hệ thống Tải ngầm OTA: Xử lý thành công lỗi File Not Found (VBScript) do tải file bị ngắt quãng giữa chừng khi server Github chuyển hướng.\n- Trả lại thiết lập mặc định TẮT cho Eco Mode."
 }
