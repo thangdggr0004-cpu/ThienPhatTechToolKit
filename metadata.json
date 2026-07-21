@@ -1,0 +1,6 @@
+{
+  "name": "Thiên Phát Tech ToolKit",
+  "description": "Bộ công cụ chẩn đoán hệ thống tối ưu, dọn rác, kiểm tra bản quyền Windows/Office, kiểm tra cấu hình chi tiết, tối ưu mạng và quản lý nguồn điện chất lượng cao.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
