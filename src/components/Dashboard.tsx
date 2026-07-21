@@ -194,7 +194,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Nghị định 30</span>
           </div>
           <div className="space-y-1">
-            <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Chuẩn hóa Office Văn Bản</h3>
+            <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Tiện Ích Office</h3>
             <p className="text-[11px] text-slate-500 leading-relaxed">Căn lề, font chữ chuẩn Word của Nhà Nước phục vụ văn phòng công sở.</p>
           </div>
           <div className="text-[10px] text-slate-400 font-semibold uppercase flex items-center gap-1 group-hover:text-blue-600 transition-colors">

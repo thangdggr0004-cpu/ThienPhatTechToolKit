@@ -1,5 +1,5 @@
 {
-  "version": "1.2.7",
-  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest/download/ThienPhatTechToolkit.1.2.7.exe",
-  "releaseNotes": "- Hoàn thiện hệ thống Tải ngầm OTA: Xử lý thành công lỗi File Not Found (VBScript).\n- Cải tiến AI tự nhận diện Eco Mode: Code thông minh hơn để nhận diện máy yếu chuẩn xác, không còn tự kích hoạt nhầm trên các dòng máy có RAM lớn."
+  "version": "1.2.8",
+  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest/download/ThienPhatTechToolkit.1.2.8.exe",
+  "releaseNotes": "- Đổi tên 'Chuẩn hóa Office Văn Bản' thành 'Tiện Ích Office' ngoài màn hình Dashboard."
 }
