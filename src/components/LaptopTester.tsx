@@ -4,6 +4,7 @@ import {
   X, Maximize, AlertTriangle, Keyboard as KeyboardIcon 
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
+import TouchScreenTester from './TouchScreenTester';
 
 export default function LaptopTester() {
   const [activeTest, setActiveTest] = useState<string | null>(null);
@@ -114,7 +115,7 @@ function TestModal({ test, onClose }: { test: string, onClose: () => void }) {
         {test === 'keyboard' && <KeyboardTest />}
         {test === 'webcam' && <WebcamTest />}
         {test === 'mic' && <MicTest />}
-        {test === 'touch' && <TouchTest />}
+        {test === 'touch' && <TouchScreenTester onBack={onClose} />}
         {test === 'battery' && <BatteryTest />}
         {test === 'disk' && <DiskTest />}
       </div>

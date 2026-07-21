@@ -42,12 +42,13 @@ body.eco-mode * {
   box-shadow: none !important;
 }
 
-body.eco-mode .bg-gradient-to-br, 
-body.eco-mode .bg-gradient-to-r,
-body.eco-mode .bg-gradient-to-b {
-  background-image: none !important;
-  background-color: #f8fafc !important; /* Slate-50 fallback */
+body.eco-mode .animate-in,
+body.eco-mode .page-enter {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
 }
+
 
 body.eco-mode button.bg-blue-600,
 body.eco-mode button.bg-blue-500 {

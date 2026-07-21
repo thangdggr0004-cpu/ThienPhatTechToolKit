@@ -112,6 +112,20 @@ export default function App() {
       if (info && info.ramTotalSize) {
         setFooterMetrics(prev => ({ ...prev, ramTotal: info.ramTotalSize }));
       }
+      
+      // Smart Auto-Eco Mode for weak CPUs
+      if (localStorage.getItem('ecoMode') === null && info && info.cpuModel) {
+        const cpuModel = info.cpuModel.toLowerCase();
+        const isWeakCpu = cpuModel.includes('celeron') || 
+                          cpuModel.includes('pentium') || 
+                          cpuModel.includes('atom') || 
+                          cpuModel.includes('athlon');
+        
+        if (isWeakCpu) {
+          setEcoMode(true);
+          localStorage.setItem('ecoHintAutoDetected', 'true');
+        }
+      }
     }).catch(() => {});
 
     const timer = setInterval(async () => {
