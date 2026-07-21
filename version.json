@@ -1,5 +1,5 @@
 {
   "version": "1.2.1",
-  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest/download/ThienPhatTechToolkit_v1.2.1.exe",
+  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest/download/ThienPhatTechToolkit.1.2.1.exe",
   "releaseNotes": "- Viết lại hoàn toàn giao diện Test Cảm Ứng bằng Ô vuông Grid.\n- Bổ sung Auto-Eco Mode tự động bật tắt tính năng để giảm giật lag trên máy cấu hình yếu.\n- Thêm hộp thoại hướng dẫn Eco Mode thông minh."
 }
