@@ -268,7 +268,21 @@ export default function App() {
             >
               <span className="font-sans font-bold uppercase tracking-wider">{ecoMode ? '🌿 Eco: BẬT' : '🌿 Eco: TẮT'}</span>
             </button>
-            <span className="text-blue-600 font-bold z-10">v1.2.0 - Active</span>
+            <button 
+              onClick={() => {
+                const icon = document.getElementById('update-spinner');
+                if (icon) icon.classList.add('animate-spin');
+                (window as any).electronAPI.checkForUpdates();
+                setTimeout(() => {
+                  if (icon) icon.classList.remove('animate-spin');
+                }, 1500);
+              }}
+              className="text-blue-600 font-bold z-10 hover:text-blue-500 transition-colors flex items-center gap-1.5 cursor-pointer bg-blue-100/50 hover:bg-blue-100 px-2 py-0.5 rounded"
+              title="Nhấp để kiểm tra bản cập nhật mới nhất"
+            >
+              <RefreshCw id="update-spinner" className="w-3 h-3" />
+              v1.2.1 - Active
+            </button>
           </div>
         </div>
       </div>

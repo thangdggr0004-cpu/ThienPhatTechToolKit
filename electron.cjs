@@ -1630,7 +1630,8 @@ Write-Output "OK"
       const currentVersion = app.getVersion();
       const updateUrl = 'https://raw.githubusercontent.com/thangdggr0004-cpu/ThienPhatTechToolKit/main/version.json';
       
-      const response = await fetch(updateUrl);
+      // Bypass Github Cache by appending a timestamp
+      const response = await fetch(updateUrl + '?t=' + Date.now(), { cache: 'no-store' });
       if (!response.ok) {
         return { hasUpdate: false };
       }
