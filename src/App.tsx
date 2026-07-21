@@ -64,6 +64,22 @@ export default function App() {
     netDown: null,
     loaded: false
   });
+  
+  const [ecoMode, setEcoMode] = useState<boolean>(() => {
+    return localStorage.getItem('ecoMode') === 'true';
+  });
+
+  useEffect(() => {
+    if (ecoMode) {
+      document.body.classList.add('eco-mode');
+      localStorage.setItem('ecoMode', 'true');
+      (window as any).__ecoMode = true;
+    } else {
+      document.body.classList.remove('eco-mode');
+      localStorage.setItem('ecoMode', 'false');
+      (window as any).__ecoMode = false;
+    }
+  }, [ecoMode]);
 
   useEffect(() => {
     const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
@@ -77,6 +93,7 @@ export default function App() {
     }).catch(() => {});
 
     const timer = setInterval(async () => {
+      if ((window as any).__ecoMode) return; // Skip polling in eco mode
       try {
         const m = await (window as any).electronAPI.getRealtimeMetrics();
         setFooterMetrics(prev => ({
@@ -195,6 +212,13 @@ export default function App() {
             <span>NET: <span className="text-emerald-600 font-bold">{footerMetrics.loaded ? `↑ ${footerMetrics.netUp}Kb/s ↓ ${((footerMetrics.netDown || 0) / 1024).toFixed(1)}Mb/s` : '...'}</span></span>
           </div>
           <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setEcoMode(!ecoMode)}
+              className={`flex items-center gap-1.5 px-2 py-0.5 rounded transition-colors ${ecoMode ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' : 'bg-slate-200 text-slate-500 hover:bg-slate-300'}`}
+              title="Chế độ tiết kiệm (Giảm lag cho máy yếu)"
+            >
+              <span className="font-sans font-bold uppercase tracking-wider">{ecoMode ? '🌿 Eco: BẬT' : '🌿 Eco: TẮT'}</span>
+            </button>
             <span className="text-blue-600 font-bold">v1.2.0 - Active</span>
           </div>
         </div>

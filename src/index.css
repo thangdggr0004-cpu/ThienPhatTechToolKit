@@ -33,3 +33,31 @@
 .icon-pastel-rose   { background: #fff1f2; color: #e11d48; }
 .icon-pastel-sky    { background: #f0f9ff; color: #0284c7; }
 .icon-pastel-slate  { background: #f8fafc; color: #475569; }
+
+/* Eco Mode Overrides for Low-End PCs */
+body.eco-mode * {
+  animation: none !important;
+  transition: none !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
+body.eco-mode .bg-gradient-to-br, 
+body.eco-mode .bg-gradient-to-r,
+body.eco-mode .bg-gradient-to-b {
+  background-image: none !important;
+  background-color: #f8fafc !important; /* Slate-50 fallback */
+}
+
+body.eco-mode button.bg-blue-600,
+body.eco-mode button.bg-blue-500 {
+  background-image: none !important;
+  background-color: #2563eb !important; /* Flat blue-600 */
+}
+
+body.eco-mode .blur,
+body.eco-mode .backdrop-blur-md,
+body.eco-mode .backdrop-blur-xl {
+  filter: none !important;
+  backdrop-filter: none !important;
+}

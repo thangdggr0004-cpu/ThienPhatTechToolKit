@@ -71,9 +71,9 @@ export default function HardwareDetails() {
     }
 
     const timer = setInterval(async () => {
-      // Only fetch when Hardware tab is active
-      if ((window as any).__activeSection !== 'hardware') {
-        // Show placeholder mock data when not active
+      // Only fetch when Hardware tab is active and NOT in eco mode
+      if ((window as any).__activeSection !== 'hardware' || (window as any).__ecoMode) {
+        // Show placeholder mock data when not active or eco mode
         setMetrics({
           cpu: 28,
           ram: 64,
