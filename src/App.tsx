@@ -69,6 +69,10 @@ export default function App() {
     return localStorage.getItem('ecoMode') === 'true';
   });
 
+  const [showEcoHint, setShowEcoHint] = useState<boolean>(() => {
+    return localStorage.getItem('ecoHintShown') !== 'true';
+  });
+
   useEffect(() => {
     if (ecoMode) {
       document.body.classList.add('eco-mode');
@@ -211,15 +215,43 @@ export default function App() {
             <span>RAM: <span className="text-blue-600 font-bold">{footerMetrics.loaded && footerMetrics.ram != null && footerMetrics.ramTotal != null ? `${footerMetrics.ram.toFixed(1)}/${footerMetrics.ramTotal.toFixed(1)} GB` : '...'}</span></span>
             <span>NET: <span className="text-emerald-600 font-bold">{footerMetrics.loaded ? `↑ ${footerMetrics.netUp}Kb/s ↓ ${((footerMetrics.netDown || 0) / 1024).toFixed(1)}Mb/s` : '...'}</span></span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 relative">
+            
+            {/* Eco Mode Hint Popover */}
+            {showEcoHint && (
+              <div className="absolute bottom-10 right-20 w-64 bg-slate-800 border border-slate-700 p-3 rounded-lg shadow-2xl animate-fade-in-up z-50">
+                <div className="text-white text-[11px] font-sans leading-relaxed">
+                  <span className="font-bold text-emerald-400 block mb-1">Mẹo tối ưu hiệu năng:</span>
+                  Nếu máy tính quá yếu hoặc bị lag (như Surface Go, Celeron), hãy <span className="font-bold text-emerald-300">Bật tính năng Eco Mode</span> để tắt các hiệu ứng đồ họa, giúp phần mềm chạy siêu nhẹ nhé!
+                </div>
+                <div className="mt-2 flex justify-end">
+                  <button 
+                    onClick={() => {
+                      setShowEcoHint(false);
+                      localStorage.setItem('ecoHintShown', 'true');
+                    }}
+                    className="text-[10px] font-bold uppercase text-slate-300 hover:text-white bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded transition-colors"
+                  >
+                    Đã hiểu
+                  </button>
+                </div>
+                {/* Arrow pointing down */}
+                <div className="absolute -bottom-2 right-12 w-4 h-4 bg-slate-800 border-b border-r border-slate-700 transform rotate-45"></div>
+              </div>
+            )}
+
             <button 
-              onClick={() => setEcoMode(!ecoMode)}
-              className={`flex items-center gap-1.5 px-2 py-0.5 rounded transition-colors ${ecoMode ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' : 'bg-slate-200 text-slate-500 hover:bg-slate-300'}`}
+              onClick={() => {
+                setEcoMode(!ecoMode);
+                setShowEcoHint(false);
+                localStorage.setItem('ecoHintShown', 'true');
+              }}
+              className={`flex items-center gap-1.5 px-2 py-0.5 rounded transition-colors relative z-10 ${ecoMode ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' : 'bg-slate-200 text-slate-500 hover:bg-slate-300'}`}
               title="Chế độ tiết kiệm (Giảm lag cho máy yếu)"
             >
               <span className="font-sans font-bold uppercase tracking-wider">{ecoMode ? '🌿 Eco: BẬT' : '🌿 Eco: TẮT'}</span>
             </button>
-            <span className="text-blue-600 font-bold">v1.2.0 - Active</span>
+            <span className="text-blue-600 font-bold z-10">v1.2.0 - Active</span>
           </div>
         </div>
       </div>
