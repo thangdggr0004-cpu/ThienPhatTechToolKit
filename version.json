@@ -1,5 +1,5 @@
 {
-  "version": "1.2.3",
-  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest/download/ThienPhatTechToolkit.1.2.3.exe",
-  "releaseNotes": "- Bản thử nghiệm (Mock Update) để kiểm tra hệ thống OTA có hoạt động ngay lập tức không.\n- Nút cập nhật thủ công hoạt động hoàn hảo!"
+  "version": "1.2.2",
+  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest/download/ThienPhatTechToolkit.1.2.2.exe",
+  "releaseNotes": "- Tích hợp nút Kiểm tra bản cập nhật thủ công dưới Footer.\n- Nâng cấp bộ dò tìm OTA: Ép Github nhả file mới nhất ngay lập tức (Bypass Cache), không còn tình trạng trễ thông báo 5 phút như các bản cũ."
 }
