@@ -1648,7 +1648,8 @@ Write-Output "OK"
         updateDataGlobal = { currentVersion, latestVersion, downloadUrl, releaseNotes };
         // Tell renderer update is available
         setTimeout(() => {
-          if (mainWindow) mainWindow.webContents.send('updater-event', { type: 'update-available', info: updateDataGlobal });
+          const win = BrowserWindow.getAllWindows()[0];
+          if (win) win.webContents.send('updater-event', { type: 'update-available', info: updateDataGlobal });
         }, 1000);
         return { success: true, hasUpdate: true };
       } else {
@@ -1682,8 +1683,8 @@ Write-Output "OK"
              https.get(response.headers.location, (res) => {
                 handleResponse(res);
              }).on('error', (err) => {
-                fs.unlink(destPath, () => {});
-                if (mainWindow) mainWindow.webContents.send('updater-event', { type: 'error', error: err.message });
+                const win = BrowserWindow.getAllWindows()[0];
+                if (win) win.webContents.send('updater-event', { type: 'error', error: err.message });
                 resolve({ success: false, error: err.message });
              });
              return;
@@ -1698,8 +1699,9 @@ Write-Output "OK"
           res.on('data', (chunk) => {
             downloadedBytes += chunk.length;
             const percent = totalBytes ? Math.round((downloadedBytes / totalBytes) * 100) : 0;
-            if (mainWindow) {
-              mainWindow.webContents.send('updater-event', { 
+            const win = BrowserWindow.getAllWindows()[0];
+            if (win) {
+              win.webContents.send('updater-event', { 
                 type: 'download-progress', 
                 progress: { percent } 
               });
@@ -1710,14 +1712,16 @@ Write-Output "OK"
 
           file.on('finish', () => {
             file.close();
-            if (mainWindow) mainWindow.webContents.send('updater-event', { type: 'update-downloaded' });
+            const win = BrowserWindow.getAllWindows()[0];
+            if (win) win.webContents.send('updater-event', { type: 'update-downloaded' });
             resolve({ success: true });
           });
         }
 
         request.on('error', (err) => {
           fs.unlink(destPath, () => {});
-          if (mainWindow) mainWindow.webContents.send('updater-event', { type: 'error', error: err.message });
+          const win = BrowserWindow.getAllWindows()[0];
+          if (win) win.webContents.send('updater-event', { type: 'error', error: err.message });
           resolve({ success: false, error: err.message });
         });
         

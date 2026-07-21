@@ -16,8 +16,8 @@ export default function AutoUpdater() {
         if (eventData.type === 'update-available') {
           // info is inside eventData.info
           setUpdateInfo({
-            currentVersion: eventData.info.version || '?',
-            latestVersion: eventData.info.version || 'Mới',
+            currentVersion: eventData.info.currentVersion || '?',
+            latestVersion: eventData.info.latestVersion || 'Mới',
             releaseNotes: eventData.info.releaseNotes
           });
         } else if (eventData.type === 'download-progress') {

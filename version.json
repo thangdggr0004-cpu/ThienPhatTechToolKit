@@ -1,5 +1,5 @@
 {
-  "version": "1.2.3",
-  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest/download/ThienPhatTechToolkit.1.2.3.exe",
-  "releaseNotes": "- Gỡ bỏ thẻ Test Cảm Ứng ngoài màn hình chính để tối ưu giao diện.\n- Đổi tên Tiện ích Office Nâng cao và Sửa lỗi Kẹt tài khoản theo góp ý của người dùng."
+  "version": "1.2.4",
+  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest/download/ThienPhatTechToolkit.1.2.4.exe",
+  "releaseNotes": "- Sửa triệt để lỗi phần mềm không thể tự cập nhật ngầm do sai tên biến.\n- Gỡ bỏ thẻ Test Cảm Ứng, cập nhật văn bản Office."
 }
