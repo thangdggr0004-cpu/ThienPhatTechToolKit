@@ -1,9 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { LogOut, RotateCcw } from 'lucide-react';
+
+const CELL_SIZE = 40;
 
 export default function TouchScreenTester({ onBack }: { onBack: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
+  const touchedCellsRef = useRef<Set<string>>(new Set());
+  const [cols, setCols] = useState(0);
+  const [rows, setRows] = useState(0);
 
   useEffect(() => {
     // Prevent scrolling or zooming while testing
@@ -17,6 +21,39 @@ export default function TouchScreenTester({ onBack }: { onBack: () => void }) {
     };
   }, []);
 
+  const drawGrid = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number, touched: Set<string>) => {
+    const c = Math.ceil(width / CELL_SIZE);
+    const r = Math.ceil(height / CELL_SIZE);
+    
+    // Background - untouched color (Light Blue)
+    ctx.fillStyle = '#60a5fa'; // blue-400
+    ctx.fillRect(0, 0, width, height);
+
+    // Draw touched cells (Orange)
+    ctx.fillStyle = '#f97316'; // orange-500
+    touched.forEach(key => {
+      const [cx, cy] = key.split(',').map(Number);
+      ctx.fillRect(cx * CELL_SIZE, cy * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+    });
+
+    // Draw grid lines
+    ctx.strokeStyle = '#ffffff';
+    ctx.globalAlpha = 0.3;
+    ctx.lineWidth = 1;
+    
+    ctx.beginPath();
+    for (let x = 0; x <= width; x += CELL_SIZE) {
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+    }
+    for (let y = 0; y <= height; y += CELL_SIZE) {
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1.0;
+  }, []);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -27,32 +64,11 @@ export default function TouchScreenTester({ onBack }: { onBack: () => void }) {
       if (parent) {
         canvas.width = parent.clientWidth;
         canvas.height = parent.clientHeight;
-        fillBackground();
-      }
-    };
-
-    const ctx = canvas.getContext('2d');
-    const fillBackground = () => {
-      if (!ctx) return;
-      // We will fill it with a grid pattern for better visualization of touch spots
-      ctx.fillStyle = '#0f172a'; // slate-950
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      // Draw grid
-      ctx.strokeStyle = '#1e293b'; // slate-800
-      ctx.lineWidth = 1;
-      const gridSize = 50;
-      for (let x = 0; x < canvas.width; x += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
-        ctx.stroke();
-      }
-      for (let y = 0; y < canvas.height; y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
+        setCols(Math.ceil(canvas.width / CELL_SIZE));
+        setRows(Math.ceil(canvas.height / CELL_SIZE));
+        
+        const ctx = canvas.getContext('2d');
+        if (ctx) drawGrid(ctx, canvas.width, canvas.height, touchedCellsRef.current);
       }
     };
 
@@ -60,126 +76,99 @@ export default function TouchScreenTester({ onBack }: { onBack: () => void }) {
     resizeCanvas();
 
     return () => window.removeEventListener('resize', resizeCanvas);
-  }, []);
+  }, [drawGrid]);
 
   const clearCanvas = () => {
+    touchedCellsRef.current.clear();
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (ctx) drawGrid(ctx, canvas.width, canvas.height, touchedCellsRef.current);
+  };
 
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const handlePointerMove = (e: React.MouseEvent | React.TouchEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     
-    ctx.strokeStyle = '#1e293b';
-    ctx.lineWidth = 1;
-    const gridSize = 50;
-    for (let x = 0; x < canvas.width; x += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, canvas.height);
-      ctx.stroke();
-    }
-    for (let y = 0; y < canvas.height; y += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(canvas.width, y);
-      ctx.stroke();
-    }
-  };
-
-  const drawLine = (x: number, y: number, isDown: boolean) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    if (!isDown) {
-      ctx.beginPath();
-      ctx.moveTo(x, y);
+    const rect = canvas.getBoundingClientRect();
+    
+    // Handle both touch and mouse events
+    let clientX, clientY;
+    
+    if ('touches' in e) {
+      if (e.touches.length === 0) return;
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
     } else {
-      ctx.lineTo(x, y);
-      ctx.strokeStyle = '#38bdf8'; // sky-400 (bright blue for visibility)
-      ctx.lineWidth = 20;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.stroke();
-      
-      // Draw a solid circle at the current point to make dots when tapping without moving
-      ctx.beginPath();
-      ctx.arc(x, y, 10, 0, Math.PI * 2);
-      ctx.fillStyle = '#38bdf8';
-      ctx.fill();
-      
-      ctx.beginPath();
-      ctx.moveTo(x, y);
+      // For mouse, we only care if button is pressed (optional, but good for testing)
+      if (e.buttons !== 1) return;
+      clientX = (e as React.MouseEvent).clientX;
+      clientY = (e as React.MouseEvent).clientY;
     }
-  };
 
-  const handlePointerDown = (e: React.PointerEvent) => {
-    setIsDrawing(true);
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (rect) {
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      drawLine(x, y, false);
-      drawLine(x, y, true); // ensure a dot is drawn even if they don't move
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    
+    const col = Math.floor(x / CELL_SIZE);
+    const row = Math.floor(y / CELL_SIZE);
+    
+    // Boundary check
+    if (col < 0 || col >= cols || row < 0 || row >= rows) return;
+    
+    const key = `${col},${row}`;
+    
+    // If not touched yet, add and render just this cell
+    if (!touchedCellsRef.current.has(key)) {
+      touchedCellsRef.current.add(key);
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        // Draw just the newly touched cell (for performance)
+        ctx.fillStyle = '#f97316';
+        ctx.fillRect(col * CELL_SIZE, row * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+        
+        // Redraw grid lines around it so they stay on top
+        ctx.strokeStyle = '#ffffff';
+        ctx.globalAlpha = 0.3;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(col * CELL_SIZE, row * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+        ctx.globalAlpha = 1.0;
+      }
     }
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  };
-
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDrawing) return;
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (rect) {
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      drawLine(x, y, true);
-    }
-  };
-
-  const handlePointerUp = (e: React.PointerEvent) => {
-    setIsDrawing(false);
-    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-950 overflow-hidden flex flex-col z-50 touch-none">
-      <div className="absolute top-4 right-4 flex gap-3 z-10">
-        <button
-          onClick={clearCanvas}
-          className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-semibold shadow-lg transition-colors border border-slate-700"
-        >
-          <RotateCcw className="w-5 h-5" />
-          Làm mới
-        </button>
-        <button
+    <div className="fixed inset-0 z-50 bg-slate-900 flex flex-col items-center justify-center">
+      {/* Top Controls */}
+      <div className="absolute top-4 w-full px-6 flex justify-between items-center z-10 pointer-events-none">
+        <button 
           onClick={onBack}
-          className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 rounded-lg font-semibold shadow-lg transition-colors"
+          className="pointer-events-auto flex items-center gap-2 px-4 py-2 bg-rose-600/80 hover:bg-rose-500 text-white rounded-lg backdrop-blur-sm transition-all"
         >
-          <LogOut className="w-5 h-5" />
-          Thoát Test
+          <LogOut className="w-4 h-4" />
+          <span className="font-bold">Thoát</span>
+        </button>
+        
+        <div className="pointer-events-auto bg-slate-800/80 text-white text-sm font-bold px-6 py-2 rounded-full backdrop-blur-sm shadow-lg border border-slate-700">
+          Vuốt ngón tay khắp màn hình để tô màu. Phát hiện điểm liệt cảm ứng.
+        </div>
+        
+        <button 
+          onClick={clearCanvas}
+          className="pointer-events-auto flex items-center gap-2 px-4 py-2 bg-slate-800/80 hover:bg-slate-700 text-white rounded-lg backdrop-blur-sm transition-all border border-slate-700"
+        >
+          <RotateCcw className="w-4 h-4" />
+          <span className="font-bold">Làm lại</span>
         </button>
       </div>
 
-      <div className="absolute top-4 left-4 pointer-events-none z-10">
-        <div className="bg-slate-900/80 backdrop-blur border border-slate-800 text-white p-4 rounded-xl shadow-lg">
-          <h2 className="font-bold text-lg text-sky-400">Kiểm tra Màn hình Cảm ứng</h2>
-          <p className="text-sm text-slate-300 mt-1 max-w-sm">
-            Vuốt ngón tay hoặc chuột khắp màn hình để vẽ. Những vùng không vẽ được nét đứt có thể là điểm chết cảm ứng.
-          </p>
-        </div>
-      </div>
-
-      <div className="flex-1 w-full h-full relative cursor-crosshair touch-none">
+      <div className="w-full h-full cursor-crosshair">
         <canvas
           ref={canvasRef}
-          className="block w-full h-full touch-none"
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerUp}
-          onPointerOut={handlePointerUp}
+          className="w-full h-full touch-none block"
+          onMouseMove={handlePointerMove}
+          onMouseDown={handlePointerMove}
+          onTouchMove={handlePointerMove}
+          onTouchStart={handlePointerMove}
         />
       </div>
     </div>

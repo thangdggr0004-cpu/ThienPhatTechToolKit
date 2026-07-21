@@ -66,12 +66,26 @@ export default function App() {
   });
   
   const [ecoMode, setEcoMode] = useState<boolean>(() => {
-    return localStorage.getItem('ecoMode') === 'true';
+    const saved = localStorage.getItem('ecoMode');
+    if (saved !== null) return saved === 'true';
+    
+    // Auto detect low end
+    const cores = navigator.hardwareConcurrency || 8;
+    const mem = (navigator as any).deviceMemory || 8;
+    const isLowEnd = cores <= 4 || mem <= 4;
+    
+    if (isLowEnd) {
+      localStorage.setItem('ecoHintAutoDetected', 'true');
+    }
+    return isLowEnd;
   });
 
   const [showEcoHint, setShowEcoHint] = useState<boolean>(() => {
     return localStorage.getItem('ecoHintShown') !== 'true';
   });
+
+  // Track if we auto-enabled it so the hint can reflect that
+  const isAutoDetected = localStorage.getItem('ecoHintAutoDetected') === 'true';
 
   useEffect(() => {
     if (ecoMode) {
@@ -222,7 +236,10 @@ export default function App() {
               <div className="absolute bottom-10 right-20 w-64 bg-slate-800 border border-slate-700 p-3 rounded-lg shadow-2xl animate-fade-in-up z-50">
                 <div className="text-white text-[11px] font-sans leading-relaxed">
                   <span className="font-bold text-emerald-400 block mb-1">Mẹo tối ưu hiệu năng:</span>
-                  Nếu máy tính quá yếu hoặc bị lag (như Surface Go, Celeron), hãy <span className="font-bold text-emerald-300">Bật tính năng Eco Mode</span> để tắt các hiệu ứng đồ họa, giúp phần mềm chạy siêu nhẹ nhé!
+                  {isAutoDetected 
+                    ? <span>Hệ thống phát hiện máy tính cấu hình yếu, Tool đã <span className="font-bold text-emerald-300">Tự động Bật Eco Mode</span> để giảm lag. Hãy tắt nút bên dưới nếu bạn muốn giao diện đầy đủ hiệu ứng!</span>
+                    : <span>Nếu máy tính quá yếu hoặc bị lag (như Surface Go, Celeron), hãy <span className="font-bold text-emerald-300">Bật tính năng Eco Mode</span> để tắt các hiệu ứng đồ họa, giúp phần mềm chạy siêu nhẹ nhé!</span>
+                  }
                 </div>
                 <div className="mt-2 flex justify-end">
                   <button 
