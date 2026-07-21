@@ -166,7 +166,7 @@ export default function OfficeStandardizer() {
           <FileEdit className="w-8 h-8 text-emerald-600" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-slate-800">Tiện Ích Office Nâng Cao (Thực Chiến)</h2>
+          <h2 className="text-xl font-bold text-slate-800">Tiện Ích Office Nâng Cao</h2>
           <p className="text-sm text-slate-500 mt-1">
             Bộ công cụ 1-Click giúp kỹ thuật viên chuẩn hóa Word/Excel, sửa các lỗi treo/văng cứng đầu và quản trị giấy phép an toàn, tối ưu nhất.
           </p>
@@ -235,7 +235,7 @@ export default function OfficeStandardizer() {
           />
           <UtilityCard
             id="clear-creds"
-            title="Trị Bệnh Kẹt Tài Khoản (Account Error)"
+            title="Sửa Lỗi Kẹt Tài Khoản (Account Error)"
             description="Xóa sạch thông tin đăng nhập trong Credential Manager và các khóa Identity của Office. Cực kỳ hiệu quả khi máy bị lỗi không thể xác minh đăng nhập hoặc lỗi chấm than vàng."
             icon={UserX}
             colorClass="bg-amber-50 text-amber-600"

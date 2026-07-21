@@ -242,25 +242,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           </div>
         </div>
 
-        {/* Card 11: Touch Screen Test */}
-        <div
-          onClick={() => onNavigate('touch')}
-          className="bg-white hover:bg-gradient-to-br hover:from-slate-50 hover:to-slate-100/80 p-5 rounded-xl border border-slate-200/80 hover:border-blue-400/40 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group space-y-4 hover:-translate-y-0.5"
-        >
-          <div className="flex justify-between items-start">
-            <div className="p-2 bg-indigo-50 text-indigo-600 rounded border border-indigo-200 group-hover:scale-105 transition-transform shadow-sm">
-              <Pointer className="h-5 w-5" />
-            </div>
-            <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">Test Màn Hình</span>
-          </div>
-          <div className="space-y-1">
-            <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Test Cảm Ứng</h3>
-            <p className="text-[11px] text-slate-500 leading-relaxed">Vẽ toàn màn hình để kiểm tra điểm chết và độ nhạy của màn hình cảm ứng.</p>
-          </div>
-          <div className="text-[10px] text-slate-400 font-semibold uppercase flex items-center gap-1 group-hover:text-blue-600 transition-colors">
-            Khám phá <ArrowRight className="h-3 w-3" />
-          </div>
-        </div>
       </div>
 
       {/* Author and Donation Banner */}

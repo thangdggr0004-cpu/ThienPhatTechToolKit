@@ -1,5 +1,5 @@
 {
-  "version": "1.2.2",
-  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest/download/ThienPhatTechToolkit.1.2.2.exe",
-  "releaseNotes": "- Tích hợp nút Kiểm tra bản cập nhật thủ công dưới Footer.\n- Nâng cấp bộ dò tìm OTA: Ép Github nhả file mới nhất ngay lập tức (Bypass Cache), không còn tình trạng trễ thông báo 5 phút như các bản cũ."
+  "version": "1.2.3",
+  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest/download/ThienPhatTechToolkit.1.2.3.exe",
+  "releaseNotes": "- Gỡ bỏ thẻ Test Cảm Ứng ngoài màn hình chính để tối ưu giao diện.\n- Đổi tên Tiện ích Office Nâng cao và Sửa lỗi Kẹt tài khoản theo góp ý của người dùng."
 }
