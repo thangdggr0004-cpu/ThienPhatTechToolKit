@@ -1667,9 +1667,10 @@ Write-Output "OK"
     return new Promise((resolve, reject) => {
       try {
         const downloadUrl = updateDataGlobal.downloadUrl;
-        const exeDir = path.dirname(process.execPath);
-        // Only download next to exe if packaged, otherwise download to desktop for dev
-        const targetDir = app.isPackaged ? exeDir : path.join(os.homedir(), 'Desktop');
+        // Fix for Portable Apps: they run from a Temp folder and delete it upon exit.
+        // We MUST download to the real directory and delete the real exe.
+        const realExeDir = process.env.PORTABLE_EXECUTABLE_DIR || path.dirname(process.execPath);
+        const targetDir = app.isPackaged ? realExeDir : path.join(os.homedir(), 'Desktop');
         const fileName = `ThienPhatTechToolkit_v${updateDataGlobal.latestVersion}.exe`;
         const destPath = path.join(targetDir, fileName);
         
@@ -1735,7 +1736,8 @@ Write-Output "OK"
     if (!updateDataGlobal || !updateDataGlobal.newExePath) return;
 
     try {
-      const currentExe = process.execPath;
+      // Fix for Portable Apps: delete the real file, not the temp file
+      const currentExe = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
       const newExe = updateDataGlobal.newExePath;
       
       // If running in dev mode, don't delete electron.exe
