@@ -1,5 +1,5 @@
 {
-  "version": "1.2.4",
-  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest/download/ThienPhatTechToolkit.1.2.4.exe",
-  "releaseNotes": "- Sửa triệt để lỗi phần mềm không thể tự cập nhật ngầm do sai tên biến.\n- Gỡ bỏ thẻ Test Cảm Ứng, cập nhật văn bản Office."
+  "version": "1.2.5",
+  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest/download/ThienPhatTechToolkit.1.2.5.exe",
+  "releaseNotes": "- Trả lại thiết lập mặc định TẮT cho Eco Mode, không còn tự ý bật gây mất hiệu ứng hình ảnh."
 }
