@@ -1,5 +1,5 @@
 {
-  "version": "1.2.8",
-  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest/download/ThienPhatTechToolkit.1.2.8.exe",
-  "releaseNotes": "- Đổi tên 'Chuẩn hóa Office Văn Bản' thành 'Tiện Ích Office' ngoài màn hình Dashboard."
+  "version": "1.2.9",
+  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest/download/ThienPhatTechToolkit.1.2.9.exe",
+  "releaseNotes": "- Bản cập nhật dùng để Test luồng OTA cuối cùng."
 }
