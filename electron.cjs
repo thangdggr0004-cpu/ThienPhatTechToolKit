@@ -5,7 +5,6 @@ const fs = require('fs');
 const os = require('os');
 const https = require('https');
 const si = require('systeminformation');
-const { autoUpdater } = require('electron-updater');
 
 // 1. MUST BE VERY TOP: Global error logging for debugging crashes on other PCs
 process.on('uncaughtException', (error) => {
@@ -1622,39 +1621,37 @@ Write-Output "OK"
     }
   });
 
-  // Setup autoUpdater events
-  autoUpdater.autoDownload = false; // We want to control when to download
-  autoUpdater.autoInstallOnAppQuit = true;
-
-  autoUpdater.on('update-available', (info) => {
-    // Send to renderer that update is available
-    if (mainWindow) mainWindow.webContents.send('updater-event', { type: 'update-available', info });
-  });
-
-  autoUpdater.on('update-not-available', (info) => {
-    if (mainWindow) mainWindow.webContents.send('updater-event', { type: 'update-not-available', info });
-  });
-
-  autoUpdater.on('error', (err) => {
-    if (mainWindow) mainWindow.webContents.send('updater-event', { type: 'error', error: err.toString() });
-  });
-
-  autoUpdater.on('download-progress', (progressObj) => {
-    if (mainWindow) mainWindow.webContents.send('updater-event', { type: 'download-progress', progress: progressObj });
-  });
-
-  autoUpdater.on('update-downloaded', (info) => {
-    if (mainWindow) mainWindow.webContents.send('updater-event', { type: 'update-downloaded', info });
-  });
+  // Custom Portable Auto Updater
+  let downloadRequest = null;
+  let updateDataGlobal = null;
 
   ipcMain.handle('check-for-updates', async () => {
     try {
-      if (app.isPackaged) {
-        const result = await autoUpdater.checkForUpdates();
-        return { success: true, result };
+      const currentVersion = app.getVersion();
+      const updateUrl = 'https://raw.githubusercontent.com/thangdggr0004-cpu/ThienPhatTechToolKit/main/version.json';
+      
+      const response = await fetch(updateUrl);
+      if (!response.ok) {
+        return { hasUpdate: false };
+      }
+      
+      const data = await response.json();
+      const latestVersion = data.version;
+      const downloadUrl = data.downloadUrl;
+      const releaseNotes = data.releaseNotes;
+
+      // Ensure we have a download URL and version is different
+      const hasUpdate = latestVersion && latestVersion !== currentVersion && downloadUrl;
+      
+      if (hasUpdate) {
+        updateDataGlobal = { currentVersion, latestVersion, downloadUrl, releaseNotes };
+        // Tell renderer update is available
+        setTimeout(() => {
+          if (mainWindow) mainWindow.webContents.send('updater-event', { type: 'update-available', info: updateDataGlobal });
+        }, 1000);
+        return { success: true, hasUpdate: true };
       } else {
-        // Dev mode mock
-        return { success: false, error: "Auto-updater only works in packaged mode" };
+        return { success: true, hasUpdate: false };
       }
     } catch (err) {
       console.error('Update check failed:', err);
@@ -1663,16 +1660,109 @@ Write-Output "OK"
   });
 
   ipcMain.handle('download-update', async () => {
-    try {
-      await autoUpdater.downloadUpdate();
-      return { success: true };
-    } catch (err) {
-      return { success: false, error: err.toString() };
-    }
+    if (!updateDataGlobal || !updateDataGlobal.downloadUrl) return { success: false, error: 'No download url' };
+    
+    return new Promise((resolve, reject) => {
+      try {
+        const downloadUrl = updateDataGlobal.downloadUrl;
+        const exeDir = path.dirname(process.execPath);
+        // Only download next to exe if packaged, otherwise download to desktop for dev
+        const targetDir = app.isPackaged ? exeDir : path.join(os.homedir(), 'Desktop');
+        const fileName = `ThienPhatTechToolkit_v${updateDataGlobal.latestVersion}.exe`;
+        const destPath = path.join(targetDir, fileName);
+        
+        updateDataGlobal.newExePath = destPath;
+
+        const file = fs.createWriteStream(destPath);
+
+        const request = https.get(downloadUrl, (response) => {
+          if (response.statusCode === 301 || response.statusCode === 302) {
+             // Handle redirect for Github releases
+             https.get(response.headers.location, (res) => {
+                handleResponse(res);
+             }).on('error', (err) => {
+                fs.unlink(destPath, () => {});
+                if (mainWindow) mainWindow.webContents.send('updater-event', { type: 'error', error: err.message });
+                resolve({ success: false, error: err.message });
+             });
+             return;
+          }
+          handleResponse(response);
+        });
+
+        function handleResponse(res) {
+          const totalBytes = parseInt(res.headers['content-length'], 10);
+          let downloadedBytes = 0;
+
+          res.on('data', (chunk) => {
+            downloadedBytes += chunk.length;
+            const percent = totalBytes ? Math.round((downloadedBytes / totalBytes) * 100) : 0;
+            if (mainWindow) {
+              mainWindow.webContents.send('updater-event', { 
+                type: 'download-progress', 
+                progress: { percent } 
+              });
+            }
+          });
+
+          res.pipe(file);
+
+          file.on('finish', () => {
+            file.close();
+            if (mainWindow) mainWindow.webContents.send('updater-event', { type: 'update-downloaded' });
+            resolve({ success: true });
+          });
+        }
+
+        request.on('error', (err) => {
+          fs.unlink(destPath, () => {});
+          if (mainWindow) mainWindow.webContents.send('updater-event', { type: 'error', error: err.message });
+          resolve({ success: false, error: err.message });
+        });
+        
+        downloadRequest = request;
+
+      } catch (err) {
+        resolve({ success: false, error: err.toString() });
+      }
+    });
   });
 
   ipcMain.handle('install-update', () => {
-    autoUpdater.quitAndInstall();
+    if (!updateDataGlobal || !updateDataGlobal.newExePath) return;
+
+    try {
+      const currentExe = process.execPath;
+      const newExe = updateDataGlobal.newExePath;
+      
+      // If running in dev mode, don't delete electron.exe
+      if (!app.isPackaged) {
+         exec(`start "" "${newExe}"`);
+         app.quit();
+         return;
+      }
+
+      // Create a VBS script in TEMP to wait, delete old exe, and launch new exe
+      const scriptPath = path.join(os.tmpdir(), 'update_helper.vbs');
+      const vbsCode = `
+WScript.Sleep 2000
+Dim fso
+Set fso = CreateObject("Scripting.FileSystemObject")
+On Error Resume Next
+fso.DeleteFile("${currentExe}")
+On Error GoTo 0
+Dim shell
+Set shell = CreateObject("WScript.Shell")
+shell.Run """${newExe}"""
+fso.DeleteFile(WScript.ScriptFullName)
+      `;
+      
+      fs.writeFileSync(scriptPath, vbsCode);
+      exec(`wscript "${scriptPath}"`);
+      app.quit();
+    } catch (e) {
+      console.error("Install update error:", e);
+    }
   });
 
   app.on('activate', () => {

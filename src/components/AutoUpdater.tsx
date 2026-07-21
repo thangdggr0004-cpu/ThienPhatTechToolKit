@@ -86,14 +86,19 @@ export default function AutoUpdater() {
             )}
             
             {downloaded && (
-              <button 
-                onClick={() => {
-                  (window as any).electronAPI.installUpdate();
-                }}
-                className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold py-1.5 px-3 rounded transition-colors"
-              >
-                <RefreshCw className="w-3 h-3" /> Cài đặt & Khởi động lại
-              </button>
+              <div className="flex flex-col gap-2 w-full">
+                <p className="text-xs text-emerald-600 font-medium">
+                  ✓ File bản mới đã được lưu ngay cạnh file cũ!
+                </p>
+                <button 
+                  onClick={() => {
+                    (window as any).electronAPI.installUpdate();
+                  }}
+                  className="flex items-center justify-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold py-1.5 px-3 rounded transition-colors"
+                >
+                  <RefreshCw className="w-3 h-3" /> Tắt App & Mở Bản Mới
+                </button>
+              </div>
             )}
 
             {!downloading && !downloaded && (
