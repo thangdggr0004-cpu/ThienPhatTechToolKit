@@ -30,6 +30,9 @@ app.commandLine.appendSwitch('no-sandbox');
 app.commandLine.appendSwitch('disable-gpu-sandbox');
 app.commandLine.appendSwitch('js-flags', '--max-old-space-size=256');
 app.commandLine.appendSwitch('disable-background-timer-throttling');
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
+app.commandLine.appendSwitch('ignore-gpu-blocklist');
 
 let __hardwareCache = null; // { ts: number, data: any }
 let HARDWARE_CACHE_FILE = '';

@@ -112,7 +112,7 @@ function TestModal({ test, onClose }: { test: string, onClose: () => void }) {
       
       <div className="w-full h-full relative">
         {test === 'screen' && <ScreenTest />}
-        {test === 'keyboard' && <KeyboardTest />}
+        {test === 'keyboard' && <KeyboardTest onClose={onClose} />}
         {test === 'webcam' && <WebcamTest />}
         {test === 'mic' && <MicTest />}
         {test === 'touch' && <TouchScreenTester onBack={onClose} />}
@@ -145,9 +145,10 @@ function ScreenTest() {
 // ========================
 // 2. KEYBOARD TEST
 // ========================
-function KeyboardTest() {
+function KeyboardTest({ onClose }: { onClose?: () => void }) {
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set());
   const [currentKey, setCurrentKey] = useState<string>('');
+  const [layout, setLayout] = useState<'laptop' | 'full' | 'mac'>('full');
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -164,82 +165,258 @@ function KeyboardTest() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const keysRow1 = ['Backquote','Digit1','Digit2','Digit3','Digit4','Digit5','Digit6','Digit7','Digit8','Digit9','Digit0','Minus','Equal','Backspace'];
-  const keysRow2 = ['Tab','KeyQ','KeyW','KeyE','KeyR','KeyT','KeyY','KeyU','KeyI','KeyO','KeyP','BracketLeft','BracketRight','Backslash'];
-  const keysRow3 = ['CapsLock','KeyA','KeyS','KeyD','KeyF','KeyG','KeyH','KeyJ','KeyK','KeyL','Semicolon','Quote','Enter'];
-  const keysRow4 = ['ShiftLeft','KeyZ','KeyX','KeyC','KeyV','KeyB','KeyN','KeyM','Comma','Period','Slash','ShiftRight'];
-  const keysRow5 = ['ControlLeft','MetaLeft','AltLeft','Space','AltRight','ControlRight','ArrowLeft','ArrowUp','ArrowDown','ArrowRight'];
-
-  const renderKey = (code: string, label?: string, flex?: string) => {
+  const renderKey = (code: string, label?: string, flex?: string, height?: string) => {
     const isPressed = pressedKeys.has(code);
     return (
       <div 
         key={code}
-        className={`h-12 border-2 rounded flex items-center justify-center font-bold text-xs uppercase transition-colors duration-75
-          ${flex ? flex : 'w-12'}
-          ${isPressed ? 'bg-emerald-500 border-emerald-400 text-white shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'bg-slate-800 border-slate-700 text-slate-400'}
+        className={`border border-slate-700/80 rounded flex items-center justify-center font-bold text-[10px] uppercase transition-colors duration-75 select-none
+          ${height ? height : 'h-10'}
+          ${flex ? flex : 'w-10'}
+          ${isPressed ? 'bg-emerald-500 border-emerald-400 text-white shadow-[0_0_12px_rgba(16,185,129,0.6)] font-black scale-[0.98]' : 'bg-slate-800/90 text-slate-300'}
         `}
       >
-        {label || code.replace('Key', '').replace('Digit', '')}
+        {label || code.replace('Key', '').replace('Digit', '').replace('Numpad', '')}
       </div>
     );
   };
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950 p-8">
-      <div className="mb-8 text-center">
-        <h3 className="text-2xl font-black text-white mb-2">Kiểm tra Bàn phím</h3>
-        <p className="text-slate-400">Hãy gõ tất cả các phím. Phím hoạt động tốt sẽ đổi màu xanh.</p>
-        <div className="mt-4 text-3xl font-bold text-blue-400 h-10">{currentKey}</div>
+    <div className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md p-4 flex flex-col items-center justify-center overflow-auto select-none">
+      {/* Top Header & Layout Switcher Card */}
+      <div className="w-full max-w-[1050px] mb-3 flex flex-wrap justify-between items-center gap-2 bg-slate-900/90 p-3 rounded-xl border border-slate-800 shadow-xl">
+        <div className="flex items-center gap-3">
+          <h3 className="text-base font-black text-white flex items-center gap-1.5">
+            <span>⌨️</span> Kiểm tra Bàn phím
+          </h3>
+          <span className="text-[11px] font-bold px-2.5 py-1 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/60">
+            Đã nhận: {pressedKeys.size} phím
+          </span>
+        </div>
+
+        {/* Layout Tabs */}
+        <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-800">
+          <button
+            onClick={() => setLayout('laptop')}
+            className={`px-3 py-1 rounded text-[11px] font-bold transition-all cursor-pointer ${layout === 'laptop' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+          >
+            💻 Laptop (75%)
+          </button>
+          <button
+            onClick={() => setLayout('full')}
+            className={`px-3 py-1 rounded text-[11px] font-bold transition-all cursor-pointer ${layout === 'full' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+          >
+            ⌨️ Bàn phím đầy đủ (Full 100%)
+          </button>
+          <button
+            onClick={() => setLayout('mac')}
+            className={`px-3 py-1 rounded text-[11px] font-bold transition-all cursor-pointer ${layout === 'mac' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+          >
+            🍎 Macbook Layout
+          </button>
+        </div>
+
+        {/* Action Controls */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { setPressedKeys(new Set()); setCurrentKey(''); }}
+            className="px-3 py-1 bg-rose-600/80 hover:bg-rose-500 text-white rounded text-[11px] font-bold transition cursor-pointer shadow"
+          >
+            🔄 Reset
+          </button>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded text-[11px] font-bold transition cursor-pointer shadow"
+            >
+              ❌ Thoát (ESC)
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="flex flex-col gap-2 p-6 bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl">
-        <div className="flex gap-2">
-          {renderKey('Backquote', '`~')}
-          {renderKey('Digit1')} {renderKey('Digit2')} {renderKey('Digit3')} {renderKey('Digit4')}
-          {renderKey('Digit5')} {renderKey('Digit6')} {renderKey('Digit7')} {renderKey('Digit8')}
-          {renderKey('Digit9')} {renderKey('Digit0')}
-          {renderKey('Minus', '-_')} {renderKey('Equal', '+=')}
-          {renderKey('Backspace', 'Backspace', 'flex-1 w-24')}
+      {/* Current Key Indicator */}
+      <div className="mb-3 text-center">
+        <div className="text-xl font-black text-emerald-400 h-7 font-mono flex items-center justify-center gap-2">
+          {currentKey ? (
+            <>
+              <span className="text-[11px] text-slate-500 font-sans">Phím vừa gõ:</span>
+              <span className="bg-slate-900 px-3 py-0.5 rounded border border-slate-800 shadow text-emerald-400 font-mono text-base">{currentKey}</span>
+            </>
+          ) : (
+            <span className="text-[11px] text-slate-500 font-sans">Gõ bất kỳ phím nào để bắt đầu test...</span>
+          )}
         </div>
-        <div className="flex gap-2">
-          {renderKey('Tab', 'Tab', 'w-16')}
-          {renderKey('KeyQ')} {renderKey('KeyW')} {renderKey('KeyE')} {renderKey('KeyR')}
-          {renderKey('KeyT')} {renderKey('KeyY')} {renderKey('KeyU')} {renderKey('KeyI')}
-          {renderKey('KeyO')} {renderKey('KeyP')}
-          {renderKey('BracketLeft', '[{')} {renderKey('BracketRight', ']}')}
-          {renderKey('Backslash', '\\|', 'flex-1 w-16')}
-        </div>
-        <div className="flex gap-2">
-          {renderKey('CapsLock', 'Caps', 'w-20')}
-          {renderKey('KeyA')} {renderKey('KeyS')} {renderKey('KeyD')} {renderKey('KeyF')}
-          {renderKey('KeyG')} {renderKey('KeyH')} {renderKey('KeyJ')} {renderKey('KeyK')}
-          {renderKey('KeyL')} {renderKey('Semicolon', ';:')} {renderKey('Quote', '\'"')}
-          {renderKey('Enter', 'Enter', 'flex-1 w-24')}
-        </div>
-        <div className="flex gap-2">
-          {renderKey('ShiftLeft', 'Shift', 'w-28')}
-          {renderKey('KeyZ')} {renderKey('KeyX')} {renderKey('KeyC')} {renderKey('KeyV')}
-          {renderKey('KeyB')} {renderKey('KeyN')} {renderKey('KeyM')}
-          {renderKey('Comma', ',<')} {renderKey('Period', '.>')} {renderKey('Slash', '/?')}
-          {renderKey('ShiftRight', 'Shift', 'flex-1 w-24')}
-        </div>
-        <div className="flex gap-2">
-          {renderKey('ControlLeft', 'Ctrl', 'w-16')}
-          {renderKey('MetaLeft', 'Win', 'w-14')}
-          {renderKey('AltLeft', 'Alt', 'w-14')}
-          {renderKey('Space', 'Space', 'flex-1 w-64')}
-          {renderKey('AltRight', 'Alt', 'w-14')}
-          {renderKey('ControlRight', 'Ctrl', 'w-16')}
-          <div className="flex gap-1 ml-4">
-            {renderKey('ArrowLeft', '←', 'w-12')}
-            <div className="flex flex-col gap-1">
-              {renderKey('ArrowUp', '↑', 'w-12 h-[22px]')}
-              {renderKey('ArrowDown', '↓', 'w-12 h-[22px]')}
-            </div>
-            {renderKey('ArrowRight', '→', 'w-12')}
+      </div>
+
+      {/* Keyboard Matrix Main Box */}
+      <div className="p-4 bg-slate-900/90 rounded-2xl border border-slate-800 shadow-2xl flex gap-3 max-w-[1050px]">
+        {/* Main QWERTY Block */}
+        <div className="flex flex-col gap-1">
+          {/* Function Row */}
+          <div className="flex gap-1 mb-1">
+            {renderKey('Escape', 'Esc', 'w-10')}
+            <div className="w-2" />
+            {renderKey('F1')} {renderKey('F2')} {renderKey('F3')} {renderKey('F4')}
+            <div className="w-2" />
+            {renderKey('F5')} {renderKey('F6')} {renderKey('F7')} {renderKey('F8')}
+            <div className="w-2" />
+            {renderKey('F9')} {renderKey('F10')} {renderKey('F11')} {renderKey('F12')}
+          </div>
+
+          {/* Number Row */}
+          <div className="flex gap-1">
+            {renderKey('Backquote', '` ~')}
+            {renderKey('Digit1')} {renderKey('Digit2')} {renderKey('Digit3')} {renderKey('Digit4')}
+            {renderKey('Digit5')} {renderKey('Digit6')} {renderKey('Digit7')} {renderKey('Digit8')}
+            {renderKey('Digit9')} {renderKey('Digit0')}
+            {renderKey('Minus', '- _')} {renderKey('Equal', '= +')}
+            {renderKey('Backspace', 'Backspace', 'w-[76px]')}
+          </div>
+
+          {/* QWERTY Row */}
+          <div className="flex gap-1">
+            {renderKey('Tab', 'Tab', 'w-14')}
+            {renderKey('KeyQ')} {renderKey('KeyW')} {renderKey('KeyE')} {renderKey('KeyR')}
+            {renderKey('KeyT')} {renderKey('KeyY')} {renderKey('KeyU')} {renderKey('KeyI')}
+            {renderKey('KeyO')} {renderKey('KeyP')}
+            {renderKey('BracketLeft', '[ {')} {renderKey('BracketRight', '] }')}
+            {renderKey('Backslash', '\\ |', 'w-[52px]')}
+          </div>
+
+          {/* ASDF Row */}
+          <div className="flex gap-1">
+            {renderKey('CapsLock', 'Caps', 'w-[64px]')}
+            {renderKey('KeyA')} {renderKey('KeyS')} {renderKey('KeyD')} {renderKey('KeyF')}
+            {renderKey('KeyG')} {renderKey('KeyH')} {renderKey('KeyJ')} {renderKey('KeyK')}
+            {renderKey('KeyL')} {renderKey('Semicolon', '; :')} {renderKey('Quote', '\' "')}
+            {renderKey('Enter', 'Enter', 'w-[84px]')}
+          </div>
+
+          {/* ZXCV Row */}
+          <div className="flex gap-1">
+            {renderKey('ShiftLeft', 'Shift', 'w-[84px]')}
+            {renderKey('KeyZ')} {renderKey('KeyX')} {renderKey('KeyC')} {renderKey('KeyV')}
+            {renderKey('KeyB')} {renderKey('KeyN')} {renderKey('KeyM')}
+            {renderKey('Comma', ', <')} {renderKey('Period', '. >')} {renderKey('Slash', '/ ?')}
+            {renderKey('ShiftRight', 'Shift', 'w-[104px]')}
+          </div>
+
+          {/* Bottom Control Row */}
+          <div className="flex gap-1">
+            {layout === 'mac' ? (
+              <>
+                {renderKey('ControlLeft', 'Control', 'w-12')}
+                {renderKey('AltLeft', 'Option', 'w-12')}
+                {renderKey('MetaLeft', '⌘ Cmd', 'w-14')}
+                {renderKey('Space', 'Space', 'w-[250px]')}
+                {renderKey('MetaRight', '⌘ Cmd', 'w-14')}
+                {renderKey('AltRight', 'Option', 'w-12')}
+              </>
+            ) : (
+              <>
+                {renderKey('ControlLeft', 'Ctrl', 'w-12')}
+                {renderKey('MetaLeft', 'Win', 'w-10')}
+                {renderKey('AltLeft', 'Alt', 'w-10')}
+                {renderKey('Space', 'Space', 'w-[250px]')}
+                {renderKey('AltRight', 'Alt', 'w-10')}
+                {renderKey('MetaRight', 'Win', 'w-10')}
+                {renderKey('ContextMenu', 'App', 'w-10')}
+                {renderKey('ControlRight', 'Ctrl', 'w-12')}
+              </>
+            )}
+
+            {/* Arrows for Laptop Layout */}
+            {layout === 'laptop' && (
+              <div className="flex gap-1 ml-2">
+                {renderKey('ArrowLeft', '←', 'w-9')}
+                <div className="flex flex-col gap-0.5">
+                  {renderKey('ArrowUp', '↑', 'w-9', 'h-[19px]')}
+                  {renderKey('ArrowDown', '↓', 'w-9', 'h-[19px]')}
+                </div>
+                {renderKey('ArrowRight', '→', 'w-9')}
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Navigation Cluster (For Full Layout) */}
+        {layout === 'full' && (
+          <div className="flex flex-col gap-1 pl-3 border-l border-slate-800 justify-between">
+            <div className="flex flex-col gap-1">
+              <div className="flex gap-1">
+                {renderKey('PrintScreen', 'PrtSc', 'w-10')}
+                {renderKey('ScrollLock', 'ScrLk', 'w-10')}
+                {renderKey('Pause', 'Pause', 'w-10')}
+              </div>
+              <div className="flex gap-1">
+                {renderKey('Insert', 'Ins', 'w-10')}
+                {renderKey('Home', 'Home', 'w-10')}
+                {renderKey('PageUp', 'PgUp', 'w-10')}
+              </div>
+              <div className="flex gap-1">
+                {renderKey('Delete', 'Del', 'w-10')}
+                {renderKey('End', 'End', 'w-10')}
+                {renderKey('PageDown', 'PgDn', 'w-10')}
+              </div>
+            </div>
+
+            {/* Navigation Arrows */}
+            <div className="flex flex-col items-center gap-1 mt-auto">
+              {renderKey('ArrowUp', '↑', 'w-10')}
+              <div className="flex gap-1">
+                {renderKey('ArrowLeft', '←', 'w-10')}
+                {renderKey('ArrowDown', '↓', 'w-10')}
+                {renderKey('ArrowRight', '→', 'w-10')}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Numpad Tenkey Cluster (For Full Layout) */}
+        {layout === 'full' && (
+          <div className="flex flex-col gap-1 pl-3 border-l border-slate-800">
+            {/* Top Row: Num, /, *, - */}
+            <div className="flex gap-1 mb-0.5">
+              {renderKey('NumLock', 'Num', 'w-10')}
+              {renderKey('NumpadDivide', '/', 'w-10')}
+              {renderKey('NumpadMultiply', '*', 'w-10')}
+              {renderKey('NumpadSubtract', '-', 'w-10')}
+            </div>
+
+            {/* Middle Section: 3x4 Numpad Grid + Plus / Enter Column */}
+            <div className="flex gap-1">
+              {/* Left 3-Column Number Block */}
+              <div className="flex flex-col gap-1">
+                <div className="flex gap-1">
+                  {renderKey('Numpad7', '7', 'w-10')}
+                  {renderKey('Numpad8', '8', 'w-10')}
+                  {renderKey('Numpad9', '9', 'w-10')}
+                </div>
+                <div className="flex gap-1">
+                  {renderKey('Numpad4', '4', 'w-10')}
+                  {renderKey('Numpad5', '5', 'w-10')}
+                  {renderKey('Numpad6', '6', 'w-10')}
+                </div>
+                <div className="flex gap-1">
+                  {renderKey('Numpad1', '1', 'w-10')}
+                  {renderKey('Numpad2', '2', 'w-10')}
+                  {renderKey('Numpad3', '3', 'w-10')}
+                </div>
+                <div className="flex gap-1">
+                  {renderKey('Numpad0', '0', 'w-[84px]')}
+                  {renderKey('NumpadDecimal', '.', 'w-10')}
+                </div>
+              </div>
+
+              {/* Right Column: Tall Plus (+) and Tall Enter (↵) */}
+              <div className="flex flex-col gap-1 justify-between">
+                {renderKey('NumpadAdd', '+', 'w-10', 'h-[84px]')}
+                {renderKey('NumpadEnter', '↵', 'w-10', 'h-[84px]')}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
