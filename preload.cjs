@@ -51,6 +51,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   applyWindowsSettings: (settings) => ipcRenderer.invoke('apply-windows-settings', settings),
   applyTaskbarSettings: (settings) => ipcRenderer.invoke('apply-taskbar-settings', settings),
   applySystemOptimization: (settings) => ipcRenderer.invoke('apply-system-optimization', settings),
+  applyAdvancedOptimization: (options) => ipcRenderer.invoke('apply-advanced-optimization', options),
   // Window controls
   windowMinimize: () => ipcRenderer.send('window-minimize'),
   windowMaximize: () => ipcRenderer.send('window-maximize'),

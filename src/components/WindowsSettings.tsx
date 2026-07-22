@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Zap, Battery, Play, Download, CheckCircle, Info, Activity, Settings, RefreshCw, AlertTriangle, Monitor, HardDrive, Cpu, Terminal, Wrench } from 'lucide-react';
+import { Shield, Zap, Battery, Play, Download, CheckCircle, Info, Activity, Settings, RefreshCw, AlertTriangle, Monitor, HardDrive, Cpu, Terminal, Wrench, X } from 'lucide-react';
 
 type PowerModeType = 'battery' | 'balanced' | 'gaming' | 'performance' | 'ultimate';
 
@@ -87,6 +87,44 @@ export default function WindowsSettings() {
   const [loadingState, setLoadingState] = useState(false);
   const [fixingAction, setFixingAction] = useState<string | null>(null);
   const [isApplyingSettings, setIsApplyingSettings] = useState(false);
+
+  // Advanced Optimization Modal State
+  const [showAdvancedModal, setShowAdvancedModal] = useState(false);
+  const [applyingAdvanced, setApplyingAdvanced] = useState(false);
+  const [advancedResult, setAdvancedResult] = useState<string | null>(null);
+
+  const [advancedOpts, setAdvancedOpts] = useState({
+    createRestorePoint: true,
+    disableHpet: true,
+    disableNetworkThrottling: true,
+    purgeStandbyRam: true,
+    disableBackgroundApps: true,
+    disableDeliveryOptimization: true,
+    enableGameMode: true,
+    disableStartupDelay: true
+  });
+
+  const handleApplyAdvanced = async () => {
+    setApplyingAdvanced(true);
+    setAdvancedResult(null);
+    try {
+      const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
+      if (isElectron) {
+        const res = await (window as any).electronAPI.applyAdvancedOptimization(advancedOpts);
+        if (res && res.success) {
+          setAdvancedResult("Đã áp dụng toàn bộ các cấu hình tối ưu nâng cao thành công!");
+        } else {
+          setAdvancedResult("Lỗi khi áp dụng: " + (res?.error || "Không xác định"));
+        }
+      } else {
+        alert("Tính năng này chỉ chạy trên ứng dụng Desktop.");
+      }
+    } catch (e: any) {
+      setAdvancedResult("Lỗi: " + e.message);
+    } finally {
+      setApplyingAdvanced(false);
+    }
+  };
   
   // Settings State
   const [state, setState] = useState({
@@ -432,9 +470,8 @@ export default function WindowsSettings() {
               </button>
               
               <button 
-                disabled={true}
-                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded-lg font-bold transition-all shadow-sm opacity-80 cursor-not-allowed"
-                title="Sẽ phát triển trong tương lai"
+                onClick={() => setShowAdvancedModal(true)}
+                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-lg font-bold transition-all shadow-md hover:shadow-lg active:scale-95 cursor-pointer"
               >
                 <Zap className="w-4 h-4" />
                 Tối ưu nâng cao
@@ -565,6 +602,196 @@ export default function WindowsSettings() {
         </div>
 
       </div>
+
+      {/* ADVANCED OPTIMIZATION MODAL */}
+      {showAdvancedModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-amber-100 text-amber-600 rounded-xl">
+                  <Zap className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-slate-800">Tối Ưu Hệ Thống Nâng Cao (Extreme Performance)</h3>
+                  <p className="text-xs text-slate-500">Minh bạch 100% từng tùy chọn can thiệp sâu dành cho Kỹ thuật viên & Game thủ</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowAdvancedModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="py-4 space-y-3 overflow-y-auto flex-1 pr-1">
+              {/* Tùy chọn Restore Point */}
+              <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 hover:border-amber-400/50 hover:bg-amber-50/30 transition-all cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={advancedOpts.createRestorePoint} 
+                  onChange={e => setAdvancedOpts(prev => ({ ...prev, createRestorePoint: e.target.checked }))}
+                  className="mt-1 w-4 h-4 text-amber-500 rounded border-slate-300 focus:ring-amber-400"
+                />
+                <div>
+                  <span className="font-bold text-slate-800 text-sm block">Tự động tạo điểm khôi phục (System Restore Point)</span>
+                  <span className="text-xs text-slate-500">Khuyên dùng. Giúp dễ dàng hoàn tác (Undo) 100% nếu muốn quay lại ban đầu.</span>
+                </div>
+              </label>
+
+              {/* Tùy chọn HPET */}
+              <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 hover:border-amber-400/50 hover:bg-amber-50/30 transition-all cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={advancedOpts.disableHpet} 
+                  onChange={e => setAdvancedOpts(prev => ({ ...prev, disableHpet: e.target.checked }))}
+                  className="mt-1 w-4 h-4 text-amber-500 rounded border-slate-300 focus:ring-amber-400"
+                />
+                <div>
+                  <span className="font-bold text-slate-800 text-sm block">Tắt HPET & Dynamic Tick (Giảm độ trễ CPU cho Game)</span>
+                  <span className="text-xs text-slate-500">Giảm khựng/khung hình rác (FPS drop/stuttering) khi chơi các tựa game bắn súng/đối kháng.</span>
+                </div>
+              </label>
+
+              {/* Tùy chọn Network Throttling */}
+              <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 hover:border-amber-400/50 hover:bg-amber-50/30 transition-all cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={advancedOpts.disableNetworkThrottling} 
+                  onChange={e => setAdvancedOpts(prev => ({ ...prev, disableNetworkThrottling: e.target.checked }))}
+                  className="mt-1 w-4 h-4 text-amber-500 rounded border-slate-300 focus:ring-amber-400"
+                />
+                <div>
+                  <span className="font-bold text-slate-800 text-sm block">Tắt Network Throttling (Mở khóa 100% băng thông mạng)</span>
+                  <span className="text-xs text-slate-500">Loại bỏ chế độ giới hạn mạng Multimedia của Windows, giúp giảm ping và tối ưu gói tin Game/Zoom/Meet.</span>
+                </div>
+              </label>
+
+              {/* Tùy chọn Purge RAM */}
+              <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 hover:border-amber-400/50 hover:bg-amber-50/30 transition-all cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={advancedOpts.purgeStandbyRam} 
+                  onChange={e => setAdvancedOpts(prev => ({ ...prev, purgeStandbyRam: e.target.checked }))}
+                  className="mt-1 w-4 h-4 text-amber-500 rounded border-slate-300 focus:ring-amber-400"
+                />
+                <div>
+                  <span className="font-bold text-slate-800 text-sm block">Dọn dẹp Standby RAM Cache (Nhả bộ nhớ RAM thừa tức thì)</span>
+                  <span className="text-xs text-slate-500">Thu hồi RAM bị các app đã đóng giữ chân, giải phóng từ 500MB đến 3GB RAM thực tế mà không cần rs máy.</span>
+                </div>
+              </label>
+
+              {/* Tùy chọn Background Apps */}
+              <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 hover:border-amber-400/50 hover:bg-amber-50/30 transition-all cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={advancedOpts.disableBackgroundApps} 
+                  onChange={e => setAdvancedOpts(prev => ({ ...prev, disableBackgroundApps: e.target.checked }))}
+                  className="mt-1 w-4 h-4 text-amber-500 rounded border-slate-300 focus:ring-amber-400"
+                />
+                <div>
+                  <span className="font-bold text-slate-800 text-sm block">Chặn Ứng Dụng UWP Chạy Ngầm (Disable Background Apps)</span>
+                  <span className="text-xs text-slate-500">Ngăn các ứng dụng Store rác tự chạy ngầm ngốn tài nguyên. Không ảnh hưởng đến phần mềm văn phòng.</span>
+                </div>
+              </label>
+
+              {/* Tùy chọn Delivery Optimization */}
+              <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 hover:border-amber-400/50 hover:bg-amber-50/30 transition-all cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={advancedOpts.disableDeliveryOptimization} 
+                  onChange={e => setAdvancedOpts(prev => ({ ...prev, disableDeliveryOptimization: e.target.checked }))}
+                  className="mt-1 w-4 h-4 text-amber-500 rounded border-slate-300 focus:ring-amber-400"
+                />
+                <div>
+                  <span className="font-bold text-slate-800 text-sm block">Tắt Delivery Optimization (Chặn upload Win Update ngầm)</span>
+                  <span className="text-xs text-slate-500">Chặn Windows chia sẻ băng thông mạng của máy bạn sang máy khác trên Internet.</span>
+                </div>
+              </label>
+
+              {/* Tùy chọn Game Mode */}
+              <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 hover:border-amber-400/50 hover:bg-amber-50/30 transition-all cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={advancedOpts.enableGameMode} 
+                  onChange={e => setAdvancedOpts(prev => ({ ...prev, enableGameMode: e.target.checked }))}
+                  className="mt-1 w-4 h-4 text-amber-500 rounded border-slate-300 focus:ring-amber-400"
+                />
+                <div>
+                  <span className="font-bold text-slate-800 text-sm block">Kích hoạt Windows Game Mode (Ưu tiên phần cứng)</span>
+                  <span className="text-xs text-slate-500">Tự động ưu tiên xung nhịp CPU và tài nguyên GPU cho cửa sổ ứng dụng/game đang mở.</span>
+                </div>
+              </label>
+
+              {/* Tùy chọn Startup Delay */}
+              <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 hover:border-amber-400/50 hover:bg-amber-50/30 transition-all cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={advancedOpts.disableStartupDelay} 
+                  onChange={e => setAdvancedOpts(prev => ({ ...prev, disableStartupDelay: e.target.checked }))}
+                  className="mt-1 w-4 h-4 text-amber-500 rounded border-slate-300 focus:ring-amber-400"
+                />
+                <div>
+                  <span className="font-bold text-slate-800 text-sm block">Bỏ thời gian chờ khởi động ứng dụng (Disable Startup Delay)</span>
+                  <span className="text-xs text-slate-500">Giúp các phần mềm tự chạy cùng Windows xuất hiện lập tức khi vừa vào Desktop.</span>
+                </div>
+              </label>
+
+              {advancedResult && (
+                <div className={`p-3 rounded-xl text-sm font-bold flex items-center gap-2 ${advancedResult.includes('thành công') ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>
+                  {advancedResult.includes('thành công') ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+                  {advancedResult}
+                </div>
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 flex flex-wrap justify-between items-center gap-3">
+              <button 
+                onClick={() => setAdvancedOpts({
+                  createRestorePoint: true,
+                  disableHpet: true,
+                  disableNetworkThrottling: true,
+                  purgeStandbyRam: true,
+                  disableBackgroundApps: true,
+                  disableDeliveryOptimization: true,
+                  enableGameMode: true,
+                  disableStartupDelay: true
+                })}
+                className="text-xs text-slate-500 hover:text-amber-600 font-bold cursor-pointer"
+              >
+                🔄 Tích chọn tất cả (Khuyên dùng)
+              </button>
+
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setShowAdvancedModal(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors cursor-pointer"
+                >
+                  Đóng
+                </button>
+                <button 
+                  onClick={handleApplyAdvanced}
+                  disabled={applyingAdvanced}
+                  className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold rounded-lg text-sm transition-all shadow flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                >
+                  {applyingAdvanced ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Đang tối ưu...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-4 h-4" />
+                      Áp dụng Tối Ưu Nâng Cao
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

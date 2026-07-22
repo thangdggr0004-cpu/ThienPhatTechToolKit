@@ -1347,6 +1347,79 @@ Write-Output "OK"
       return { success: false, error: err.message };
     }
   });
+
+  ipcMain.handle('apply-advanced-optimization', async (event, opts) => {
+    try {
+      let script = `
+        $OutputEncoding = [System.Text.Encoding]::UTF8
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+        $ErrorActionPreference = 'SilentlyContinue'
+      `;
+
+      if (opts.createRestorePoint) {
+        script += `
+          try {
+            Enable-ComputerRestore -Drive "C:\\" -ErrorAction SilentlyContinue
+            Checkpoint-Computer -Description "ThienPhatTech_PreOptimization" -RestorePointType "MODIFY_SETTINGS" -ErrorAction SilentlyContinue
+          } catch {}
+        \n`;
+      }
+
+      if (opts.disableHpet) {
+        script += `
+          bcdedit /deletevalue useplatformclock 2>$null
+          bcdedit /set disabledynamictick yes 2>$null
+        \n`;
+      }
+
+      if (opts.disableNetworkThrottling) {
+        script += `
+          Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile" -Name "NetworkThrottlingIndex" -Value 0xFFFFFFFF -Force
+          Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile" -Name "SystemResponsiveness" -Value 0 -Force
+        \n`;
+      }
+
+      if (opts.disableDeliveryOptimization) {
+        script += `
+          Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization" -Name "DODownloadMode" -Value 0 -Force -ErrorAction SilentlyContinue
+          Stop-Service -Name "dosvc" -Force -ErrorAction SilentlyContinue
+          Set-Service -Name "dosvc" -StartupType Disabled -ErrorAction SilentlyContinue
+        \n`;
+      }
+
+      if (opts.disableBackgroundApps) {
+        script += `
+          Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\BackgroundAccessApplications" -Name "GlobalUserDisabled" -Value 1 -Force
+        \n`;
+      }
+
+      if (opts.enableGameMode) {
+        script += `
+          Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\GameBar" -Name "AllowAutoGameMode" -Value 1 -Force
+          Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\GameBar" -Name "AutoGameModeEnabled" -Value 1 -Force
+        \n`;
+      }
+
+      if (opts.disableStartupDelay) {
+        script += `
+          New-Item -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer" -Name "Serialize" -Force -ErrorAction SilentlyContinue
+          Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Serialize" -Name "StartupDelayInMSec" -Value 0 -Force
+        \n`;
+      }
+
+      if (opts.purgeStandbyRam) {
+        script += `
+          [System.GC]::Collect()
+          [System.GC]::WaitForPendingFinalizers()
+        \n`;
+      }
+
+      await runPowerShellScriptElevated(script);
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
   // ========== BITLOCKER MANAGER ==========
   ipcMain.handle('get-bitlocker-status', async () => {
     try {
