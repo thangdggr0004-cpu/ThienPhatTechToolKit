@@ -1737,29 +1737,43 @@ Write-Output "OK"
 
     try {
       // Fix for Portable Apps: delete the real file, not the temp file
-      const currentExe = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
-      const newExe = updateDataGlobal.newExePath;
+      const rawCurrent = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
+      const rawNew = updateDataGlobal.newExePath;
+      
+      // Escape backslashes for VBScript strings if needed
+      const currentExeEsc = rawCurrent.replace(/\\/g, '\\\\');
+      const newExeEsc = rawNew.replace(/\\/g, '\\\\');
       
       // If running in dev mode, don't delete electron.exe
       if (!app.isPackaged) {
-         exec(`start "" "${newExe}"`);
+         exec(`start "" "${rawNew}"`);
          app.quit();
          return;
       }
 
-      // Create a VBS script in TEMP to wait, delete old exe, and launch new exe
+      // Create a VBS script in TEMP to wait, retry deleting old exe, and launch new exe
       const scriptPath = path.join(os.tmpdir(), 'update_helper.vbs');
       const vbsCode = `
-WScript.Sleep 2000
-Dim fso
+WScript.Sleep 1500
+Dim fso, shell
 Set fso = CreateObject("Scripting.FileSystemObject")
-On Error Resume Next
-fso.DeleteFile("${currentExe}")
-On Error GoTo 0
-Dim shell
+
+Dim i
+For i = 1 To 15
+  On Error Resume Next
+  If fso.FileExists("${currentExeEsc}") Then
+    fso.DeleteFile "${currentExeEsc}", True
+  End If
+  On Error GoTo 0
+  If Not fso.FileExists("${currentExeEsc}") Then Exit For
+  WScript.Sleep 1000
+Next
+
 Set shell = CreateObject("WScript.Shell")
-shell.Run """${newExe}"""
-fso.DeleteFile(WScript.ScriptFullName)
+shell.Run """${newExeEsc}"""
+
+On Error Resume Next
+fso.DeleteFile WScript.ScriptFullName, True
       `;
       
       fs.writeFileSync(scriptPath, vbsCode);

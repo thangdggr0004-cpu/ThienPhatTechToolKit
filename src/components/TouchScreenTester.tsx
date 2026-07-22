@@ -138,27 +138,11 @@ export default function TouchScreenTester({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900 flex flex-col items-center justify-center">
-      {/* Top Controls */}
-      <div className="absolute top-4 w-full px-6 flex justify-between items-center z-10 pointer-events-none">
-        <button 
-          onClick={onBack}
-          className="pointer-events-auto flex items-center gap-2 px-4 py-2 bg-rose-600/80 hover:bg-rose-500 text-white rounded-lg backdrop-blur-sm transition-all"
-        >
-          <LogOut className="w-4 h-4" />
-          <span className="font-bold">Thoát</span>
-        </button>
-        
-        <div className="pointer-events-auto bg-slate-800/80 text-white text-sm font-bold px-6 py-2 rounded-full backdrop-blur-sm shadow-lg border border-slate-700">
-          Vuốt ngón tay khắp màn hình để tô màu. Phát hiện điểm liệt cảm ứng.
+      {/* Top Instruction Banner */}
+      <div className="absolute top-4 w-full px-6 flex justify-center items-center z-10 pointer-events-none">
+        <div className="bg-slate-800/80 text-white text-xs sm:text-sm font-bold px-6 py-2 rounded-full backdrop-blur-sm shadow-lg border border-slate-700">
+          Vuốt ngón tay khắp màn hình để tô màu. Nhấn ESC hoặc nút (X) để thoát.
         </div>
-        
-        <button 
-          onClick={clearCanvas}
-          className="pointer-events-auto flex items-center gap-2 px-4 py-2 bg-slate-800/80 hover:bg-slate-700 text-white rounded-lg backdrop-blur-sm transition-all border border-slate-700"
-        >
-          <RotateCcw className="w-4 h-4" />
-          <span className="font-bold">Làm lại</span>
-        </button>
       </div>
 
       <div className="w-full h-full cursor-crosshair">

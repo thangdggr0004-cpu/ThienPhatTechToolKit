@@ -69,18 +69,7 @@ export default function App() {
   const [ecoMode, setEcoMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('ecoMode');
     if (saved !== null) return saved === 'true';
-    
-    // Auto detect low end (Smarter algorithm)
-    const cores = navigator.hardwareConcurrency || 8;
-    const mem = (navigator as any).deviceMemory || 8;
-    
-    // Only auto-enable if BOTH are low, or RAM is critically low
-    const isLowEnd = (cores <= 4 && mem <= 4) || mem <= 2;
-    
-    if (isLowEnd) {
-      localStorage.setItem('ecoHintAutoDetected', 'true');
-    }
-    return isLowEnd;
+    return false; // Default OFF to avoid unwanted Eco mode on 4-core/32GB PCs
   });
 
   const [showEcoHint, setShowEcoHint] = useState<boolean>(() => {
@@ -113,15 +102,23 @@ export default function App() {
         setFooterMetrics(prev => ({ ...prev, ramTotal: info.ramTotalSize }));
       }
       
-      // Smart Auto-Eco Mode for weak CPUs
-      if (localStorage.getItem('ecoMode') === null && info && info.cpuModel) {
+      // Smart Auto-Eco Mode for weak CPUs (Celeron, Pentium, Atom, Athlon)
+      if (info && info.cpuModel) {
         const cpuModel = info.cpuModel.toLowerCase();
         const isWeakCpu = cpuModel.includes('celeron') || 
                           cpuModel.includes('pentium') || 
                           cpuModel.includes('atom') || 
-                          cpuModel.includes('athlon');
+                          cpuModel.includes('athlon') ||
+                          (info.ramTotalSize && info.ramTotalSize <= 3);
         
-        if (isWeakCpu) {
+        const autoDetected = localStorage.getItem('ecoHintAutoDetected') === 'true';
+        
+        if (autoDetected && !isWeakCpu) {
+          // Reset false auto-detection from previous versions on strong machines
+          setEcoMode(false);
+          localStorage.removeItem('ecoHintAutoDetected');
+          localStorage.setItem('ecoMode', 'false');
+        } else if (localStorage.getItem('ecoMode') === null && isWeakCpu) {
           setEcoMode(true);
           localStorage.setItem('ecoHintAutoDetected', 'true');
         }
