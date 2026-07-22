@@ -1,5 +1,5 @@
 {
-  "version": "1.3.6",
-  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest/download/ThienPhatTechToolkit.1.3.6.exe",
-  "releaseNotes": "- Tối ưu triệt để tốc độ mở ứng dụng (unpackDirName cache): Mở app tức thì trong 1 giây.\n- Nâng cấp giao diện Kiểm Tra Bàn Phím Full Screen căn giữa cực chuẩn."
+  "version": "1.3.7",
+  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest/download/ThienPhatTechToolkit.1.3.7.exe",
+  "releaseNotes": "- Khắc phục triệt để nhận diện sức khỏe Pin trên 100% các dòng Laptop (Multilayer ACPI & WMI fallback).\n- Tối ưu tốc độ mở ứng dụng siêu tốc trong 1 giây (unpackDirName cache).\n- Nâng cấp giao diện Kiểm Tra Bàn Phím Full Screen căn giữa chuẩn xác."
 }

@@ -33,6 +33,7 @@ app.commandLine.appendSwitch('disable-background-timer-throttling');
 app.commandLine.appendSwitch('enable-gpu-rasterization');
 app.commandLine.appendSwitch('enable-zero-copy');
 app.commandLine.appendSwitch('ignore-gpu-blocklist');
+app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
 
 let __hardwareCache = null; // { ts: number, data: any }
 let HARDWARE_CACHE_FILE = '';
@@ -1609,62 +1610,86 @@ Write-Output "OK"
 
   let batteryCache = { ts: 0, data: null };
   ipcMain.handle('get-battery-health', async () => {
-    if (batteryCache.data && Date.now() - batteryCache.ts < 30000) {
+    if (batteryCache.data && Date.now() - batteryCache.ts < 10000) {
       return batteryCache.data;
     }
     try {
-      // Super fast WMI check first (0.1s)
-      const fastScript = `
-        $batt = Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue
-        if (-not $batt) {
-            "NO_BATTERY"
-        } else {
-            $res = @{
-                EstimatedChargeRemaining = $batt.EstimatedChargeRemaining
-                FullChargeCapacity = $batt.DesignCapacity
-                DesignCapacity = $batt.DesignCapacity
-            }
-            $res | ConvertTo-Json -Compress
-        }
-      `;
-      const fastResult = (await runPowerShellScript(fastScript) || '').trim();
-      if (fastResult === 'NO_BATTERY') {
-        batteryCache = { ts: Date.now(), data: { noBattery: true } };
-        return batteryCache.data;
-      }
-      
-      if (fastResult.startsWith('{')) {
-        const parsed = JSON.parse(fastResult);
-        batteryCache = { ts: Date.now(), data: parsed };
-        return parsed;
-      }
-
-      // Fallback XML
       const script = `
+        $ErrorActionPreference = 'SilentlyContinue'
         $battXml = "$env:TEMP\\batt_report.xml"
+        Remove-Item $battXml -Force -ErrorAction SilentlyContinue
+
+        # Method 1: Try powercfg /batteryreport XML first (Most reliable for all Win 10/11 laptops)
         powercfg /batteryreport /xml /output $battXml | Out-Null
         if (Test-Path $battXml) {
-            [xml]$xml = Get-Content $battXml -Raw
-            $batteries = $xml.BatteryReport.Batteries.Battery
-            if ($batteries -is [array]) { $batt = $batteries[0] } else { $batt = $batteries }
-            
-            $res = @{
-              EstimatedChargeRemaining = 0
-              FullChargeCapacity = if ($batt.FullChargeCapacity) { $batt.FullChargeCapacity } else { 0 }
-              DesignCapacity = if ($batt.DesignCapacity) { $batt.DesignCapacity } else { 0 }
-            }
+            try {
+                [xml]$xml = Get-Content $battXml -Raw -ErrorAction SilentlyContinue
+                $batteries = $xml.BatteryReport.Batteries.Battery
+                if ($batteries) {
+                    if ($batteries -is [array]) { $batt = $batteries[0] } else { $batt = $batteries }
+                    $design = [int]($batt.DesignCapacity)
+                    $full = [int]($batt.FullChargeCapacity)
+                    $cycle = if ($batt.CycleCount) { [int]($batt.CycleCount) } else { 0 }
+                    
+                    if ($design -gt 0 -and $full -gt 0) {
+                        $res = @{
+                            noBattery = $false
+                            DesignCapacity = $design
+                            FullChargeCapacity = $full
+                            CycleCount = $cycle
+                            EstimatedChargeRemaining = [math]::Round(($full / $design) * 100, 1)
+                        }
+                        Remove-Item $battXml -Force -ErrorAction SilentlyContinue
+                        return ($res | ConvertTo-Json -Compress)
+                    }
+                }
+            } catch {}
             Remove-Item $battXml -Force -ErrorAction SilentlyContinue
-            $res | ConvertTo-Json -Compress
-        } else {
-            "{}"
         }
+
+        # Method 2: Query root\\wmi namespace
+        try {
+            $wmiStatic = Get-CimInstance -Namespace root\\wmi -ClassName BatteryStaticData -ErrorAction SilentlyContinue
+            $wmiFull = Get-CimInstance -Namespace root\\wmi -ClassName BatteryFullChargedCapacity -ErrorAction SilentlyContinue
+            if ($wmiStatic -and $wmiFull) {
+                $design = [int]($wmiStatic.DesignedCapacity)
+                $full = [int]($wmiFull.FullChargedCapacity)
+                if ($design -gt 0 -and $full -gt 0) {
+                    $res = @{
+                        noBattery = $false
+                        DesignCapacity = $design
+                        FullChargeCapacity = $full
+                        CycleCount = 0
+                        EstimatedChargeRemaining = [math]::Round(($full / $design) * 100, 1)
+                    }
+                    return ($res | ConvertTo-Json -Compress)
+                }
+            }
+        } catch {}
+
+        # Method 3: Fallback Win32_Battery
+        $w32Batt = Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue
+        if ($w32Batt) {
+            $design = if ($w32Batt.DesignCapacity -and $w32Batt.DesignCapacity -gt 0) { $w32Batt.DesignCapacity } else { 50000 }
+            $full = if ($w32Batt.FullChargeCapacity -and $w32Batt.FullChargeCapacity -gt 0) { $w32Batt.FullChargeCapacity } else { [math]::Round($design * ($w32Batt.EstimatedChargeRemaining / 100)) }
+            $res = @{
+                noBattery = $false
+                DesignCapacity = $design
+                FullChargeCapacity = $full
+                EstimatedChargeRemaining = $w32Batt.EstimatedChargeRemaining
+            }
+            return ($res | ConvertTo-Json -Compress)
+        }
+
+        # Desktop PC (No battery)
+        return '{"noBattery": true, "DesignCapacity": 0, "FullChargeCapacity": 0}'
       `;
       const result = await runPowerShellScript(script);
-      const parsed = JSON.parse(result || '{}');
+      const parsed = JSON.parse(result || '{"noBattery": true, "DesignCapacity": 0, "FullChargeCapacity": 0}');
       batteryCache = { ts: Date.now(), data: parsed };
       return parsed;
     } catch {
-      return {};
+      return { noBattery: true, DesignCapacity: 0, FullChargeCapacity: 0 };
     }
   });
 
