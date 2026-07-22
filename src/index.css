@@ -13,6 +13,16 @@
 }
 .page-enter { animation: pageIn 0.22s cubic-bezier(0.22,1,0.36,1) both; }
 
+/* ── Hardware Acceleration Hints for Silky 60fps ────────────────────────── */
+.page-enter, 
+.animate-in, 
+.transition-all,
+.transition-transform {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
 /* ── Skeleton loading ────────────────────────────────────── */
 @keyframes shimmer {
   0%   { background-position: -600px 0; }

@@ -1,5 +1,5 @@
 {
-  "version": "1.3.3",
-  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest/download/ThienPhatTechToolkit.1.3.3.exe",
-  "releaseNotes": "- Kích hoạt tính năng 'Tối Ưu Nâng Cao' (Extreme Performance) minh bạch 100% từng tùy chọn can thiệp.\n- Tích hợp tự động tạo Restore Point an toàn trước khi tinh chỉnh sâu hệ thống."
+  "version": "1.3.4",
+  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest/download/ThienPhatTechToolkit.1.3.4.exe",
+  "releaseNotes": "- Bản tối ưu toàn diện 100% thực chiến: Tốc độ phản hồi cực nhanh, chính xác 100%.\n- Bổ sung nút 1-Click Undo cho Tối Ưu Nâng Cao.\n- Đọc cảm biến nhiệt độ ổ cứng SMART thực tế và tính toán dung lượng đĩa chuẩn xác."
 }

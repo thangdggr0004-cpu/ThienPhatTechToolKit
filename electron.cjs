@@ -28,6 +28,8 @@ process.on('unhandledRejection', (reason) => {
 // Fixes "Renderer process launch-failed" on built-in Administrator accounts or Windows LTSC
 app.commandLine.appendSwitch('no-sandbox');
 app.commandLine.appendSwitch('disable-gpu-sandbox');
+app.commandLine.appendSwitch('js-flags', '--max-old-space-size=256');
+app.commandLine.appendSwitch('disable-background-timer-throttling');
 
 let __hardwareCache = null; // { ts: number, data: any }
 let HARDWARE_CACHE_FILE = '';
@@ -44,6 +46,10 @@ function readDiskCache() {
     if (fs.existsSync(HARDWARE_CACHE_FILE)) {
       const raw = fs.readFileSync(HARDWARE_CACHE_FILE, 'utf8');
       const parsed = JSON.parse(raw);
+      // Invalidate cache if disk temperature is N/A
+      if (parsed && parsed.data && parsed.data.storageDrives && parsed.data.storageDrives.some(d => d.temperature === 'N/A')) {
+        return null;
+      }
       // Cache valid for 24 hours (hardware rarely changes)
       if (parsed && parsed.ts && Date.now() - parsed.ts < 86400000) {
         return parsed.data;
@@ -63,6 +69,20 @@ function writeDiskCache(data) {
     console.error('[HW Cache] Failed to write disk cache:', e);
   }
 }
+
+// Automatically clean up temporary script files in %TEMP%
+function cleanupTempScripts() {
+  try {
+    const tmpDir = os.tmpdir();
+    const files = fs.readdirSync(tmpDir);
+    files.forEach(f => {
+      if (f.startsWith('tp_script_') || f.startsWith('tp_out_') || f.startsWith('batt_report')) {
+        try { fs.unlinkSync(path.join(tmpDir, f)); } catch(e) {}
+      }
+    });
+  } catch(e) {}
+}
+cleanupTempScripts();
 
 // Gather all hardware info via a single PowerShell script (1 process instead of 7+)
 async function getRealHardwareInfo() {
@@ -122,15 +142,30 @@ $gpuType = if ($gpuName -match 'NVIDIA|AMD|Radeon|GeForce') { "Dedicated" } else
 
 # Disks
 $disks = Get-CimInstance Win32_DiskDrive
+$logicalDisks = Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" -ErrorAction SilentlyContinue
+$counters = Get-PhysicalDisk -ErrorAction SilentlyContinue | Get-StorageReliabilityCounter -ErrorAction SilentlyContinue
 $diskList = @()
 $diskIdx = 0
+$totalFreeGB = [math]::Round(($logicalDisks | Measure-Object -Property FreeSpace -Sum).Sum / 1GB)
+
 foreach ($d in $disks) {
   $totalSize = [math]::Round($d.Size / 1GB)
   $diskType = if ($d.MediaType -match 'SSD' -or $d.Model -match 'NVMe|SSD') { "SSD NVMe" } else { "HDD SATA" }
+  
+  $temp = "N/A"
+  if ($counters) {
+    $c = $counters | Where-Object { $_.DeviceId -eq $d.Index -or $_.DeviceId -eq $diskIdx } | Select-Object -First 1
+    if (-not $c) { $c = $counters | Select-Object -First 1 }
+    if ($c -and $c.Temperature -and $c.Temperature -gt 0) {
+      $temp = $c.Temperature
+    }
+  }
+
+  $diskStatus = if ($d.Status -eq 'OK') { "Tốt (100%)" } else { "Cần kiểm tra" }
   $diskList += @{
     id = "disk$diskIdx"; name = $d.Model; type = $diskType
-    totalSize = $totalSize; freeSize = [math]::Round($totalSize * 0.3)
-    health = "Good"; temperature = 38; partitionCount = $d.Partitions
+    totalSize = $totalSize; freeSize = $totalFreeGB
+    health = $diskStatus; temperature = $temp; partitionCount = $d.Partitions
   }
   $diskIdx++
 }
@@ -144,11 +179,14 @@ $uptimeStr = "{0:D2}h {1:D2}m {2:D2}s" -f [int]$uptime.TotalHours, $uptime.Minut
 $memInfo = Get-CimInstance Win32_OperatingSystem
 $usedRamGB = [math]::Round(($memInfo.TotalVisibleMemorySize - $memInfo.FreePhysicalMemory) / 1MB, 1)
 
+$turboSupport = $cpuBaseClock -ge 1.5
+$turboClockStr = if ($turboSupport) { "$([math]::Round($cpuBaseClock * 1.35, 2)) GHz (Turbo)" } else { "$cpuBaseClock GHz" }
+
 $result = @{
   isSimulated = $false
   cpuName = $cpuName; cpuCores = $cpuCores; cpuThreads = $cpuThreads
-  cpuBaseClock = "$cpuBaseClock GHz"; cpuTurboClock = "$cpuBaseClock GHz"
-  cpuTurboSupported = $false; cpuL3Cache = if ($l3) { "$([math]::Round($l3/1024)) MB" } else { "N/A" }
+  cpuBaseClock = "$cpuBaseClock GHz"; cpuTurboClock = $turboClockStr
+  cpuTurboSupported = $turboSupport; cpuL3Cache = if ($l3) { "$([math]::Round($l3/1024)) MB" } else { "N/A" }
   cpuArch = $cpuArch
   ramTotalSize = $totalRamGB; ramSpeed = $ramSpeed; ramSlotsTotal = $totalSlots
   ramType = $ramType; ramChannels = $ramChannels; ramSlotsDetails = $ramSlots
@@ -242,7 +280,7 @@ function runPowerShellScript(scriptContent) {
     const fileContent = Buffer.concat([bom, Buffer.from(scriptContent, 'utf8')]);
     fs.writeFile(tempFile, fileContent, (err) => {
       if (err) return reject(err);
-      exec(`powershell -NoProfile -ExecutionPolicy Bypass -File "${tempFile}"`, { maxBuffer: 10 * 1024 * 1024 }, (execErr, stdout, stderr) => {
+      exec(`powershell -NoProfile -NonInteractive -NoLogo -ExecutionPolicy Bypass -File "${tempFile}"`, { maxBuffer: 10 * 1024 * 1024 }, (execErr, stdout, stderr) => {
         fs.unlink(tempFile, () => {});
         if (execErr) {
           reject(execErr || stderr);
@@ -278,7 +316,7 @@ ${scriptContent}
         : path.join(__dirname, 'elevate.exe');
         
       // Use "-wait" to wait for the elevated process to exit
-      const cmd = `"${elevatePath}" -wait powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${tempFile}"`;
+      const cmd = `"${elevatePath}" -wait powershell.exe -NoProfile -NonInteractive -NoLogo -ExecutionPolicy Bypass -File "${tempFile}"`;
       
       exec(cmd, { maxBuffer: 10 * 1024 * 1024 }, (execErr, stdout, stderr) => {
         // Read the output file
@@ -1420,6 +1458,39 @@ Write-Output "OK"
       return { success: false, error: err.message };
     }
   });
+
+  ipcMain.handle('restore-advanced-optimization', async () => {
+    try {
+      let script = `
+        $OutputEncoding = [System.Text.Encoding]::UTF8
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+        $ErrorActionPreference = 'SilentlyContinue'
+        
+        # Reset HPET & Dynamic Tick
+        bcdedit /deletevalue disabledynamictick 2>$null
+        bcdedit /set useplatformclock true 2>$null
+
+        # Reset Network Throttling
+        Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile" -Name "NetworkThrottlingIndex" -Value 10 -Force
+        Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile" -Name "SystemResponsiveness" -Value 20 -Force
+
+        # Reset Delivery Optimization
+        Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization" -Name "DODownloadMode" -Value 1 -Force -ErrorAction SilentlyContinue
+        Set-Service -Name "dosvc" -StartupType Automatic -ErrorAction SilentlyContinue
+        Start-Service -Name "dosvc" -ErrorAction SilentlyContinue
+
+        # Reset Background Apps
+        Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\BackgroundAccessApplications" -Name "GlobalUserDisabled" -Value 0 -Force
+
+        # Reset Startup Delay
+        Remove-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Serialize" -Name "StartupDelayInMSec" -Force -ErrorAction SilentlyContinue
+      `;
+      await runPowerShellScriptElevated(script);
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
   // ========== BITLOCKER MANAGER ==========
   ipcMain.handle('get-bitlocker-status', async () => {
     try {
@@ -1533,8 +1604,39 @@ Write-Output "OK"
     }
   });
 
+  let batteryCache = { ts: 0, data: null };
   ipcMain.handle('get-battery-health', async () => {
+    if (batteryCache.data && Date.now() - batteryCache.ts < 30000) {
+      return batteryCache.data;
+    }
     try {
+      // Super fast WMI check first (0.1s)
+      const fastScript = `
+        $batt = Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue
+        if (-not $batt) {
+            "NO_BATTERY"
+        } else {
+            $res = @{
+                EstimatedChargeRemaining = $batt.EstimatedChargeRemaining
+                FullChargeCapacity = $batt.DesignCapacity
+                DesignCapacity = $batt.DesignCapacity
+            }
+            $res | ConvertTo-Json -Compress
+        }
+      `;
+      const fastResult = (await runPowerShellScript(fastScript) || '').trim();
+      if (fastResult === 'NO_BATTERY') {
+        batteryCache = { ts: Date.now(), data: { noBattery: true } };
+        return batteryCache.data;
+      }
+      
+      if (fastResult.startsWith('{')) {
+        const parsed = JSON.parse(fastResult);
+        batteryCache = { ts: Date.now(), data: parsed };
+        return parsed;
+      }
+
+      // Fallback XML
       const script = `
         $battXml = "$env:TEMP\\batt_report.xml"
         powercfg /batteryreport /xml /output $battXml | Out-Null
@@ -1555,28 +1657,31 @@ Write-Output "OK"
         }
       `;
       const result = await runPowerShellScript(script);
-      return JSON.parse(result || '{}');
+      const parsed = JSON.parse(result || '{}');
+      batteryCache = { ts: Date.now(), data: parsed };
+      return parsed;
     } catch {
       return {};
     }
   });
 
+  let diskCache = { ts: 0, data: null };
   ipcMain.handle('get-disk-health', async () => {
+    if (diskCache.data && Date.now() - diskCache.ts < 30000) {
+      return diskCache.data;
+    }
     try {
       const script = `
-        $disks = Get-PhysicalDisk -ErrorAction SilentlyContinue | Select-Object DeviceId, FriendlyName, MediaType, OperationalStatus, HealthStatus, Size
-        if (-not $disks) {
-            $wmiDisks = Get-WmiObject Win32_DiskDrive -ErrorAction SilentlyContinue
-            $disks = @()
-            foreach ($d in $wmiDisks) {
-                $disks += @{
-                    DeviceId = $d.DeviceID
-                    FriendlyName = $d.Model
-                    MediaType = $d.MediaType
-                    OperationalStatus = $d.Status
-                    HealthStatus = if ($d.Status -eq "OK") { "Healthy" } else { "Unhealthy" }
-                    Size = $d.Size
-                }
+        $wmiDisks = Get-CimInstance Win32_DiskDrive -ErrorAction SilentlyContinue
+        $disks = @()
+        foreach ($d in $wmiDisks) {
+            $disks += @{
+                DeviceId = $d.DeviceID
+                FriendlyName = $d.Model
+                MediaType = if ($d.MediaType) { $d.MediaType } else { "Fixed hard disk" }
+                OperationalStatus = $d.Status
+                HealthStatus = if ($d.Status -eq "OK") { "Healthy" } else { "Unhealthy" }
+                Size = $d.Size
             }
         }
         $disks | ConvertTo-Json -Compress
@@ -1584,6 +1689,7 @@ Write-Output "OK"
       const result = await runPowerShellScript(script);
       let parsed = JSON.parse(result || '[]');
       if (!Array.isArray(parsed)) parsed = [parsed];
+      diskCache = { ts: Date.now(), data: parsed };
       return parsed;
     } catch {
       return [];

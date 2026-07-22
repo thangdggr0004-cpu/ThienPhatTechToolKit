@@ -127,6 +127,7 @@ export default function App() {
 
     const timer = setInterval(async () => {
       if ((window as any).__ecoMode) return; // Skip polling in eco mode
+      if (typeof document !== 'undefined' && document.hidden) return; // Skip polling when app is minimized/hidden
       try {
         const m = await (window as any).electronAPI.getRealtimeMetrics();
         setFooterMetrics(prev => ({

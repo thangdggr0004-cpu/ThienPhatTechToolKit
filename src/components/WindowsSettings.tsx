@@ -125,6 +125,29 @@ export default function WindowsSettings() {
       setApplyingAdvanced(false);
     }
   };
+
+  const handleRestoreAdvanced = async () => {
+    if (!confirm("Bạn có chắc chắn muốn khôi phục toàn bộ các cấu hình tối ưu nâng cao về mặc định của Windows?")) return;
+    setApplyingAdvanced(true);
+    setAdvancedResult(null);
+    try {
+      const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
+      if (isElectron) {
+        const res = await (window as any).electronAPI.restoreAdvancedOptimization();
+        if (res && res.success) {
+          setAdvancedResult("Đã khôi phục toàn bộ cài đặt nâng cao về mặc định của Windows thành công!");
+        } else {
+          setAdvancedResult("Lỗi khi khôi phục: " + (res?.error || "Không xác định"));
+        }
+      } else {
+        alert("Tính năng này chỉ chạy trên ứng dụng Desktop.");
+      }
+    } catch (e: any) {
+      setAdvancedResult("Lỗi: " + e.message);
+    } finally {
+      setApplyingAdvanced(false);
+    }
+  };
   
   // Settings State
   const [state, setState] = useState({
@@ -747,21 +770,30 @@ export default function WindowsSettings() {
             </div>
 
             <div className="pt-4 border-t border-slate-100 flex flex-wrap justify-between items-center gap-3">
-              <button 
-                onClick={() => setAdvancedOpts({
-                  createRestorePoint: true,
-                  disableHpet: true,
-                  disableNetworkThrottling: true,
-                  purgeStandbyRam: true,
-                  disableBackgroundApps: true,
-                  disableDeliveryOptimization: true,
-                  enableGameMode: true,
-                  disableStartupDelay: true
-                })}
-                className="text-xs text-slate-500 hover:text-amber-600 font-bold cursor-pointer"
-              >
-                🔄 Tích chọn tất cả (Khuyên dùng)
-              </button>
+              <div className="flex gap-4 items-center">
+                <button 
+                  onClick={() => setAdvancedOpts({
+                    createRestorePoint: true,
+                    disableHpet: true,
+                    disableNetworkThrottling: true,
+                    purgeStandbyRam: true,
+                    disableBackgroundApps: true,
+                    disableDeliveryOptimization: true,
+                    enableGameMode: true,
+                    disableStartupDelay: true
+                  })}
+                  className="text-xs text-slate-500 hover:text-amber-600 font-bold cursor-pointer"
+                >
+                  ☑️ Tích chọn tất cả (Khuyên dùng)
+                </button>
+                <button 
+                  onClick={handleRestoreAdvanced}
+                  disabled={applyingAdvanced}
+                  className="text-xs text-rose-500 hover:text-rose-700 font-bold cursor-pointer underline"
+                >
+                  🔄 Trả về mặc định Windows (Undo)
+                </button>
+              </div>
 
               <div className="flex gap-2">
                 <button 
