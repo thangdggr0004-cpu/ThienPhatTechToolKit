@@ -1,5 +1,5 @@
 {
-  "version": "1.3.7",
-  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest/download/ThienPhatTechToolkit.1.3.7.exe",
-  "releaseNotes": "- Khắc phục triệt để nhận diện sức khỏe Pin trên 100% các dòng Laptop (Multilayer ACPI & WMI fallback).\n- Tối ưu tốc độ mở ứng dụng siêu tốc trong 1 giây (unpackDirName cache).\n- Nâng cấp giao diện Kiểm Tra Bàn Phím Full Screen căn giữa chuẩn xác."
+  "version": "1.3.8",
+  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest/download/ThienPhatTechToolkit.1.3.8.exe",
+  "releaseNotes": "- Sửa triệt để tiến trình Cập nhật OTA VBScript (Khắc phục lỗi 80070002 & tự động xóa file .exe cũ).\n- Nút Tắt/Bật nhanh Windows Defender 1-Click ngay trên Bảng điều khiển.\n- Cẩm nang Tra cứu Reset Mực & Drum Brother thực chiến 100% cho mọi dòng máy in Brother."
 }
