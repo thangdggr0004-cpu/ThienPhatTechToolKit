@@ -1,4 +1,4 @@
-# 🚀 Thiên Phát Tech Toolkit Pro v1.3.6 - Bộ Công Cụ Kỹ Thuật Máy Tính Toàn Diện
+# 🚀 Thiên Phát Tech Toolkit Pro v1.3.8 - Bộ Công Cụ Kỹ Thuật Máy Tính Toàn Diện
 
 **Thiên Phát Tech Toolkit Pro** là bộ công cụ kỹ thuật máy tính cao cấp, được thiết kế chuyên nghiệp dành riêng cho **Kỹ thuật viên IT, Cửa hàng máy tính và Người dùng nâng cao**. Phần mềm tập hợp tất cả tiện ích chẩn đoán phần cứng, sửa lỗi phần mềm, chuẩn hóa Office, dọn dẹp hệ thống, xử lý bản quyền và tối ưu hóa Windows 10/11 một cách tự động, nhanh chóng và chính xác 100%.
 
@@ -8,11 +8,11 @@
 
 ```
 +-----------------------------------------------------------------------------------+
-|                        THIÊN PHÁT TECH TOOLKIT PRO v1.3.6                         |
+|                        THIÊN PHÁT TECH TOOLKIT PRO v1.3.8                         |
 +-------------------+--------------------+--------------------+---------------------+
-| 🛡️ Bản Quyền      | 🖨️ Tiện Ích Máy In | 💻 Laptop Tester   | ⚙️ Windows Settings |
+| 🛡️ Bản Quyền      | 🖨️ Reset Brother   | 💻 Laptop Tester   | ⚙️ Windows Settings |
 | 🧹 Dọn Dẹp Rác    | 🔓 BitLocker       | 💾 Sao Lưu Wifi/Drv| 🌐 Mạng & DNS       |
-| 📝 Fix Office     | ⚡ Tối Ưu Nâng Cao | 🔄 Cập Nhật OTA    | 🚀 Bật App 1s       |
+| 📝 Fix Office     | ⚡ Defender Toggle | 🔄 Cập Nhật OTA    | 🚀 Bật App 1s       |
 +-------------------+--------------------+--------------------+---------------------+
 ```
 
@@ -99,7 +99,7 @@ Công cụ bóc tách tình trạng bản quyền Windows/Office với thuật t
 
 - **Tác giả & Phát triển:** Anh **Thắng (Thiên Phát Tech)**
 - **Mục đích:** Tự động hóa quy trình kỹ thuật sửa chữa máy tính, giải quyết dứt điểm các lỗi kinh điển mà Kỹ thuật viên IT thường xuyên gặp phải.
-- **Phiên bản hiện tại:** `v1.3.6 Pro` (Bản quyền thuộc về Thiên Phát Tech)
+- **Phiên bản hiện tại:** `v1.3.8 Pro` (Bản quyền thuộc về Thiên Phát Tech)
 
 ---
 *Cảm ơn bạn đã tin tưởng và sử dụng Thiên Phát Tech Toolkit Pro!*

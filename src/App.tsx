@@ -15,6 +15,7 @@ const BackupManager = lazy(() => import('./components/BackupManager'));
 const PrinterUtils = lazy(() => import('./components/PrinterUtils'));
 const LaptopTester = lazy(() => import('./components/LaptopTester'));
 const TouchScreenTester = lazy(() => import('./components/TouchScreenTester'));
+const AdvancedActivation = lazy(() => import('./components/AdvancedActivation'));
 
 import { Monitor, RefreshCw, Terminal, Cpu, MemoryStick, Activity } from 'lucide-react';
 import AutoUpdater from './components/AutoUpdater';
@@ -49,6 +50,42 @@ export default function App() {
   useEffect(() => {
     (window as any).__activeSection = activeSection;
   }, [activeSection]);
+  
+  const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
+    return localStorage.getItem('advancedUnlocked') === 'true';
+  });
+
+  // Secret shortcut "1111" listener to unlock Advanced Activation tab
+  useEffect(() => {
+    let buffer = '';
+    let timer: any = null;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      if (e.key === '1') {
+        buffer += '1';
+        clearTimeout(timer);
+        timer = setTimeout(() => { buffer = ''; }, 2000);
+
+        if (buffer === '1111') {
+          buffer = '';
+          setIsUnlocked(true);
+          localStorage.setItem('advancedUnlocked', 'true');
+          setActiveSection('advanced-activation');
+          alert("🔓 Chúc mừng! Bạn đã mở khóa thành công Tiện Ích Nâng Cao (MAS Engine)!");
+        }
+      } else {
+        buffer = '';
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      clearTimeout(timer);
+    };
+  }, []);
   
   const [footerMetrics, setFooterMetrics] = useState<{
     temp: number | null;
@@ -171,7 +208,7 @@ export default function App() {
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
           
           {/* Left Navigation Sidebar */}
-          <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} />
+          <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} isUnlocked={isUnlocked} />
 
           {/* Right Main Panel Content */}
           <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-[#fafafa] space-y-6" key={activeSection}>
@@ -228,6 +265,11 @@ export default function App() {
             {activeSection === 'laptop-tester' && (
               <Suspense fallback={<PageSkeleton />}>
                 <PageWrapper><LaptopTester /></PageWrapper>
+              </Suspense>
+            )}
+            {activeSection === 'advanced-activation' && (
+              <Suspense fallback={<PageSkeleton />}>
+                <PageWrapper><AdvancedActivation /></PageWrapper>
               </Suspense>
             )}
             {activeSection === 'touch' && (

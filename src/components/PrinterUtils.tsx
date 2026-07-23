@@ -17,6 +17,117 @@ interface PrintJob {
   TotalPages: number;
 }
 
+interface BrotherGuide {
+  modelGroup: string;
+  models: string;
+  hasScreen: boolean;
+  tonerReset: {
+    title: string;
+    steps: string[];
+  };
+  drumReset: {
+    title: string;
+    steps: string[];
+  };
+}
+
+const brotherGuides: BrotherGuide[] = [
+  {
+    modelGroup: 'Brother HL-L2321D / HL-2361DN / HL-2365DW',
+    models: 'HL-L2321D, HL-2361DN, HL-2365DW (Máy in đơn năng - Không màn hình)',
+    hasScreen: false,
+    tonerReset: {
+      title: 'Reset Mực (Toner Reset - Lỗi Replace Toner / Toner Low)',
+      steps: [
+        '1. Tắt công tắc nguồn máy in (hoặc giữ nút Nguồn).',
+        '2. Mở nắp trước máy in (Nắp hộp mực).',
+        '3. Giữ chặt nút GO, đồng thời bật công tắc Nguồn.',
+        '4. Giữ nút GO khoảng 5 giây cho tới khi các đèn Toner, Drum, Paper sáng (trừ đèn Ready). Nhả nút GO.',
+        '5. Nhấn nút GO 2 lần liên tiếp. Chờ các đèn sáng trở lại.',
+        '6. Nhấn nút GO 5 lần liên tiếp (Đèn Toner sẽ tắt hoặc nháy).',
+        '7. Đóng nắp trước máy in lại. Máy in sẽ khởi động lại và nhận full 100% mực!'
+      ]
+    },
+    drumReset: {
+      title: 'Reset Trống (Drum Reset - Lỗi Replace Drum / Drum End)',
+      steps: [
+        '1. Bật nguồn máy in.',
+        '2. Mở nắp trước máy in (Nắp hộp mực).',
+        '3. Nhấn và giữ nút GO khoảng 4 giây cho tới khi tất cả 4 đèn LED đều sáng.',
+        '4. Nhả nút GO ra và đóng nắp trước máy in lại. Đèn Drum sẽ tắt!'
+      ]
+    }
+  },
+  {
+    modelGroup: 'Brother DCP-L2520D / L2540DW / MFC-L2701DW / L2715DW',
+    models: 'DCP-L2520D, L2540DW, MFC-L2701DW, L2715DW (Máy in đa năng - Có màn hình LCD)',
+    hasScreen: true,
+    tonerReset: {
+      title: 'Reset Mực (Toner Reset trên màn hình LCD)',
+      steps: [
+        '1. Bật nguồn máy in.',
+        '2. Mở nắp trước máy in.',
+        '3. Nhấn và giữ nút Clear/Back (hoặc nút OK tùy dòng) khoảng 5 giây cho tới khi màn hình LCD hiện: "Replace Toner?" hoặc "Front Cover Open".',
+        '4. Nhấn nút Phím Mũi Tên Lên ▲ (hoặc phím số 1) để chọn YES.',
+        '5. Màn hình hiện "Accepted" hoặc "OK". Đóng nắp trước lại là hoàn tất!'
+      ]
+    },
+    drumReset: {
+      title: 'Reset Trống (Drum Reset trên màn hình LCD)',
+      steps: [
+        '1. Bật nguồn máy in.',
+        '2. Mở nắp trước máy in.',
+        '3. Nhấn và giữ nút OK (hoặc Clear/Back) trong 3-5 giây.',
+        '4. Màn hình hiện: "Replace Drum? 1. Yes 2. No" (hoặc ▲ Reset).',
+        '5. Nhấn số 1 (hoặc nút ▲ Mũi tên lên) để đồng ý Reset.',
+        '6. Đóng nắp trước lại. Máy in báo OK!'
+      ]
+    }
+  },
+  {
+    modelGroup: 'Brother HL-1111 / HL-1211W / HL-1201 (Dòng Mini)',
+    models: 'HL-1111, HL-1211W, HL-1201 (Dòng máy in gia đình)',
+    hasScreen: false,
+    tonerReset: {
+      title: 'Reset Mực & Trống (HL-1111 / 1211W)',
+      steps: [
+        '1. Bật nguồn máy in.',
+        '2. Nhấn nút Nguồn (Power button) 4 lần liên tiếp thật nhanh.',
+        '3. Đèn trạng thái sẽ nháy và máy in sẽ tự động reset lại bộ đếm mực!'
+      ]
+    },
+    drumReset: {
+      title: 'Reset Trống (HL-1111 / 1211W)',
+      steps: [
+        '1. Mở nắp trên máy in.',
+        '2. Nhấn nút Nguồn 4 lần liên tiếp.',
+        '3. Đóng nắp máy in lại.'
+      ]
+    }
+  },
+  {
+    modelGroup: 'Brother Tank phun màu (MFC-T4500DW / T910DW / T510W)',
+    models: 'DCP-T310, T510W, T710W, MFC-T810W, T910DW, T4500DW',
+    hasScreen: true,
+    tonerReset: {
+      title: 'Reset Đếm Mực Phun (Ink Counter Reset - Maintenance Mode)',
+      steps: [
+        '1. Nhấn nút Menu ➔ Mono Copy ➔ Nhấn phím Mũi tên lên ▲ 4 lần để vào chế độ Maintenance.',
+        '2. Nhập mã 84 (chọn số 8 bấm OK, chọn số 4 bấm OK).',
+        '3. Nhấn nút Mono Copy nhiều lần tìm mục "PURGE: XXXXX" (hoặc FLUSH).',
+        '4. Nhập mã 2783 để reset số PURGE về 00000.',
+        '5. Bấm nút Stop/Exit và nhập 99 để thoát chế độ Maintenance.'
+      ]
+    },
+    drumReset: {
+      title: 'Reset Đầu In (Printhead Counter)',
+      steps: [
+        'Thực hiện theo các bước Maintenance 84 ➔ chọn FLUSH counter ➔ nhập 2783.'
+      ]
+    }
+  }
+];
+
 export default function PrinterUtils() {
   const [printers, setPrinters] = useState<PrinterInfo[]>([]);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
@@ -25,6 +136,9 @@ export default function PrinterUtils() {
   const [selectedPrinter, setSelectedPrinter] = useState<string>('');
   const [printQueue, setPrintQueue] = useState<PrintJob[]>([]);
   const [showQueue, setShowQueue] = useState(false);
+
+  const [selectedBrotherIndex, setSelectedBrotherIndex] = useState<number>(0);
+  const [brotherTab, setBrotherTab] = useState<'toner' | 'drum'>('toner');
 
   const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
 
@@ -358,8 +472,72 @@ export default function PrinterUtils() {
             </div>
           </div>
 
-          {/* Logs */}
-          <div className="bg-slate-950 rounded-xl p-4 shadow-lg border border-slate-800 h-40 flex flex-col shrink-0">
+          {/* Brother Printer Reset Guide */}
+          <div className="bg-slate-950 border-2 border-amber-500/50 rounded-xl p-4 text-white shadow-2xl space-y-3 shrink-0">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🖨️</span>
+                <h4 className="text-xs font-black text-amber-400 uppercase tracking-wider">
+                  Cẩm Nang Tra Cứu Reset Mực &amp; Drum Brother
+                </h4>
+              </div>
+              <span className="text-[10px] font-black px-2.5 py-0.5 rounded bg-amber-500 text-slate-950 shadow">
+                Thực chiến 100%
+              </span>
+            </div>
+
+            {/* Select Brother Model */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-200 block">Chọn dòng máy in Brother:</label>
+              <select
+                value={selectedBrotherIndex}
+                onChange={(e) => setSelectedBrotherIndex(Number(e.target.value))}
+                className="w-full bg-slate-900 border-2 border-amber-500/60 rounded-lg px-3 py-2 text-xs text-amber-300 font-extrabold focus:outline-none focus:border-amber-400 cursor-pointer"
+              >
+                {brotherGuides.map((g, idx) => (
+                  <option key={idx} value={idx}>{g.modelGroup}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Active Guide Steps */}
+            {brotherGuides[selectedBrotherIndex] && (
+              <div className="space-y-3 bg-slate-900/90 p-3 rounded-xl border border-slate-800 text-xs shadow-inner">
+                {/* Mode Selector Tab */}
+                <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-800 gap-1">
+                  <button
+                    onClick={() => setBrotherTab('toner')}
+                    className={`flex-1 py-1.5 text-xs font-black rounded-md cursor-pointer transition ${brotherTab === 'toner' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    💧 Reset Mực (Toner)
+                  </button>
+                  <button
+                    onClick={() => setBrotherTab('drum')}
+                    className={`flex-1 py-1.5 text-xs font-black rounded-md cursor-pointer transition ${brotherTab === 'drum' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    🥁 Reset Trống (Drum)
+                  </button>
+                </div>
+
+                {/* Steps Details */}
+                <div className="space-y-2">
+                  <h5 className="font-extrabold text-amber-300 text-xs flex items-center gap-1.5">
+                    <span>📌</span> {brotherTab === 'toner' ? brotherGuides[selectedBrotherIndex].tonerReset.title : brotherGuides[selectedBrotherIndex].drumReset.title}
+                  </h5>
+                  <div className="space-y-1.5 text-xs text-slate-100 leading-relaxed font-sans">
+                    {(brotherTab === 'toner' ? brotherGuides[selectedBrotherIndex].tonerReset.steps : brotherGuides[selectedBrotherIndex].drumReset.steps).map((step, sIdx) => (
+                      <div key={sIdx} className="bg-slate-950 p-2.5 rounded-lg border border-slate-800 text-slate-100 font-medium">
+                        {step}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Terminal Logs */}
+          <div className="bg-slate-950 rounded-xl p-4 shadow-lg border border-slate-800 h-36 flex flex-col shrink-0">
             <h4 className="text-[10px] font-mono text-blue-400 mb-2 flex items-center gap-1.5 border-b border-slate-800 pb-2">
               <FileText className="w-3.5 h-3.5" /> Terminal Logs
             </h4>

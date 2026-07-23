@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   Cpu, ShieldAlert, Trash2, Wifi, AlignLeft, Monitor,
-  CheckCircle, Archive, Printer, Settings, Lock, Laptop, Activity
+  CheckCircle, Archive, Printer, Settings, Lock, Laptop, Activity, KeyRound
 } from 'lucide-react';
 
 interface SidebarProps {
   activeSection: string;
   setActiveSection: (section: string) => void;
+  isUnlocked?: boolean;
 }
 
 interface MenuItem {
@@ -28,7 +29,7 @@ const systemItems: MenuItem[] = [
   { id: 'windows-settings', name: 'Thiết Lập Windows', description: 'Tối ưu & Tùy biến',        icon: Settings,  iconClass: 'icon-pastel-slate'   },
 ];
 
-const utilityItems: MenuItem[] = [
+const baseUtilityItems: MenuItem[] = [
   { id: 'network',       name: 'Mạng & DNS',        description: 'Đổi DNS, Chẩn đoán',      icon: Wifi,      iconClass: 'icon-pastel-emerald' },
   { id: 'printer',       name: 'Tiện Ích Máy In',   description: 'Sửa lỗi in, Xóa hàng đợi', icon: Printer,  iconClass: 'icon-pastel-amber'   },
   { id: 'standardizer',  name: 'Tiện Ích Office',   description: 'Chuẩn hóa căn lề, Fix lỗi', icon: AlignLeft, iconClass: 'icon-pastel-blue'   },
@@ -37,7 +38,10 @@ const utilityItems: MenuItem[] = [
   { id: 'laptop-tester', name: 'Kiểm Tra Laptop',   description: 'Test Màn, Phím, Mic, Cam', icon: Laptop,    iconClass: 'icon-pastel-violet'  },
 ];
 
-export default function Sidebar({ activeSection, setActiveSection }: SidebarProps) {
+export default function Sidebar({ activeSection, setActiveSection, isUnlocked }: SidebarProps) {
+  const utilityItems = isUnlocked 
+    ? [...baseUtilityItems, { id: 'advanced-activation', name: 'Tiện Ích Nâng Cao', description: 'MAS AIO Activator 🔓', icon: KeyRound, iconClass: 'icon-pastel-amber' }]
+    : baseUtilityItems;
   const [sysInfo, setSysInfo] = useState<{ uptime: string; usedRam: string; totalRam: string } | null>(null);
 
   useEffect(() => {

@@ -730,14 +730,51 @@ foreach ($key in $paths.Keys) {
 
 $recycleSize = 0
 $recycleFiles = @()
-if (Test-Path "C:\`$Recycle.Bin") {
-  $allRecycle = Get-ChildItem -Path "C:\`$Recycle.Bin" -Recurse -File -Force -ErrorAction SilentlyContinue
-  foreach ($f in $allRecycle) { $recycleSize += $f.Length }
-  $recycleFiles = $allRecycle | Select-Object -First 5 | ForEach-Object { $_.FullName }
-}
+
+# 1. Shell COM Object
+try {
+  $shell = New-Object -ComObject Shell.Application
+  $rb = $shell.NameSpace(0x0a)
+  if ($rb) {
+    foreach ($item in $rb.Items()) {
+      $recycleSize += $item.Size
+      if ($recycleFiles.Count -lt 5) {
+        $recycleFiles += $item.Name
+      }
+    }
+  }
+} catch {}
+
+# 2. Multi-drive filesystem scan
+try {
+  $drives = Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" -ErrorAction SilentlyContinue
+  $fsSize = 0
+  $fsFiles = @()
+  foreach ($d in $drives) {
+    $rbPath = Join-Path $d.DeviceID '$Recycle.Bin'
+    if (Test-Path $rbPath) {
+      $files = Get-ChildItem -Path $rbPath -Recurse -Force -ErrorAction SilentlyContinue
+      foreach ($f in $files) {
+        if (-not $f.PSIsContainer -and $f.Name -notlike "desktop.ini") {
+          $fsSize += $f.Length
+          if ($fsFiles.Count -lt 5) {
+            $fsFiles += $f.Name
+          }
+        }
+      }
+    }
+  }
+  if ($fsSize -gt $recycleSize) {
+    $recycleSize = $fsSize
+  }
+  if ($recycleFiles.Count -eq 0 -and $fsFiles.Count -gt 0) {
+    $recycleFiles = $fsFiles
+  }
+} catch {}
+
 $results["recycle_bin"] = @{
   sizeMB = [math]::Round($recycleSize / 1MB, 2)
-  filesList = if ($recycleFiles) { $recycleFiles } else { @() }
+  filesList = if ($recycleFiles) { @($recycleFiles) } else { @() }
 }
 
 $regCount = 0
@@ -806,8 +843,14 @@ if ($categories -contains "recycle_bin") {
     Clear-RecycleBin -Force -ErrorAction Stop
     $logs += "[+] Đã làm rỗng Thùng rác thành công."
   } catch {
-    $cleared = Clean-Directory "C:\`$Recycle.Bin"
-    $logs += "[+] Đã dọn dẹp thư mục C:\`$Recycle.Bin."
+    $drives = Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" -ErrorAction SilentlyContinue
+    foreach ($d in $drives) {
+      $rbPath = Join-Path $d.DeviceID '$Recycle.Bin'
+      if (Test-Path $rbPath) {
+        Clean-Directory $rbPath | Out-Null
+      }
+    }
+    $logs += "[+] Đã dọn dẹp tất cả thư mục Recycle Bin."
   }
 }
 
@@ -1390,6 +1433,129 @@ Write-Output "OK"
     }
   });
 
+  ipcMain.handle('get-defender-status', async () => {
+    try {
+      const script = `
+        $ErrorActionPreference = 'SilentlyContinue'
+        $mp = Get-MpPreference -ErrorAction SilentlyContinue
+        $disabledMP = if ($mp) { $mp.DisableRealtimeMonitoring } else { $false }
+        $regPolicy = (Get-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender" -Name "DisableAntiSpyware" -ErrorAction SilentlyContinue).DisableAntiSpyware
+        $status = Get-MpComputerStatus -ErrorAction SilentlyContinue
+        $realtimeOn = if ($status) { $status.RealTimeProtectionEnabled } else { $true }
+        
+        $isOff = ($disabledMP -eq $true) -or ($regPolicy -eq 1) -or ($realtimeOn -eq $false)
+        @{ enabled = (-not $isOff) } | ConvertTo-Json -Compress
+      `;
+      const output = await runPowerShellScript(script);
+      const parsed = JSON.parse(output || '{"enabled": true}');
+      return parsed;
+    } catch (err) {
+      return { enabled: true };
+    }
+  });
+
+  ipcMain.handle('toggle-defender-status', async (event, enable) => {
+    try {
+      let script = `
+        $OutputEncoding = [System.Text.Encoding]::UTF8
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+        $ErrorActionPreference = 'SilentlyContinue'
+      `;
+      if (enable) {
+        script += `
+          Set-MpPreference -DisableRealtimeMonitoring 0 -ErrorAction SilentlyContinue
+          Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender" -Name "DisableAntiSpyware" -Force -ErrorAction SilentlyContinue
+        `;
+      } else {
+        script += `
+          Set-MpPreference -DisableRealtimeMonitoring 1 -ErrorAction SilentlyContinue
+          Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender" -Name "DisableAntiSpyware" -Value 1 -Force -ErrorAction SilentlyContinue
+        `;
+      }
+      await runPowerShellScriptElevated(script);
+      return { success: true, enabled: enable };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  function getMasCmdPath() {
+    const possiblePaths = [
+      path.join(process.cwd(), 'MAS_AIO.cmd'),
+      path.join(path.dirname(process.execPath), 'MAS_AIO.cmd'),
+      path.join(process.cwd(), 'MAS', 'MAS_AIO.cmd'),
+      `C:\\Users\\PC\\Downloads\\MAS_Temp\\Microsoft-Activation-Scripts-master\\MAS\\All-In-One-Version-KL\\MAS_AIO.cmd`
+    ];
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p)) return p;
+    }
+    return null;
+  }
+
+  ipcMain.handle('run-mas-action', async (event, mode) => {
+    try {
+      const localCmd = getMasCmdPath();
+      const hasLocalCmd = !!localCmd;
+
+      if (mode === 'aio_menu') {
+        if (hasLocalCmd) {
+          exec(`powershell -Command "Start-Process cmd.exe -ArgumentList '/c \"\"${localCmd}\"\"' -Verb RunAs"`);
+          return { success: true, output: `Đã mở cửa sổ MAS AIO Menu (${path.basename(localCmd)}) thành công!` };
+        } else {
+          exec(`powershell -Command "Start-Process powershell -ArgumentList '-Command \"irm https://get.activated.win | iex\"' -Verb RunAs"`);
+          return { success: true, output: "Đã khởi chạy MAS AIO Engine trực tuyến thành công!" };
+        }
+      }
+
+      if (mode === 'hwid') {
+        if (hasLocalCmd) {
+          exec(`powershell -Command "Start-Process cmd.exe -ArgumentList '/c \"\"${localCmd}\" /HWID' -Verb RunAs"`);
+          return { success: true, output: "Đã khởi chạy kích hoạt Windows HWID vĩnh viễn qua MAS!" };
+        } else {
+          exec(`powershell -Command "Start-Process powershell -ArgumentList '-Command \"irm https://get.activated.win | iex\"' -Verb RunAs"`);
+          return { success: true, output: "Đã khởi chạy MAS Engine trực tuyến trong cửa sổ Administrator!" };
+        }
+      }
+
+      if (mode === 'ohook') {
+        if (hasLocalCmd) {
+          exec(`powershell -Command "Start-Process cmd.exe -ArgumentList '/c \"\"${localCmd}\" /Ohook' -Verb RunAs"`);
+          return { success: true, output: "Đã khởi chạy kích hoạt Office Ohook vĩnh viễn qua MAS!" };
+        } else {
+          exec(`powershell -Command "Start-Process powershell -ArgumentList '-Command \"irm https://get.activated.win | iex\"' -Verb RunAs"`);
+          return { success: true, output: "Đã khởi chạy MAS Engine trực tuyến trong cửa sổ Administrator!" };
+        }
+      }
+
+      if (mode === 'kms38') {
+        if (hasLocalCmd) {
+          exec(`powershell -Command "Start-Process cmd.exe -ArgumentList '/c \"\"${localCmd}\" /KMS38' -Verb RunAs"`);
+          return { success: true, output: "Đã khởi chạy kích hoạt Windows Server / Enterprise KMS38 qua MAS!" };
+        } else {
+          exec(`powershell -Command "Start-Process powershell -ArgumentList '-Command \"irm https://get.activated.win | iex\"' -Verb RunAs"`);
+          return { success: true, output: "Đã khởi chạy MAS Engine trực tuyến trong cửa sổ Administrator!" };
+        }
+      }
+
+      if (mode === 'clean') {
+        let script = `
+          $OutputEncoding = [System.Text.Encoding]::UTF8
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          cscript //nologo $env:SystemRoot\\System32\\slmgr.vbs /ckms
+          cscript //nologo $env:SystemRoot\\System32\\slmgr.vbs /upk
+          cscript //nologo $env:SystemRoot\\System32\\slmgr.vbs /cpky
+          Write-Output "Đã gỡ bỏ key KMS lậu và làm sạch trạng thái bản quyền gốc thành công!"
+        `;
+        const output = await runPowerShellScriptElevated(script);
+        return { success: true, output: output.trim() || "Thực thi hoàn tất thành công!" };
+      }
+
+      return { success: true, output: "Thực thi hoàn tất!" };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
   ipcMain.handle('apply-advanced-optimization', async (event, opts) => {
     try {
       let script = `
@@ -1947,9 +2113,9 @@ Write-Output "OK"
       const rawCurrent = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
       const rawNew = updateDataGlobal.newExePath;
       
-      // Escape backslashes for VBScript strings if needed
-      const currentExeEsc = rawCurrent.replace(/\\/g, '\\\\');
-      const newExeEsc = rawNew.replace(/\\/g, '\\\\');
+      // In VBScript strings, backslashes should NOT be doubled (only double-quotes are escaped with "")
+      const currentExeClean = rawCurrent.replace(/"/g, '""');
+      const newExeClean = rawNew.replace(/"/g, '""');
       
       // If running in dev mode, don't delete electron.exe
       if (!app.isPackaged) {
@@ -1961,26 +2127,32 @@ Write-Output "OK"
       // Create a VBS script in TEMP to wait, retry deleting old exe, and launch new exe
       const scriptPath = path.join(os.tmpdir(), 'update_helper.vbs');
       const vbsCode = `
-WScript.Sleep 1500
 Dim fso, shell
 Set fso = CreateObject("Scripting.FileSystemObject")
+Set shell = CreateObject("WScript.Shell")
+
+WScript.Sleep 2000
 
 Dim i
-For i = 1 To 15
+For i = 1 To 20
   On Error Resume Next
-  If fso.FileExists("${currentExeEsc}") Then
-    fso.DeleteFile "${currentExeEsc}", True
+  If fso.FileExists("${currentExeClean}") Then
+    fso.DeleteFile "${currentExeClean}", True
   End If
   On Error GoTo 0
-  If Not fso.FileExists("${currentExeEsc}") Then Exit For
+  If Not fso.FileExists("${currentExeClean}") Then Exit For
   WScript.Sleep 1000
 Next
 
-Set shell = CreateObject("WScript.Shell")
-shell.Run """${newExeEsc}"""
-
 On Error Resume Next
-fso.DeleteFile WScript.ScriptFullName, True
+If fso.FileExists("${newExeClean}") Then
+  shell.Run """${newExeClean}"""
+End If
+
+WScript.Sleep 500
+If fso.FileExists(WScript.ScriptFullName) Then
+  fso.DeleteFile WScript.ScriptFullName, True
+End If
       `;
       
       fs.writeFileSync(scriptPath, vbsCode);

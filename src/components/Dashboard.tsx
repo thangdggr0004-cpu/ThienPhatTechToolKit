@@ -6,6 +6,59 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ onNavigate }: DashboardProps) {
+  const [defenderEnabled, setDefenderEnabled] = React.useState<boolean | null>(null);
+  const [togglingDefender, setTogglingDefender] = React.useState<boolean>(false);
+
+  React.useEffect(() => {
+    const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
+    if (isElectron && (window as any).electronAPI.getDefenderStatus) {
+      (window as any).electronAPI.getDefenderStatus().then((res: any) => {
+        if (res && typeof res.enabled === 'boolean') {
+          setDefenderEnabled(res.enabled);
+        }
+      }).catch(() => {
+        setDefenderEnabled(true);
+      });
+    } else {
+      setDefenderEnabled(true);
+    }
+  }, []);
+
+  const handleToggleDefender = async () => {
+    const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
+    const targetState = !defenderEnabled;
+    
+    if (defenderEnabled === true) {
+      const confirm = window.confirm("Bạn có chắc chắn muốn TẮT Windows Defender?");
+      if (!confirm) return;
+    }
+
+    setTogglingDefender(true);
+    if (isElectron && (window as any).electronAPI.toggleDefenderStatus) {
+      try {
+        const res = await (window as any).electronAPI.toggleDefenderStatus(targetState);
+        if (res && res.success) {
+          // Re-fetch live status
+          const check = await (window as any).electronAPI.getDefenderStatus();
+          if (check && typeof check.enabled === 'boolean') {
+            setDefenderEnabled(check.enabled);
+          } else {
+            setDefenderEnabled(targetState);
+          }
+        } else {
+          alert("Không thể thay đổi trạng thái Windows Defender: " + (res?.error || "Lỗi không xác định"));
+        }
+      } catch (err: any) {
+        alert("Lỗi khi điều khiển Windows Defender: " + err.message);
+      } finally {
+        setTogglingDefender(false);
+      }
+    } else {
+      setDefenderEnabled(targetState);
+      setTogglingDefender(false);
+    }
+  };
+
   return (
     <div className="space-y-6" id="dashboard-container">
       {/* Banner */}
@@ -35,6 +88,33 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               className="py-2 px-4 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded text-xs font-semibold transition cursor-pointer shadow-sm"
             >
               Kiểm tra bản quyền
+            </button>
+            <button
+              onClick={handleToggleDefender}
+              disabled={togglingDefender}
+              className={`py-2 px-4 rounded text-xs font-semibold transition cursor-pointer shadow-sm flex items-center gap-1.5 border ${
+                defenderEnabled === false
+                  ? 'bg-rose-50 hover:bg-rose-100 border-rose-300 text-rose-700'
+                  : 'bg-emerald-50 hover:bg-emerald-100 border-emerald-300 text-emerald-700'
+              }`}
+              title="Bật/Tắt nhanh Windows Defender Real-time Protection"
+            >
+              {togglingDefender ? (
+                <>
+                  <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  Đang xử lý...
+                </>
+              ) : defenderEnabled === false ? (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                  🛡️ Bật Windows Defender
+                </>
+              ) : (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  🛡️ Tắt Windows Defender
+                </>
+              )}
             </button>
           </div>
         </div>

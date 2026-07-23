@@ -53,6 +53,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   applySystemOptimization: (settings) => ipcRenderer.invoke('apply-system-optimization', settings),
   applyAdvancedOptimization: (options) => ipcRenderer.invoke('apply-advanced-optimization', options),
   restoreAdvancedOptimization: () => ipcRenderer.invoke('restore-advanced-optimization'),
+  // Defender Quick Toggle
+  getDefenderStatus: () => ipcRenderer.invoke('get-defender-status'),
+  toggleDefenderStatus: (enable) => ipcRenderer.invoke('toggle-defender-status', enable),
+  // Advanced MAS Activation
+  runMasAction: (mode) => ipcRenderer.invoke('run-mas-action', mode),
   // Window controls
   windowMinimize: () => ipcRenderer.send('window-minimize'),
   windowMaximize: () => ipcRenderer.send('window-maximize'),
