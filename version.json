@@ -1,5 +1,5 @@
 {
-  "version": "1.3.9",
-  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest/download/ThienPhatTechToolkit.1.3.9.exe",
-  "releaseNotes": "- Nâng cấp Bộ Tiện Ích Máy In: Tái cấu trúc 4 Tab chuyên nghiệp, tích hợp tính năng Reset Mực Thải Epson L3110/L3150/L3250 & Canon 5B00, tự động Fix kẹt Spooler và lỗi Máy In Offline.\n- Tối ưu hóa tính năng Quét Chẩn Đoán Bản Quyền Windows & Office phân luồng độc lập.\n- Khắc phục triệt để lỗi phân quyền và xoá bỏ tận gốc các file giả mạo Ohook trên Office."
+  "version": "1.4.0",
+  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest/download/ThienPhatTechToolkit.1.4.0.exe",
+  "releaseNotes": "- Thêm nút 'Khôi Phục Key Gốc từ BIOS' ở Tab Windows (tương thích Option 2 của getiwc.online).\n- Bộ tiêu chí chẩn đoán 4 trạng thái chuẩn xác, bổ sung thẻ kết luận 'MÁY TRỐNG: HỆ THỐNG SẠCH VÀ KHÔNG CÓ KEY'.\n- Bộ xử lý tước quyền xóa file Ohook DLL (sppcs.dll) với cờ /L cho Symlink/ReparsePoint và lệnh xóa cấp thấp cmd del.\n- Tách độc lập hoàn toàn luồng Quét/Reset của 2 Tab Windows & MS Office.\n- Khắc phục triệt để lỗi đứng màn hình xanh #0f172a và thêm cơ chế bắt lỗi toàn cục ErrorBoundary."
 }
