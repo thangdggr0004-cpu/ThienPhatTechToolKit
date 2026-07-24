@@ -2033,32 +2033,51 @@ Write-Output "OK"
   ipcMain.handle('check-for-updates', async () => {
     try {
       const currentVersion = app.getVersion();
-      const updateUrl = 'https://raw.githubusercontent.com/thangdggr0004-cpu/ThienPhatTechToolKit/main/version.json';
-      
-      // Bypass Github Cache by appending a timestamp
-      const response = await fetch(updateUrl + '?t=' + Date.now(), { cache: 'no-store' });
-      if (!response.ok) {
-        return { hasUpdate: false };
-      }
-      
-      const data = await response.json();
-      const latestVersion = data.version;
-      const downloadUrl = data.downloadUrl;
-      const releaseNotes = data.releaseNotes;
+      let latestVersion = null;
+      let downloadUrl = null;
+      let releaseNotes = null;
 
-      // Ensure we have a download URL and version is different
+      // Primary: Fetch directly from GitHub Releases API for instant zero-cache update detection
+      try {
+        const releaseRes = await fetch('https://api.github.com/repos/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest', {
+          headers: { 'User-Agent': 'ThienPhatTechToolkit-AutoUpdater' }
+        });
+        if (releaseRes.ok) {
+          const relData = await releaseRes.json();
+          latestVersion = relData.tag_name ? relData.tag_name.replace(/^v/, '') : null;
+          releaseNotes = relData.body || '';
+          if (relData.assets && relData.assets.length > 0) {
+            const exeAsset = relData.assets.find(a => a.name && a.name.endsWith('.exe')) || relData.assets[0];
+            downloadUrl = exeAsset.browser_download_url;
+          }
+        }
+      } catch (e) {
+        console.warn('GitHub Releases API check failed, falling back to version.json:', e);
+      }
+
+      // Secondary: Fallback to version.json with strict anti-cache headers
+      if (!latestVersion || !downloadUrl) {
+        const updateUrl = 'https://raw.githubusercontent.com/thangdggr0004-cpu/ThienPhatTechToolKit/main/version.json?t=' + Date.now();
+        const response = await fetch(updateUrl, { cache: 'no-store', headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' } });
+        if (response.ok) {
+          const data = await response.json();
+          latestVersion = data.version;
+          downloadUrl = data.downloadUrl;
+          if (!releaseNotes) releaseNotes = data.releaseNotes;
+        }
+      }
+
       const hasUpdate = latestVersion && latestVersion !== currentVersion && downloadUrl;
       
       if (hasUpdate) {
         updateDataGlobal = { currentVersion, latestVersion, downloadUrl, releaseNotes };
-        // Tell renderer update is available
-        setTimeout(() => {
-          const win = BrowserWindow.getAllWindows()[0];
-          if (win) win.webContents.send('updater-event', { type: 'update-available', info: updateDataGlobal });
-        }, 1000);
-        return { success: true, hasUpdate: true };
+        const win = BrowserWindow.getAllWindows()[0];
+        if (win) {
+          win.webContents.send('updater-event', { type: 'update-available', info: updateDataGlobal });
+        }
+        return { success: true, hasUpdate: true, latestVersion, downloadUrl };
       } else {
-        return { success: true, hasUpdate: false };
+        return { success: true, hasUpdate: false, currentVersion, latestVersion };
       }
     } catch (err) {
       console.error('Update check failed:', err);

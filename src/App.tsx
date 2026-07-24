@@ -327,13 +327,22 @@ export default function App() {
               <span className="font-sans font-bold uppercase tracking-wider">{ecoMode ? '🌿 Eco: BẬT' : '🌿 Eco: TẮT'}</span>
             </button>
             <button 
-              onClick={() => {
+              onClick={async () => {
                 const icon = document.getElementById('update-spinner');
                 if (icon) icon.classList.add('animate-spin');
-                (window as any).electronAPI.checkForUpdates();
-                setTimeout(() => {
+                try {
+                  const res = await (window as any).electronAPI.checkForUpdates();
+                  if (res && res.hasUpdate === false) {
+                    await (window as any).electronAPI.showInfoDialog({
+                      title: 'Thông Tin Cập Nhật',
+                      message: `Bạn đang ở phiên bản mới nhất (v${packageJson.version}). Không có bản cập nhật nào mới hơn trên GitHub.`
+                    });
+                  }
+                } catch (e) {
+                  console.error('Update check manual error:', e);
+                } finally {
                   if (icon) icon.classList.remove('animate-spin');
-                }, 1500);
+                }
               }}
               className="text-blue-600 font-bold z-10 hover:text-blue-500 transition-colors flex items-center gap-1.5 cursor-pointer bg-blue-100/50 hover:bg-blue-100 px-2 py-0.5 rounded"
               title="Nhấp để kiểm tra bản cập nhật mới nhất"
