@@ -1,5 +1,5 @@
 {
-  "version": "1.3.8",
-  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest/download/ThienPhatTechToolkit.1.3.8.exe",
-  "releaseNotes": "- Sửa triệt để tiến trình Cập nhật OTA VBScript (Khắc phục lỗi 80070002 & tự động xóa file .exe cũ).\n- Nút Tắt/Bật nhanh Windows Defender 1-Click ngay trên Bảng điều khiển.\n- Cẩm nang Tra cứu Reset Mực & Drum Brother thực chiến 100% cho mọi dòng máy in Brother."
+  "version": "1.3.9",
+  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/latest/download/ThienPhatTechToolkit.1.3.9.exe",
+  "releaseNotes": "- Nâng cấp Bộ Tiện Ích Máy In: Tái cấu trúc 4 Tab chuyên nghiệp, tích hợp tính năng Reset Mực Thải Epson L3110/L3150/L3250 & Canon 5B00, tự động Fix kẹt Spooler và lỗi Máy In Offline.\n- Tối ưu hóa tính năng Quét Chẩn Đoán Bản Quyền Windows & Office phân luồng độc lập.\n- Khắc phục triệt để lỗi phân quyền và xoá bỏ tận gốc các file giả mạo Ohook trên Office."
 }
