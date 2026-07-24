@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ShieldCheck, ShieldAlert, ShieldX, FileText, Terminal, Loader, ServerCrash, RefreshCw } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, ShieldX, FileText, Terminal, Loader, ServerCrash, RefreshCw, KeyRound } from 'lucide-react';
 
 // Define types for scan results
 type DiagnosticStepStatus = 'idle' | 'clean' | 'warning' | 'danger';
