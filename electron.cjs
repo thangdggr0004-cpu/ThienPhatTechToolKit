@@ -2276,7 +2276,8 @@ Write-Output "OK"
                   Set-ItemProperty -Path $file -Name IsReadOnly -Value $false -ErrorAction SilentlyContinue
                   Set-ItemProperty -Path $file -Name Attributes -Value "Normal" -ErrorAction SilentlyContinue
                   takeown.exe /f "$file" /a
-                  icacls.exe "$file" /grant "*S-1-5-32-544:F" /c
+                  icacls.exe "$file" /grant "*S-1-5-32-544:F" /c /L
+                  cmd /c del /f /q /a "$file" >$null 2>&1
                   Remove-Item -Path $file -Force -ErrorAction SilentlyContinue
               }
           }
