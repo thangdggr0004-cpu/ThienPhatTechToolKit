@@ -377,6 +377,14 @@ export default function LicenseManager() {
 
   const MainResultCard = () => {
     const isWindows = activeTab === 'windows';
+    const currentResultObj = isWindows ? currentScanResult?.Windows : currentScanResult?.Office;
+    const isLicensed = isWindows 
+      ? currentResultObj?.LicenseStatus === 1 
+      : (currentResultObj?.Products || []).some((p: any) => p.LicenseStatus === 1);
+    const hasProductKey = isWindows 
+      ? !!currentResultObj?.PartialProductKey 
+      : (currentResultObj?.Products || []).some((p: any) => !!p.PartialProductKey);
+
     if (isLoading) return (
         <div className="bg-slate-50 border border-slate-200 text-slate-800 p-4 rounded-lg flex items-center justify-center">
             <Loader className="animate-spin mr-3 h-5 w-5" />
@@ -396,6 +404,7 @@ export default function LicenseManager() {
         </div>
     );
 
+    // Tier 1: Danger (Active Crack / KMS / Ohook / Crack tasks)
     if (dangerCount > 0) return (
         <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-lg">
             <h3 className="font-bold flex items-center gap-2 text-base"><ShieldX className="h-5 w-5 text-red-600" />🔴 PHÁT HIỆN TIẾN TRÌNH BẺ KHÓA / RISKY TAMPERING</h3>
@@ -405,6 +414,17 @@ export default function LicenseManager() {
         </div>
     );
 
+    // Tier 2: Clean but No Key / Unlicensed (Matching getiwc.online "MÁY TRỐNG")
+    if (!isLicensed && !hasProductKey) return (
+        <div className="bg-slate-100 border border-slate-300 text-slate-800 p-4 rounded-lg">
+            <h3 className="font-bold flex items-center gap-2 text-base text-slate-800"><ShieldCheck className="h-5 w-5 text-slate-600" />👉 MÁY TRỐNG: HỆ THỐNG SẠCH VÀ KHÔNG CÓ KEY</h3>
+            <p className="text-xs mt-2 text-slate-600 leading-relaxed">
+              Hệ thống hoàn toàn sạch sẽ, không có bất kỳ tiến trình hay tệp tin bẻ khóa ngầm nào. Máy tính hiện chưa được cài đặt Product Key ({isWindows ? 'Windows' : 'MS Office'}) hoặc vừa được gỡ bỏ bản quyền thành công.
+            </p>
+        </div>
+    );
+
+    // Tier 3: Clean but Generic Key / HWID (Matching getiwc.online Warning)
     if (warningCount > 0) return (
         <div className="bg-amber-50 border border-amber-200 text-amber-900 p-4 rounded-lg">
             <h3 className="font-bold flex items-center gap-2 text-base text-amber-800"><ShieldCheck className="h-5 w-5 text-amber-600" />👉 MÁY SẠCH: KHÔNG CÓ TIẾN TRÌNH CRACK CHẠY NGẦM</h3>
@@ -417,6 +437,7 @@ export default function LicenseManager() {
         </div>
     );
 
+    // Tier 4: Genuine OEM / Retail Key
     return (
         <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-lg">
             <h3 className="font-bold flex items-center gap-2 text-base"><ShieldCheck className="h-5 w-5 text-emerald-600" />✅ {isWindows ? 'Windows' : 'MS Office'} BẢN QUYỀN CHÍNH HÃNG NGUYÊN BẢN</h3>
