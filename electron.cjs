@@ -537,9 +537,9 @@ if ($targetType -eq 'all' -or $targetType -eq 'office') {
     $officeDstatus = ""
     $officePaths = @(
         "$env:ProgramFiles\\Microsoft Office\\Office16",
-        "\${env:ProgramFiles(x86)}\\Microsoft Office\\Office16",
+        "$env:SystemDrive\\Program Files (x86)\\Microsoft Office\\Office16",
         "$env:ProgramFiles\\Microsoft Office\\Office15",
-        "\${env:ProgramFiles(x86)}\\Microsoft Office\\Office15"
+        "$env:SystemDrive\\Program Files (x86)\\Microsoft Office\\Office15"
     )
     foreach ($p in $officePaths) {
         if (Test-Path "$p\\ospp.vbs") {
@@ -567,9 +567,9 @@ if ($targetType -eq 'all' -or $targetType -eq 'office') {
     $result.Office.OhookFiles = @()
     $ohookSearchPaths = @(
         "$env:ProgramFiles\\Microsoft Office",
-        "\${env:ProgramFiles(x86)}\\Microsoft Office",
+        "$env:SystemDrive\\Program Files (x86)\\Microsoft Office",
         "$env:CommonProgramFiles\\Microsoft Shared\\OfficeSoftwareProtectionPlatform",
-        "\${env:CommonProgramW6432}\\Microsoft Shared\\OfficeSoftwareProtectionPlatform"
+        "$env:CommonProgramW6432\\Microsoft Shared\\OfficeSoftwareProtectionPlatform"
     )
     foreach ($searchBase in $ohookSearchPaths) {
         if (Test-Path $searchBase) {
@@ -678,9 +678,9 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 $officePath = ""
 $officePaths = @(
     "$env:ProgramFiles\\Microsoft Office\\Office16",
-    "\${env:ProgramFiles(x86)}\\Microsoft Office\\Office16",
+    "$env:SystemDrive\\Program Files (x86)\\Microsoft Office\\Office16",
     "$env:ProgramFiles\\Microsoft Office\\Office15",
-    "\${env:ProgramFiles(x86)}\\Microsoft Office\\Office15"
+    "$env:SystemDrive\\Program Files (x86)\\Microsoft Office\\Office15"
 )
 foreach ($p in $officePaths) {
     if (Test-Path "$p\\ospp.vbs") {
@@ -1991,9 +1991,9 @@ Write-Output "OK"
             "$env:ProgramFiles\\Microsoft Office\\Office16\\ospp.vbs",
             "$env:ProgramFiles\\Microsoft Office\\Office15\\ospp.vbs",
             "$env:ProgramFiles\\Microsoft Office\\Office14\\ospp.vbs",
-            "\${env:ProgramFiles(x86)}\\Microsoft Office\\Office16\\ospp.vbs",
-            "\${env:ProgramFiles(x86)}\\Microsoft Office\\Office15\\ospp.vbs",
-            "\${env:ProgramFiles(x86)}\\Microsoft Office\\Office14\\ospp.vbs"
+            "$env:SystemDrive\\Program Files (x86)\\Microsoft Office\\Office16\\ospp.vbs",
+            "$env:SystemDrive\\Program Files (x86)\\Microsoft Office\\Office15\\ospp.vbs",
+            "$env:SystemDrive\\Program Files (x86)\\Microsoft Office\\Office14\\ospp.vbs"
         )
         $ospp = $osppPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
         
@@ -2221,9 +2221,9 @@ Write-Output "OK"
           $officePath = ""
           $officePaths = @(
               "$env:ProgramFiles\\Microsoft Office\\Office16",
-              "\${env:ProgramFiles(x86)}\\Microsoft Office\\Office16",
+              "$env:SystemDrive\\Program Files (x86)\\Microsoft Office\\Office16",
               "$env:ProgramFiles\\Microsoft Office\\Office15",
-              "\${env:ProgramFiles(x86)}\\Microsoft Office\\Office15"
+              "$env:SystemDrive\\Program Files (x86)\\Microsoft Office\\Office15"
           )
           foreach ($p in $officePaths) {
               if (Test-Path "$p\\ospp.vbs") { $officePath = $p; break }
@@ -2254,7 +2254,7 @@ Write-Output "OK"
           Write-Host "[4/4] Quét và vô hiệu hóa Crack Ohook/Sppcs..."
           $ohookSearchPaths = @(
               "$env:ProgramFiles\\Microsoft Office",
-              "\${env:ProgramFiles(x86)}\\Microsoft Office",
+              "$env:SystemDrive\\Program Files (x86)\\Microsoft Office",
               "$env:CommonProgramFiles\\Microsoft Shared\\OfficeSoftwareProtectionPlatform",
               "\${env:CommonProgramW6432}\\Microsoft Shared\\OfficeSoftwareProtectionPlatform"
           )
