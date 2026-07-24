@@ -349,6 +349,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      webSecurity: false,
       preload: path.join(__dirname, 'preload.cjs')
     },
     frame: false,
@@ -356,10 +357,19 @@ function createWindow() {
     backgroundColor: '#0f172a',
   });
 
-  if (app.isPackaged) {
-    win.loadFile(path.join(__dirname, 'dist', 'index.html'));
+  // Capture all Renderer console logs & errors directly in terminal
+  win.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    console.log(`[RENDERER LOG L${level}]: ${message} (${sourceId}:${line})`);
+  });
+
+  if (!app.isPackaged) {
+    win.webContents.openDevTools();
+    win.loadURL('http://127.0.0.1:3000').catch((err) => {
+      console.log('Dev server not running at 127.0.0.1:3000, loading dist/index.html:', err);
+      win.loadFile(path.join(__dirname, 'dist', 'index.html'));
+    });
   } else {
-    win.loadURL('http://localhost:3000');
+    win.loadFile(path.join(__dirname, 'dist', 'index.html'));
   }
 
   // Open external links in default browser instead of inside the app
@@ -2265,8 +2275,8 @@ Write-Output "OK"
                   Write-Host "-> Phát hiện file nghi ngờ: $file. Đang tước quyền sở hữu và xóa bỏ..."
                   Set-ItemProperty -Path $file -Name IsReadOnly -Value $false -ErrorAction SilentlyContinue
                   Set-ItemProperty -Path $file -Name Attributes -Value "Normal" -ErrorAction SilentlyContinue
-                  cmd /c "takeown /f `"$file`" /a >nul 2>&1"
-                  cmd /c "icacls `"$file`" /grant *S-1-5-32-544:F /c >nul 2>&1"
+                  takeown.exe /f "$file" /a
+                  icacls.exe "$file" /grant "*S-1-5-32-544:F" /c
                   Remove-Item -Path $file -Force -ErrorAction SilentlyContinue
               }
           }

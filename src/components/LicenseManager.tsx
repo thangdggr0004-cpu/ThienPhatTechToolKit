@@ -77,6 +77,7 @@ export default function LicenseManager() {
   const [activeStep, setActiveStep] = useState<number>(1);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isResetting, setIsResetting] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
   const [windowsScanResult, setWindowsScanResult] = useState<any>(null);
   const [officeScanResult, setOfficeScanResult] = useState<any>(null);
 
