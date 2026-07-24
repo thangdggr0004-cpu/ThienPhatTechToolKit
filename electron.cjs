@@ -363,7 +363,6 @@ function createWindow() {
   });
 
   if (!app.isPackaged) {
-    win.webContents.openDevTools();
     win.loadURL('http://127.0.0.1:3000').catch((err) => {
       console.log('Dev server not running at 127.0.0.1:3000, loading dist/index.html:', err);
       win.loadFile(path.join(__dirname, 'dist', 'index.html'));
