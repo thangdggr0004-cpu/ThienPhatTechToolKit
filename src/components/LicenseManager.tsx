@@ -407,11 +407,14 @@ export default function LicenseManager() {
     );
 
     if (warningCount > 0) return (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-lg">
-            <h3 className="font-bold flex items-center gap-2 text-base"><ShieldCheck className="h-5 w-5 text-emerald-600" />👉 MÁY SẠCH: KHÔNG CÓ TIẾN TRÌNH CRACK CHẠY NGẦM</h3>
-            <p className="text-sm mt-1.5 text-slate-700 leading-relaxed">
-              Hệ thống hoàn toàn an toàn. Máy đang sử dụng <strong>Giấy Phép Kỹ Thuật Số (Digital License / HWID)</strong> với Key chung (Generic Key), không đi kèm Key nhúng BIOS. Đây là hành vi bản quyền hợp lệ liên kết phần cứng, không phải phần mềm bẻ khóa lậu.
-            </p>
+        <div className="bg-amber-50 border border-amber-200 text-amber-900 p-4 rounded-lg">
+            <h3 className="font-bold flex items-center gap-2 text-base text-amber-800"><ShieldCheck className="h-5 w-5 text-amber-600" />👉 MÁY SẠCH: KHÔNG CÓ TIẾN TRÌNH CRACK CHẠY NGẦM</h3>
+            <div className="text-xs mt-2 text-slate-700 space-y-1 leading-relaxed">
+              <p>Tuy nhiên, máy đang sử dụng <strong>Key chung (Generic Key)</strong> không đi kèm Key BIOS.</p>
+              <p>Đây có thể là hành vi <span className="text-red-600 font-semibold">kích hoạt HWID/MAS</span> hoặc <span className="text-emerald-700 font-semibold">giấy phép số HỢP LỆ</span> liên kết phần cứng.</p>
+              <p className="text-slate-500 pt-1">Để chứng minh tính hợp lệ, bạn cần nhập lại Key gốc(*) hoặc cung cấp giao dịch mua bán hợp lệ.</p>
+              <p className="text-[11px] text-slate-400 italic">(*) Key gốc có thể là key OEM, Retail mua ngoài, hoặc là key lưu trong BIOS.</p>
+            </div>
         </div>
     );
 
