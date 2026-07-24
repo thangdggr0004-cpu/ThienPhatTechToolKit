@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, Zap, Battery, Play, Download, CheckCircle, Info, Activity, Settings, RefreshCw, AlertTriangle, Monitor, HardDrive, Cpu, Terminal, Wrench, X } from 'lucide-react';
+import ProgressBarComponent from './ProgressBarComponent';
+import { useTaskManager } from '../context/TaskManagerContext';
 
 type PowerModeType = 'battery' | 'balanced' | 'gaming' | 'performance' | 'ultimate';
 
@@ -221,12 +223,29 @@ export default function WindowsSettings() {
     setState(prev => ({ ...prev, [key]: value }));
   };
 
+  const { startTask, updateTask, completeTask, failTask, getTask } = useTaskManager();
+
   const handleFixWindows = async (action: string) => {
     if (!isElectron) {
       alert("Chỉ hoạt động trên ứng dụng thật.");
       return;
     }
+
+    let taskTitle = 'SFC & DISM Sửa Lỗi Màn Xanh';
+    if (action === 'update') taskTitle = 'Reset Windows Update';
+    if (action === 'icon') taskTitle = 'Fix Lỗi Icon Cache';
+    
+    const taskId = `win-fix-${action}`;
+    startTask(taskId, taskTitle, 'Thiết Lập Windows', 'Đang khởi tạo tiến trình...', 'windows-settings');
     setFixingAction(action);
+
+    let p = 5;
+    const interval = setInterval(() => {
+      p += Math.floor(Math.random() * 6) + 2;
+      if (p > 95) p = 95;
+      updateTask(taskId, p, `Đang xử lý ${taskTitle} (${p}%)...`, `[*] Tiến trình ${taskTitle}: ${p}%`);
+    }, 1200);
+
     try {
       let success = false;
       if (action === 'sfc') {
@@ -236,13 +255,15 @@ export default function WindowsSettings() {
       } else if (action === 'icon') {
         success = await (window as any).electronAPI.rebuildIconCache();
       }
+      clearInterval(interval);
       if (success) {
-        alert("Đã chạy thành công lệnh sửa lỗi!");
+        completeTask(taskId, `Đã hoàn tất ${taskTitle} thành công!`);
       } else {
-        alert("Có lỗi xảy ra khi chạy lệnh.");
+        failTask(taskId, `Có lỗi xảy ra khi thực hiện ${taskTitle}`);
       }
     } catch (e: any) {
-      alert("Lỗi: " + e.message);
+      clearInterval(interval);
+      failTask(taskId, e.message);
     } finally {
       setFixingAction(null);
     }

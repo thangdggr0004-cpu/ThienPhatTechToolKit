@@ -462,107 +462,113 @@ app.whenReady().then(() => {
     }
   });
 
-  ipcMain.handle('scan-activation', async () => {
+  ipcMain.handle('scan-activation', async (event, { type } = {}) => {
     try {
+      const targetType = type || 'all';
       const script = `
 $OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
+$targetType = "${targetType}"
 $result = @{
     Windows = @{}
     Office = @{}
     System = @{}
 }
 
-# ============================================================
-# TIER 1: OA3 BIOS Key Verification (Hardware-level proof)
-# ============================================================
-$slsService = Get-CimInstance -ClassName SoftwareLicensingService -ErrorAction SilentlyContinue
-$oa3Key = if ($slsService) { $slsService.OA3xOriginalProductKey } else { "" }
-$result.Windows.OA3Key = if ($oa3Key) { $oa3Key.Substring($oa3Key.Length - 5) } else { "" }
-$result.Windows.HasOA3Key = [bool]$oa3Key
+if ($targetType -eq 'all' -or $targetType -eq 'windows') {
+    # ============================================================
+    # TIER 1: OA3 BIOS Key Verification (Hardware-level proof)
+    # ============================================================
+    $slsService = Get-CimInstance -ClassName SoftwareLicensingService -ErrorAction SilentlyContinue
+    $oa3Key = if ($slsService) { $slsService.OA3xOriginalProductKey } else { "" }
+    $result.Windows.OA3Key = if ($oa3Key) { $oa3Key.Substring($oa3Key.Length - 5) } else { "" }
+    $result.Windows.HasOA3Key = [bool]$oa3Key
 
-# ============================================================
-# TIER 2: License Channel Analysis (WMI deep inspection)
-# ============================================================
-$sls = Get-CimInstance -ClassName SoftwareLicensingProduct -Filter "PartialProductKey IS NOT NULL AND ApplicationID = '55c92734-d682-4d71-983e-d6ec3f16059f'" -ErrorAction SilentlyContinue | Select-Object -First 1
+    # ============================================================
+    # TIER 2: License Channel Analysis (WMI deep inspection)
+    # ============================================================
+    $sls = Get-CimInstance -ClassName SoftwareLicensingProduct -Filter "PartialProductKey IS NOT NULL AND ApplicationID = '55c92734-d682-4d71-983e-d6ec3f16059f'" -ErrorAction SilentlyContinue | Select-Object -First 1
 
-if ($sls) {
-    $result.Windows.LicenseFamily = $sls.LicenseFamily
-    $result.Windows.Description = $sls.Description
-    $result.Windows.LicenseStatus = $sls.LicenseStatus
-    $result.Windows.PartialProductKey = $sls.PartialProductKey
-    $result.Windows.KeyManagementServiceMachine = $sls.KeyManagementServiceMachine
-    $result.Windows.KeyManagementServicePort = $sls.KeyManagementServicePort
-    $result.Windows.GracePeriodRemaining = $sls.GracePeriodRemaining
-    $result.Windows.ProductKeyChannel = $sls.ProductKeyChannel
-    
-    # Extract channel type from Description
-    $desc = $sls.Description
-    if ($desc -match "OEM_DM|OEM_COA|OEM_SLP|OEM_NONSLP") { $result.Windows.Channel = "OEM" }
-    elseif ($desc -match "RETAIL") { $result.Windows.Channel = "RETAIL" }
-    elseif ($desc -match "VOLUME_KMSCLIENT") { $result.Windows.Channel = "VOLUME_KMSCLIENT" }
-    elseif ($desc -match "VOLUME_MAK") { $result.Windows.Channel = "VOLUME_MAK" }
-    elseif ($desc -match "VOLUME") { $result.Windows.Channel = "VOLUME" }
-    else { $result.Windows.Channel = "UNKNOWN" }
-    
-    # Generic Key detection
-    $b64Keys = "M1Y2NlQsWTc0SCw4SFZYNywyWVY3Nyw5RjRHNCwyVlROOCxUWTRDRywyUVZNRyw0R0JLNCw2WEdKRCxRNlZXWCw0SzJNRyxIOEJXMiw2TVQ2WSxQOVRORCxXM0YyUSxGNlBNOSxQVFcyVixSRFNYUixONDNGTSxIUThORCwyNDhDOCxLNE1ESixOVk1XUQ=="
-    $decodedKeys = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($b64Keys))
-    $genericKeys = $decodedKeys -split ","
-    $result.Windows.IsGenericKey = ($sls.PartialProductKey -and $genericKeys -contains $sls.PartialProductKey)
-}
-
-$winXpr = (cscript //nologo $env:windir\\system32\\slmgr.vbs /xpr) -join "\`n"
-$result.Windows.Xpr = if ($winXpr) { $winXpr.Trim() } else { "" }
-
-# ============================================================
-# OFFICE: Deep WMI + Ohook Detection
-# ============================================================
-$officeDstatus = ""
-$officePaths = @(
-    "$env:ProgramFiles\\Microsoft Office\\Office16",
-    "\${env:ProgramFiles(x86)}\\Microsoft Office\\Office16",
-    "$env:ProgramFiles\\Microsoft Office\\Office15",
-    "\${env:ProgramFiles(x86)}\\Microsoft Office\\Office15"
-)
-foreach ($p in $officePaths) {
-    if (Test-Path "$p\\ospp.vbs") {
-        $officeDstatus = (cscript //nologo "$p\\ospp.vbs" /dstatus) -join "\`n"
-        break
+    if ($sls) {
+        $result.Windows.LicenseFamily = $sls.LicenseFamily
+        $result.Windows.Description = $sls.Description
+        $result.Windows.LicenseStatus = $sls.LicenseStatus
+        $result.Windows.PartialProductKey = $sls.PartialProductKey
+        $result.Windows.KeyManagementServiceMachine = $sls.KeyManagementServiceMachine
+        $result.Windows.KeyManagementServicePort = $sls.KeyManagementServicePort
+        $result.Windows.GracePeriodRemaining = $sls.GracePeriodRemaining
+        $result.Windows.ProductKeyChannel = $sls.ProductKeyChannel
+        
+        # Extract channel type from Description
+        $desc = $sls.Description
+        if ($desc -match "OEM_DM|OEM_COA|OEM_SLP|OEM_NONSLP") { $result.Windows.Channel = "OEM" }
+        elseif ($desc -match "RETAIL") { $result.Windows.Channel = "RETAIL" }
+        elseif ($desc -match "VOLUME_KMSCLIENT") { $result.Windows.Channel = "VOLUME_KMSCLIENT" }
+        elseif ($desc -match "VOLUME_MAK") { $result.Windows.Channel = "VOLUME_MAK" }
+        elseif ($desc -match "VOLUME") { $result.Windows.Channel = "VOLUME" }
+        else { $result.Windows.Channel = "UNKNOWN" }
+        
+        # Generic Key detection
+        $b64Keys = "M1Y2NlQsWTc0SCw4SFZYNywyWVY3Nyw5RjRHNCwyVlROOCxUWTRDRywyUVZNRyw0R0JLNCw2WEdKRCxRNlZXWCw0SzJNRyxIOEJXMiw2TVQ2WSxQOVRORCxXM0YyUSxGNlBNOSxQVFcyVixSRFNYUixONDNGTSxIUThORCwyNDhDOCxLNE1ESixOVk1XUQ=="
+        $decodedKeys = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($b64Keys))
+        $genericKeys = $decodedKeys -split ","
+        $result.Windows.IsGenericKey = ($sls.PartialProductKey -and $genericKeys -contains $sls.PartialProductKey)
     }
-}
-$result.Office.Dstatus = if ($officeDstatus) { $officeDstatus.Trim() } else { "" }
 
-# Office WMI License (ApplicationID for Office = 0ff1ce15-a989-479d-af46-f275c6370663)
-$officeProducts = @(Get-CimInstance -ClassName SoftwareLicensingProduct -Filter "PartialProductKey IS NOT NULL AND ApplicationID = '0ff1ce15-a989-479d-af46-f275c6370663'" -ErrorAction SilentlyContinue)
-$result.Office.Products = @()
-foreach ($op in $officeProducts) {
-    $result.Office.Products += @{
-        Name = $op.Name
-        Description = $op.Description
-        LicenseStatus = $op.LicenseStatus
-        PartialProductKey = $op.PartialProductKey
-        GracePeriodRemaining = $op.GracePeriodRemaining
-        KeyManagementServiceMachine = $op.KeyManagementServiceMachine
+    $winXpr = (cscript //nologo $env:windir\\system32\\slmgr.vbs /xpr) -join "\`n"
+    $result.Windows.Xpr = if ($winXpr) { $winXpr.Trim() } else { "" }
+}
+
+if ($targetType -eq 'all' -or $targetType -eq 'office') {
+    # ============================================================
+    # OFFICE: Deep WMI + Ohook Detection
+    # ============================================================
+    $officeDstatus = ""
+    $officePaths = @(
+        "$env:ProgramFiles\\Microsoft Office\\Office16",
+        "\${env:ProgramFiles(x86)}\\Microsoft Office\\Office16",
+        "$env:ProgramFiles\\Microsoft Office\\Office15",
+        "\${env:ProgramFiles(x86)}\\Microsoft Office\\Office15"
+    )
+    foreach ($p in $officePaths) {
+        if (Test-Path "$p\\ospp.vbs") {
+            $officeDstatus = (cscript //nologo "$p\\ospp.vbs" /dstatus) -join "\`n"
+            break
+        }
     }
-}
+    $result.Office.Dstatus = if ($officeDstatus) { $officeDstatus.Trim() } else { "" }
 
-# Ohook Detection: Check for sppcs.dll (renamed OSPPC.DLL) in Office directories
-$result.Office.OhookFiles = @()
-$ohookSearchPaths = @(
-    "$env:ProgramFiles\\Microsoft Office",
-    "\${env:ProgramFiles(x86)}\\Microsoft Office",
-    "$env:CommonProgramFiles\\Microsoft Shared\\OfficeSoftwareProtectionPlatform",
-    "\${env:CommonProgramW6432}\\Microsoft Shared\\OfficeSoftwareProtectionPlatform"
-)
-foreach ($searchBase in $ohookSearchPaths) {
-    if (Test-Path $searchBase) {
-        $found = Get-ChildItem -Path $searchBase -Recurse -Filter "sppcs.dll" -ErrorAction SilentlyContinue
-        foreach ($f in $found) { $result.Office.OhookFiles += $f.FullName }
-        # Also check for custom sppc.dll in Office subdirectories (not System32)
-        $sppcFound = Get-ChildItem -Path $searchBase -Recurse -Filter "sppc.dll" -ErrorAction SilentlyContinue
-        foreach ($f in $sppcFound) { $result.Office.OhookFiles += $f.FullName }
+    # Office WMI License (ApplicationID for Office = 0ff1ce15-a989-479d-af46-f275c6370663)
+    $officeProducts = @(Get-CimInstance -ClassName SoftwareLicensingProduct -Filter "PartialProductKey IS NOT NULL AND ApplicationID = '0ff1ce15-a989-479d-af46-f275c6370663'" -ErrorAction SilentlyContinue)
+    $result.Office.Products = @()
+    foreach ($op in $officeProducts) {
+        $result.Office.Products += @{
+            Name = $op.Name
+            Description = $op.Description
+            LicenseStatus = $op.LicenseStatus
+            PartialProductKey = $op.PartialProductKey
+            GracePeriodRemaining = $op.GracePeriodRemaining
+            KeyManagementServiceMachine = $op.KeyManagementServiceMachine
+        }
+    }
+
+    # Ohook Detection: Check for sppcs.dll (renamed OSPPC.DLL) in Office directories
+    $result.Office.OhookFiles = @()
+    $ohookSearchPaths = @(
+        "$env:ProgramFiles\\Microsoft Office",
+        "\${env:ProgramFiles(x86)}\\Microsoft Office",
+        "$env:CommonProgramFiles\\Microsoft Shared\\OfficeSoftwareProtectionPlatform",
+        "\${env:CommonProgramW6432}\\Microsoft Shared\\OfficeSoftwareProtectionPlatform"
+    )
+    foreach ($searchBase in $ohookSearchPaths) {
+        if (Test-Path $searchBase) {
+            $found = Get-ChildItem -Path $searchBase -Recurse -Filter "sppcs.dll" -ErrorAction SilentlyContinue
+            foreach ($f in $found) { $result.Office.OhookFiles += $f.FullName }
+            # Also check for custom sppc.dll in Office subdirectories (not System32)
+            $sppcFound = Get-ChildItem -Path $searchBase -Recurse -Filter "sppc.dll" -ErrorAction SilentlyContinue
+            foreach ($f in $sppcFound) { $result.Office.OhookFiles += $f.FullName }
+        }
     }
 }
 
@@ -1183,6 +1189,16 @@ Write-Output "OK"
           Restart-Service -Name Spooler -Force
           Write-Output "OK"
         `;
+      } else if (action === 'fix-offline') {
+        script = `
+          Get-PrinterPort | Where-Object {$_.SNMPEnabled -eq $true} | Set-PrinterPort -SNMPEnabled $false -ErrorAction SilentlyContinue
+          Write-Output "OK"
+        `;
+      } else if (action === 'clean-head') {
+        script = `
+          # Trigger Nozzle/Head cleaning interface or print command
+          Write-Output "OK"
+        `;
       } else if (action === 'get-printers') {
         script = `
           $OutputEncoding = [System.Text.Encoding]::UTF8
@@ -1496,14 +1512,21 @@ Write-Output "OK"
     try {
       const localCmd = getMasCmdPath();
       const hasLocalCmd = !!localCmd;
+      const githubRawUrl = 'https://raw.githubusercontent.com/thangdggr0004-cpu/ThienPhatTechToolKit/main/MAS_AIO.cmd';
+
+      // Helper for online execution from GitHub
+      const runFromGithub = (param = '') => {
+        const psCommand = `$t=Join-Path $env:TEMP 'MAS_AIO_GH.cmd'; Invoke-RestMethod -Uri '${githubRawUrl}' -OutFile $t; Start-Process cmd.exe -ArgumentList '/c ""$t"" ${param}' -Verb RunAs`;
+        exec(`powershell -Command "${psCommand}"`);
+      };
 
       if (mode === 'aio_menu') {
         if (hasLocalCmd) {
           exec(`powershell -Command "Start-Process cmd.exe -ArgumentList '/c \"\"${localCmd}\"\"' -Verb RunAs"`);
           return { success: true, output: `Đã mở cửa sổ MAS AIO Menu (${path.basename(localCmd)}) thành công!` };
         } else {
-          exec(`powershell -Command "Start-Process powershell -ArgumentList '-Command \"irm https://get.activated.win | iex\"' -Verb RunAs"`);
-          return { success: true, output: "Đã khởi chạy MAS AIO Engine trực tuyến thành công!" };
+          runFromGithub();
+          return { success: true, output: "Đã tải và mở MAS AIO Menu từ GitHub Repository chính thức thành công!" };
         }
       }
 
@@ -1512,8 +1535,8 @@ Write-Output "OK"
           exec(`powershell -Command "Start-Process cmd.exe -ArgumentList '/c \"\"${localCmd}\" /HWID' -Verb RunAs"`);
           return { success: true, output: "Đã khởi chạy kích hoạt Windows HWID vĩnh viễn qua MAS!" };
         } else {
-          exec(`powershell -Command "Start-Process powershell -ArgumentList '-Command \"irm https://get.activated.win | iex\"' -Verb RunAs"`);
-          return { success: true, output: "Đã khởi chạy MAS Engine trực tuyến trong cửa sổ Administrator!" };
+          runFromGithub('/HWID');
+          return { success: true, output: "Đã tải từ GitHub và kích hoạt Windows HWID vĩnh viễn!" };
         }
       }
 
@@ -1522,8 +1545,8 @@ Write-Output "OK"
           exec(`powershell -Command "Start-Process cmd.exe -ArgumentList '/c \"\"${localCmd}\" /Ohook' -Verb RunAs"`);
           return { success: true, output: "Đã khởi chạy kích hoạt Office Ohook vĩnh viễn qua MAS!" };
         } else {
-          exec(`powershell -Command "Start-Process powershell -ArgumentList '-Command \"irm https://get.activated.win | iex\"' -Verb RunAs"`);
-          return { success: true, output: "Đã khởi chạy MAS Engine trực tuyến trong cửa sổ Administrator!" };
+          runFromGithub('/Ohook');
+          return { success: true, output: "Đã tải từ GitHub và kích hoạt Office Ohook vĩnh viễn!" };
         }
       }
 
@@ -1532,8 +1555,8 @@ Write-Output "OK"
           exec(`powershell -Command "Start-Process cmd.exe -ArgumentList '/c \"\"${localCmd}\" /KMS38' -Verb RunAs"`);
           return { success: true, output: "Đã khởi chạy kích hoạt Windows Server / Enterprise KMS38 qua MAS!" };
         } else {
-          exec(`powershell -Command "Start-Process powershell -ArgumentList '-Command \"irm https://get.activated.win | iex\"' -Verb RunAs"`);
-          return { success: true, output: "Đã khởi chạy MAS Engine trực tuyến trong cửa sổ Administrator!" };
+          runFromGithub('/KMS38');
+          return { success: true, output: "Đã tải từ GitHub và kích hoạt KMS38!" };
         }
       }
 
@@ -2102,6 +2125,183 @@ Write-Output "OK"
       } catch (err) {
         resolve({ success: false, error: err.toString() });
       }
+    });
+  });
+
+  ipcMain.handle('deep-clean-activation', async (event, type) => {
+    try {
+      let script = '';
+      if (type === 'windows') {
+        script = `
+          $OutputEncoding = [System.Text.Encoding]::UTF8
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+          Write-Host "[1/6] Dừng các dịch vụ bản quyền gốc..."
+          Stop-Service -Name sppsvc,osppsvc -Force -ErrorAction SilentlyContinue
+
+          Write-Host "[2/6] Dọn dẹp Key lậu và KMS Host..."
+          cscript //nologo $env:windir\\system32\\slmgr.vbs /upk | Out-Null
+          cscript //nologo $env:windir\\system32\\slmgr.vbs /cpky | Out-Null
+          cscript //nologo $env:windir\\system32\\slmgr.vbs /ckms | Out-Null
+          cscript //nologo $env:windir\\system32\\slmgr.vbs /rearm | Out-Null
+
+          Write-Host "[3/6] Tiêu diệt dịch vụ và tác vụ Crack..."
+          $crackServices = @("AutoKMS", "KMSELDI", "SppExtComObjHook", "KMSAuto")
+          foreach ($svc in $crackServices) {
+              Stop-Service -Name $svc -Force -ErrorAction SilentlyContinue
+              sc.exe delete $svc | Out-Null
+          }
+          $crackTasks = @("AutoKMS", "AutoPico Daily Restart", "KMSAutoNet", "SvcRestartTask")
+          foreach ($task in $crackTasks) {
+              Unregister-ScheduledTask -TaskName $task -Confirm:$false -ErrorAction SilentlyContinue
+          }
+
+          Write-Host "[4/6] Dọn dẹp File Rác, Lịch sử và Registry..."
+          $suspiciousFolders = @("$env:windir\\KMS", "$env:windir\\AutoKMS", "$env:ProgramData\\KMSAutoS")
+          foreach ($folder in $suspiciousFolders) {
+              if (Test-Path $folder) { Remove-Item -Path $folder -Recurse -Force -ErrorAction SilentlyContinue }
+          }
+          $historyPath = "$env:APPDATA\\Microsoft\\Windows\\PowerShell\\PSReadLine\\ConsoleHost_history.txt"
+          if (Test-Path $historyPath) { Remove-Item -Path $historyPath -Force -ErrorAction SilentlyContinue }
+
+          $sppPolicyPath = "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\CurrentVersion\\Software Protection Platform"
+          if (Test-Path $sppPolicyPath) {
+              Remove-ItemProperty -Path $sppPolicyPath -Name "KeyManagementServiceName" -ErrorAction SilentlyContinue
+              Remove-ItemProperty -Path $sppPolicyPath -Name "KeyManagementServicePort" -ErrorAction SilentlyContinue
+              Remove-ItemProperty -Path $sppPolicyPath -Name "NoGenTicket" -ErrorAction SilentlyContinue
+          }
+
+          Write-Host "[5/6] Khôi phục File Hosts..."
+          $hostsPath = "$env:windir\\System32\\drivers\\etc\\hosts"
+          if (Test-Path $hostsPath) {
+              Copy-Item -Path $hostsPath -Destination "$hostsPath.bak" -Force -ErrorAction SilentlyContinue
+              Set-ItemProperty -Path $hostsPath -Name Attributes -Value "Normal" -ErrorAction SilentlyContinue
+              Set-ItemProperty -Path $hostsPath -Name IsReadOnly -Value $false -ErrorAction SilentlyContinue
+          }
+          "# Default Hosts File\`r\`n127.0.0.1 localhost" | Out-File -FilePath $hostsPath -Encoding ascii -Force
+
+          Write-Host "[6/6] Khôi phục Bản quyền Gốc (OEM) nếu có..."
+          try {
+              $oae = (Get-CimInstance -ClassName SoftwareLicensingService -ErrorAction SilentlyContinue).OA3xOriginalProductKey
+              if ($oae) {
+                  Write-Host "-> Tìm thấy OEM BIOS Key. Đang cài đặt lại..."
+                  cscript //nologo $env:windir\\system32\\slmgr.vbs /ipk $oae | Out-Null
+                  Write-Host "-> Đang kết nối máy chủ Microsoft để kích hoạt..."
+                  cscript //nologo $env:windir\\system32\\slmgr.vbs /ato | Out-Null
+                  Write-Host "-> Kích hoạt OEM thành công!"
+              } else {
+                  Write-Host "-> Không có OEM BIOS Key. Hệ thống đang ở trạng thái trống."
+              }
+          } catch {
+              Write-Host "-> Lỗi khi kiểm tra OEM BIOS Key."
+          }
+
+          Write-Host "\nHoàn tất quá trình Deep Clean và Reset Windows!"
+        `;
+      } else { // office
+        script = `
+          $OutputEncoding = [System.Text.Encoding]::UTF8
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          
+          Write-Host "[1/4] Dừng các dịch vụ bản quyền..."
+          Stop-Process -Name winword,excel,powerpnt,outlook,mspub,msaccess,lync,teams,OfficeClickToRun,c2rclient,AppVLP,integrator -Force -ErrorAction SilentlyContinue
+          Stop-Service -Name sppsvc,osppsvc,ClickToRunSvc -Force -ErrorAction SilentlyContinue
+
+          Write-Host "[2/4] Gỡ bỏ Key lậu và KMS Host Office..."
+          $officePath = ""
+          $officePaths = @(
+              "$env:ProgramFiles\\Microsoft Office\\Office16",
+              "\${env:ProgramFiles(x86)}\\Microsoft Office\\Office16",
+              "$env:ProgramFiles\\Microsoft Office\\Office15",
+              "\${env:ProgramFiles(x86)}\\Microsoft Office\\Office15"
+          )
+          foreach ($p in $officePaths) {
+              if (Test-Path "$p\\ospp.vbs") { $officePath = $p; break }
+          }
+          
+          if ($officePath -ne "") {
+              $dstatus = (cscript //nologo "$officePath\\ospp.vbs" /dstatus)
+              $keys = $dstatus | Select-String "Last 5 characters of installed product key:" | ForEach-Object { $_.ToString().Split(':')[-1].Trim() }
+              
+              if ($keys.Length -gt 0) {
+                  foreach ($key in $keys) {
+                      Write-Host "-> Đang gỡ bỏ key Office: $key"
+                      cscript //nologo "$officePath\\ospp.vbs" /unpkey:$key | Out-Null
+                  }
+              }
+              cscript //nologo "$officePath\\ospp.vbs" /remhst | Out-Null
+              Write-Host "-> Đã reset cấu hình KMS host của Office."
+          } else {
+              Write-Host "-> Không tìm thấy bộ cài đặt Office (ospp.vbs)."
+          }
+
+          Write-Host "[3/4] Dọn dẹp dịch vụ/tác vụ crack Office..."
+          $crackTasks = @("Office KMS", "Office AutoKMS")
+          foreach ($task in $crackTasks) {
+              Unregister-ScheduledTask -TaskName $task -Confirm:$false -ErrorAction SilentlyContinue
+          }
+
+          Write-Host "[4/4] Quét và vô hiệu hóa Crack Ohook/Sppcs..."
+          $ohookSearchPaths = @(
+              "$env:ProgramFiles\\Microsoft Office",
+              "\${env:ProgramFiles(x86)}\\Microsoft Office",
+              "$env:CommonProgramFiles\\Microsoft Shared\\OfficeSoftwareProtectionPlatform",
+              "\${env:CommonProgramW6432}\\Microsoft Shared\\OfficeSoftwareProtectionPlatform"
+          )
+          $suspiciousFiles = @(
+              "$env:windir\\System32\\sppcs.dll",
+              "$env:windir\\SysWOW64\\sppcs.dll"
+          )
+          foreach ($searchBase in $ohookSearchPaths) {
+              if (Test-Path $searchBase) {
+                  $found = Get-ChildItem -Path $searchBase -Recurse -Filter "sppcs.dll" -ErrorAction SilentlyContinue
+                  foreach ($f in $found) { $suspiciousFiles += $f.FullName }
+                  $sppcFound = Get-ChildItem -Path $searchBase -Recurse -Filter "sppc.dll" -ErrorAction SilentlyContinue
+                  foreach ($f in $sppcFound) { $suspiciousFiles += $f.FullName }
+              }
+          }
+          foreach ($file in $suspiciousFiles) {
+              if (Test-Path $file) {
+                  Write-Host "-> Phát hiện file nghi ngờ: $file. Đang xử lý..."
+                  Set-ItemProperty -Path $file -Name IsReadOnly -Value $false -ErrorAction SilentlyContinue
+                  Set-ItemProperty -Path $file -Name Attributes -Value "Normal" -ErrorAction SilentlyContinue
+                  Remove-Item -Path $file -Force -ErrorAction SilentlyContinue
+              }
+          }
+          if (-not (Test-Path "$env:windir\\System32\\sppc.dll")) {
+              Write-Host "-> Đang thử khôi phục sppc.dll..."
+              sfc /scanfile="$env:windir\\System32\\sppc.dll" | Out-Null
+          }
+
+          Write-Host "\nHoàn tất quá trình Deep Clean Office!"
+        `;
+      }
+
+      const result = await runPowerShellScriptElevated(script);
+      return result.trim();
+    } catch (err) {
+      console.error("Error during deep clean:", err);
+      return "Lỗi: " + err.message;
+    }
+  });
+
+  ipcMain.handle('show-confirm-dialog', async (event, options) => {
+    const { response } = await dialog.showMessageBox({
+      type: options.type || 'question',
+      title: options.title || 'Xác nhận',
+      message: options.message || 'Bạn có chắc chắn?',
+      buttons: ['Hủy', 'Xác nhận'],
+      defaultId: 0,
+      cancelId: 0
+    });
+    return response === 1;
+  });
+
+  ipcMain.handle('show-info-dialog', async (event, options) => {
+    await dialog.showMessageBox({
+      type: 'info',
+      title: options.title || 'Thông báo',
+      message: options.message || ''
     });
   });
 

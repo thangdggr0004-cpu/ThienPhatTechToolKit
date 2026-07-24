@@ -17,6 +17,7 @@ export default function TitleBar() {
     }).catch(() => {});
 
     const timer = setInterval(async () => {
+      if ((window as any).__ecoMode || document.hidden) return;
       try {
         const m = await (window as any).electronAPI.getRealtimeMetrics();
         setMetrics(prev => ({
@@ -25,7 +26,7 @@ export default function TitleBar() {
           ramTotal: prev?.ramTotal ?? 0,
         }));
       } catch {}
-    }, 5000);
+    }, 10000);
 
     // Initial fetch
     (async () => {

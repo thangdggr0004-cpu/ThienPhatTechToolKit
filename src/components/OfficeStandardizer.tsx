@@ -21,6 +21,7 @@ import {
   generateRetailToVolumeScript,
   generateBlockOfficeUpdateScript
 } from '../utils/scriptGenerator';
+import { useTaskManager } from '../context/TaskManagerContext';
 
 export default function OfficeStandardizer() {
   const [activeTask, setActiveTask] = useState<string | null>(null);
@@ -30,21 +31,28 @@ export default function OfficeStandardizer() {
   const [progress, setProgress] = useState<number>(0);
   const [progressText, setProgressText] = useState<string>('');
 
-  const executeUtility = async (scriptGenFunc: (args?: any) => string, taskId: string, args?: any) => {
+  const { startTask, updateTask, completeTask, failTask } = useTaskManager();
+
+  const executeUtility = async (scriptGenFunc: (args?: any) => string, taskId: string, taskTitle = 'Tiện Ích Office', args?: any) => {
     setActiveTask(taskId);
     setSuccessTask(null);
     setProgress(0);
     setProgressText('Đang khởi tạo...');
     
+    startTask(taskId, taskTitle, 'Tiện Ích Office', 'Đang khởi tạo tiến trình...', 'office-standardizer');
+
     // Simulate Progress
     let currentP = 0;
     const pInterval = setInterval(() => {
       currentP += Math.floor(Math.random() * 15) + 5;
       if (currentP > 90) currentP = 90;
       setProgress(currentP);
-      if (currentP > 20 && currentP < 50) setProgressText('Đang nạp bộ lệnh script...');
-      else if (currentP >= 50 && currentP < 80) setProgressText('Đang xử lý khóa Registry...');
-      else if (currentP >= 80) setProgressText('Đang áp dụng thay đổi...');
+      let pTxt = 'Đang thực thi...';
+      if (currentP > 20 && currentP < 50) pTxt = 'Đang nạp bộ lệnh script...';
+      else if (currentP >= 50 && currentP < 80) pTxt = 'Đang xử lý khóa Registry...';
+      else if (currentP >= 80) pTxt = 'Đang áp dụng thay đổi...';
+      setProgressText(pTxt);
+      updateTask(taskId, currentP, `${pTxt} (${currentP}%)`, `[*] ${pTxt}`);
     }, 250);
 
     const scriptArgs = args || {
@@ -68,12 +76,14 @@ export default function OfficeStandardizer() {
         setProgress(100);
         setProgressText('Hoàn thành!');
         setSuccessTask(taskId);
+        completeTask(taskId, `Đã hoàn tất ${taskTitle}!`);
         setTimeout(() => {
           setActiveTask(null);
           setSuccessTask(null);
         }, 2000);
       } else {
         setActiveTask(null);
+        failTask(taskId, errMsg || 'Lỗi thực thi');
         window.alert("Lỗi thực thi: " + errMsg);
       }
     };

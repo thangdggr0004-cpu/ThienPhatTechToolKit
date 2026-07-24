@@ -19,7 +19,7 @@ interface MenuItem {
 }
 
 const activationItems: MenuItem[] = [
-  { id: 'activation', name: 'Quét Bản Quyền', description: 'Kiểm tra Windows & Office', icon: ShieldAlert, iconClass: 'icon-pastel-violet' },
+  { id: 'activation', name: 'Quản lý Bản quyền', description: 'Quét, chẩn đoán, xử lý bản quyền', icon: ShieldAlert, iconClass: 'icon-pastel-violet' },
 ];
 
 const systemItems: MenuItem[] = [

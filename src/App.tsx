@@ -4,7 +4,7 @@ import TitleBar from './components/TitleBar';
 import Sidebar from './components/Sidebar';
 // Lazy‑loaded components
 const Dashboard = lazy(() => import('./components/Dashboard'));
-const ActivationScanner = lazy(() => import('./components/ActivationScanner'));
+const LicenseManager = lazy(() => import('./components/LicenseManager'));
 const HardwareDetails = lazy(() => import('./components/HardwareDetails'));
 const JunkCleaner = lazy(() => import('./components/JunkCleaner'));
 const NetworkConfig = lazy(() => import('./components/NetworkConfig'));
@@ -19,6 +19,8 @@ const AdvancedActivation = lazy(() => import('./components/AdvancedActivation'))
 
 import { Monitor, RefreshCw, Terminal, Cpu, MemoryStick, Activity } from 'lucide-react';
 import AutoUpdater from './components/AutoUpdater';
+import { TaskManagerProvider } from './context/TaskManagerContext';
+import GlobalTaskBar from './components/GlobalTaskBar';
 
 // Skeleton fallback shown while lazy component loads
 function PageSkeleton() {
@@ -51,9 +53,7 @@ export default function App() {
     (window as any).__activeSection = activeSection;
   }, [activeSection]);
   
-  const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
-    return localStorage.getItem('advancedUnlocked') === 'true';
-  });
+  const [isUnlocked, setIsUnlocked] = useState<boolean>(false);
 
   // Secret shortcut "1111" listener to unlock Advanced Activation tab
   useEffect(() => {
@@ -71,7 +71,6 @@ export default function App() {
         if (buffer === '1111') {
           buffer = '';
           setIsUnlocked(true);
-          localStorage.setItem('advancedUnlocked', 'true');
           setActiveSection('advanced-activation');
           alert("🔓 Chúc mừng! Bạn đã mở khóa thành công Tiện Ích Nâng Cao (MAS Engine)!");
         }
@@ -140,8 +139,8 @@ export default function App() {
       }
       
       // Smart Auto-Eco Mode for weak CPUs (Celeron, Pentium, Atom, Athlon)
-      if (info && info.cpuModel) {
-        const cpuModel = info.cpuModel.toLowerCase();
+      if (info && info.cpuName) {
+        const cpuModel = info.cpuName.toLowerCase();
         const isWeakCpu = cpuModel.includes('celeron') || 
                           cpuModel.includes('pentium') || 
                           cpuModel.includes('atom') || 
@@ -199,7 +198,8 @@ export default function App() {
   }, []);
 
   return (
-    <div className="h-screen w-screen bg-white text-slate-800 font-sans flex flex-col overflow-hidden select-none">
+    <TaskManagerProvider>
+      <div className="h-screen w-screen bg-white text-slate-800 font-sans flex flex-col overflow-hidden select-none">
       <TitleBar />
       {/* Outer Windows Exe Application Container Frame */}
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -211,72 +211,72 @@ export default function App() {
           <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} isUnlocked={isUnlocked} />
 
           {/* Right Main Panel Content */}
-          <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-[#fafafa] space-y-6" key={activeSection}>
-            {activeSection === 'dashboard' && (
+          <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-[#fafafa] relative">
+            <div style={{ display: activeSection === 'dashboard' ? 'block' : 'none' }}>
               <Suspense fallback={<PageSkeleton />}>
                 <PageWrapper><Dashboard onNavigate={setActiveSection} /></PageWrapper>
               </Suspense>
-            )}
-            {activeSection === 'activation' && (
+            </div>
+            <div style={{ display: activeSection === 'activation' ? 'block' : 'none' }}>
               <Suspense fallback={<PageSkeleton />}>
-                <PageWrapper><ActivationScanner /></PageWrapper>
+                <PageWrapper><LicenseManager /></PageWrapper>
               </Suspense>
-            )}
-            {activeSection === 'hardware' && (
+            </div>
+            <div style={{ display: activeSection === 'hardware' ? 'block' : 'none' }}>
               <Suspense fallback={<PageSkeleton />}>
                 <PageWrapper><HardwareDetails /></PageWrapper>
               </Suspense>
-            )}
-            {activeSection === 'cleaner' && (
+            </div>
+            <div style={{ display: activeSection === 'cleaner' ? 'block' : 'none' }}>
               <Suspense fallback={<PageSkeleton />}>
                 <PageWrapper><JunkCleaner /></PageWrapper>
               </Suspense>
-            )}
-            {activeSection === 'network' && (
+            </div>
+            <div style={{ display: activeSection === 'network' ? 'block' : 'none' }}>
               <Suspense fallback={<PageSkeleton />}>
                 <PageWrapper><NetworkConfig /></PageWrapper>
               </Suspense>
-            )}
-            {activeSection === 'standardizer' && (
+            </div>
+            <div style={{ display: activeSection === 'standardizer' ? 'block' : 'none' }}>
               <Suspense fallback={<PageSkeleton />}>
                 <PageWrapper><OfficeStandardizer /></PageWrapper>
               </Suspense>
-            )}
-            {activeSection === 'windows-settings' && (
+            </div>
+            <div style={{ display: activeSection === 'windows-settings' ? 'block' : 'none' }}>
               <Suspense fallback={<PageSkeleton />}>
                 <PageWrapper><WindowsSettings /></PageWrapper>
               </Suspense>
-            )}
-            {activeSection === 'backup' && (
+            </div>
+            <div style={{ display: activeSection === 'backup' ? 'block' : 'none' }}>
               <Suspense fallback={<PageSkeleton />}>
                 <PageWrapper><BackupManager /></PageWrapper>
               </Suspense>
-            )}
-            {activeSection === 'printer' && (
+            </div>
+            <div style={{ display: activeSection === 'printer' ? 'block' : 'none' }}>
               <Suspense fallback={<PageSkeleton />}>
                 <PageWrapper><PrinterUtils /></PageWrapper>
               </Suspense>
-            )}
-            {activeSection === 'bitlocker' && (
+            </div>
+            <div style={{ display: activeSection === 'bitlocker' ? 'block' : 'none' }}>
               <Suspense fallback={<PageSkeleton />}>
                 <PageWrapper><BitLockerManager /></PageWrapper>
               </Suspense>
-            )}
-            {activeSection === 'laptop-tester' && (
+            </div>
+            <div style={{ display: activeSection === 'laptop-tester' ? 'block' : 'none' }}>
               <Suspense fallback={<PageSkeleton />}>
                 <PageWrapper><LaptopTester /></PageWrapper>
               </Suspense>
-            )}
-            {activeSection === 'advanced-activation' && (
+            </div>
+            <div style={{ display: activeSection === 'advanced-activation' ? 'block' : 'none' }}>
               <Suspense fallback={<PageSkeleton />}>
                 <PageWrapper><AdvancedActivation /></PageWrapper>
               </Suspense>
-            )}
-            {activeSection === 'touch' && (
+            </div>
+            <div style={{ display: activeSection === 'touch' ? 'block' : 'none' }}>
               <Suspense fallback={<PageSkeleton />}>
                 <TouchScreenTester onBack={() => setActiveSection('dashboard')} />
               </Suspense>
-            )}
+            </div>
           </main>
         </div>
 
@@ -341,10 +341,12 @@ export default function App() {
               <RefreshCw id="update-spinner" className="w-3 h-3" />
               v{packageJson.version} - Active
             </button>
-          </div>
         </div>
       </div>
-      <AutoUpdater />
     </div>
+    <AutoUpdater />
+    <GlobalTaskBar onNavigateTab={(tab) => setActiveSection(tab)} />
+    </div>
+  </TaskManagerProvider>
   );
 }

@@ -46,10 +46,13 @@ if %errorLevel% neq 0 (
 
 chcp 65001 >nul
 echo ====================================================================
-echo   GỠ BỎ KEY WINDOWS VÀ BẢN QUYỀN LẬU CHUYÊN SÂU
+echo   ĐẶT LẠI KÊNH BẢN QUYỀN WINDOWS VỀ GỐC
 echo ====================================================================
 echo.
-echo [!] CẢNH BÁO: Thao tác này sẽ xóa sạch Product Key hiện tại khỏi máy tính.
+echo [!] CẢNH BÁO: Thao tác này sẽ gỡ bỏ hoàn toàn Product Key và các
+echo     cấu hình kích hoạt hiện tại của Windows.
+echo     Chỉ thực hiện khi bạn đã có sẵn Key mới hoặc bản quyền số.
+echo.
 set /p confirm="Bạn có chắc chắn muốn tiếp tục? (Y/N): "
 if /i "%confirm%" neq "Y" (
     echo [*] Đã hủy thao tác.
@@ -60,37 +63,35 @@ if /i "%confirm%" neq "Y" (
 echo.
 echo [*] Bước 1: Gỡ bỏ Product Key hiện tại khỏi hệ thống...
 cscript //nologo %windir%\\system32\\slmgr.vbs /upk
-echo [+] Đã gỡ bỏ Product Key thành công.
+echo [+] Product Key đã được gỡ bỏ.
 
 echo.
-echo [*] Bước 2: Xóa Key khỏi Registry để bảo mật và tránh nhận lại...
+echo [*] Bước 2: Xóa Key khỏi Registry để tránh xung đột...
 cscript //nologo %windir%\\system32\\slmgr.vbs /cpky
-echo [+] Đã dọn dẹp Registry Key thành công.
+echo [+] Đã dọn sạch Product Key còn sót lại trong Registry.
 
 echo.
 echo [*] Bước 3: Đặt lại trạng thái cấp phép (Rearm Licensing Status)...
 cscript //nologo %windir%\\system32\\slmgr.vbs /rearm
-echo [+] Đã đặt lại trạng thái cấp phép thành công.
+echo [+] Trạng thái bản quyền đã được reset.
 
 echo.
-echo [*] Bước 4: Khởi động lại dịch vụ bảo vệ bản quyền (Software Protection)...
-sc config sppsvc start= auto >nul 2>&1
+echo [*] Bước 4: Xóa cache máy chủ KMS (nếu có)...
+cscript //nologo %windir%\\system32\\slmgr.vbs /ckms
+echo [+] Cache máy chủ KMS đã được dọn sạch.
+
+echo.
+echo [*] Bước 5: Khởi động lại dịch vụ bảo vệ bản quyền (Software Protection)...
 net stop sppsvc /y >nul 2>&1
 net start sppsvc >nul 2>&1
-echo [+] Dịch vụ sppsvc đã được khởi động lại thành công.
-
-echo.
-echo [*] Bước 5: Tiêu diệt chứng chỉ số lậu (HWID/KMS38)...
-net stop clipsvc /y >nul 2>&1
-del /f /q "%ProgramData%\Microsoft\Windows\ClipSVC\tokens.dat" >nul 2>&1
-del /f /q "%windir%\System32\spp\tokens\skus\kms38\*.*" >nul 2>&1
-net start clipsvc >nul 2>&1
-echo [+] Đã dọn dẹp chứng chỉ HWID thành công.
+echo [+] Dịch vụ sppsvc đã được khởi động lại.
 
 echo.
 echo ====================================================================
-echo [+] ĐÃ XÓA SẠCH VÀ CHUẨN HÓA LẠI BẢN QUYỀN WINDOWS!
-echo [!] Khuyến nghị: Hãy khởi động lại máy tính để thay đổi có hiệu lực.
+echo [+] ĐÃ HOÀN TẤT ĐẶT LẠI BẢN QUYỀN WINDOWS VỀ GỐC!
+echo [!] Khuyến nghị: Hãy khởi động lại máy tính, sau đó kết nối
+echo     Internet để Windows tự nhận lại bản quyền số (nếu có)
+echo     hoặc nhập Product Key mới của bạn.
 echo ====================================================================
 pause`;
   }
@@ -108,6 +109,8 @@ echo.
 
 set "found=0"
 for %%p in (
+    "%ProgramFiles%\\Microsoft Office\\root\\Office16"
+    "%ProgramFiles(x86)%\\Microsoft Office\\root\\Office16"
     "%ProgramFiles%\\Microsoft Office\\Office16"
     "%ProgramFiles(x86)%\\Microsoft Office\\Office16"
     "%ProgramFiles%\\Microsoft Office\\Office15"
@@ -146,14 +149,24 @@ if %errorLevel% neq 0 (
 
 chcp 65001 >nul
 echo ====================================================================
-echo   GỠ BỎ TOÀN BỘ KEY OFFICE LẬU HOẶC CONFLICT CHUYÊN SÂU
+echo   ĐẶT LẠI TOÀN BỘ BẢN QUYỀN MICROSOFT OFFICE VỀ GỐC
 echo ====================================================================
 echo.
-echo Công cụ này sẽ tìm kiếm và gỡ bỏ các Product Key lậu (KMS, v.v.) đang gây lỗi kích hoạt Office.
+echo [!] CẢNH BÁO: Thao tác này sẽ gỡ bỏ TOÀN BỘ Product Key của Office
+echo     đang được cài đặt trên máy. Hãy chắc chắn bạn có thể kích
+echo     hoạt lại bản quyền sau khi chạy công cụ này.
 echo.
+set /p confirm="Bạn có chắc chắn muốn xóa tất cả Key Office? (Y/N): "
+if /i "%confirm%" neq "Y" (
+    echo [*] Đã hủy thao tác.
+    pause
+    exit /b
+)
 
 set "officePath="
 for %%p in (
+    "%ProgramFiles%\\Microsoft Office\\root\\Office16"
+    "%ProgramFiles(x86)%\\Microsoft Office\\root\\Office16"
     "%ProgramFiles%\\Microsoft Office\\Office16"
     "%ProgramFiles(x86)%\\Microsoft Office\\Office16"
     "%ProgramFiles%\\Microsoft Office\\Office15"
@@ -166,35 +179,44 @@ for %%p in (
 
 if "%officePath%"=="" (
     echo [!] Không tìm thấy công cụ ospp.vbs của Microsoft Office.
-    echo [*] Thao tác không thể tiếp tục tự động.
+    echo [*] Thao tác không thể tiếp tục.
     pause
     exit /b
 )
 
+echo.
 echo [+] Đã tìm thấy công cụ Office tại: %officePath%
 echo.
-echo [*] Đang liệt kê các khóa giấy phép đang cài đặt trên máy...
+echo [*] Đang liệt kê các khóa giấy phép đang được cài đặt...
 echo ------------------------------------------------------------
 cscript //nologo "%officePath%\\ospp.vbs" /dstatus > "%temp%\\office_status.txt"
 type "%temp%\\office_status.txt"
 echo ------------------------------------------------------------
 echo.
-echo [*] Đang tự động gỡ bỏ các Key có trạng thái lậu / xung đột...
+echo [*] Bắt đầu quá trình gỡ bỏ tất cả Product Key đã phát hiện...
 
-:: Tìm kiếm các 5 ký tự cuối của key
 for /f "tokens=5" %%a in ('findstr /i "Last 5 characters of installed product key:" "%temp%\\office_status.txt"') do (
-    echo [!] Phát hiện Product Key kết thúc bằng: %%a
-    echo [*] Đang gỡ bỏ key %%a...
+    echo [+] Đang gỡ bỏ Product Key có 5 ký tự cuối là: %%a
     cscript //nologo "%officePath%\\ospp.vbs" /unpkey:%%a
-    echo [+] Đã gỡ bỏ key %%a thành công.
 )
+
+echo.
+echo [*] Đang xóa cache máy chủ KMS Host của Office (nếu có)...
+cscript //nologo "%officePath%\\ospp.vbs" /remhst
+echo [+] Đã xóa cache KMS Host.
+
+echo.
+echo [*] Đang reset lại trạng thái kích hoạt Office...
+cscript //nologo "%officePath%\\ospp.vbs" /rearm
+echo [+] Đã reset trạng thái.
 
 del "%temp%\\office_status.txt" >nul 2>&1
 
 echo.
 echo ====================================================================
-echo [+] ĐÃ DỌN SẠCH TOÀN BỘ KEY OFFICE XUNG ĐỘT!
-echo [!] Bây giờ bạn có thể đăng nhập Microsoft 365 hoặc nhập Key mới của bạn.
+echo [+] ĐÃ DỌN SẠCH TOÀN BỘ KEY OFFICE!
+echo [!] Bây giờ bạn có thể mở ứng dụng Office, đăng nhập tài khoản 
+echo     Microsoft 365 hoặc nhập Product Key mới của bạn.
 echo ====================================================================
 pause`;
   }
@@ -451,51 +473,62 @@ Write-Host "    - Lề Phải (Right Margin): $($preset.marginRight) mm"
 Write-Host "    - Giãn dòng: $($preset.lineSpacing) lines"
 Write-Host ""
 
-Write-Host "[*] Đang khởi động Microsoft Word tự động để thiết lập..." -ForegroundColor Yellow
+$normalPath = "$env:APPDATA\\Microsoft\\Templates\\Normal.dotm"
+
+# 1. Clear ReadOnly attribute on Normal.dotm if exists
+if (Test-Path $normalPath) {
+    Set-ItemProperty -Path $normalPath -Name IsReadOnly -Value $false -ErrorAction SilentlyContinue
+    (Get-Item $normalPath).IsReadOnly = $false
+}
+
+# 2. Stop any background Word processes
+Write-Host "[*] Đang đóng tiến trình Word ngầm để giải phóng Mẫu chuẩn (Normal.dotm)..." -ForegroundColor Yellow
+Stop-Process -Name "WINWORD" -Force -ErrorAction SilentlyContinue
+Start-Sleep -Milliseconds 500
 
 try {
-    # Create Word Object
+    # Create Word COM Object
     $word = New-Object -ComObject Word.Application
     $word.Visible = $false
+    $word.DisplayAlerts = 0 # wdAlertsNone
     
-    # Open default template or create blank doc to set as default
     $doc = $word.Documents.Add()
     
-    # 1. Page Setup (Convert mm to points: 1 mm = 2.83465 points)
-    $doc.PageSetup.PageWidth = 210 * 2.83465
-    $doc.PageSetup.PageHeight = 297 * 2.83465
-    $doc.PageSetup.TopMargin = $($preset.marginTop) * 2.83465
-    $doc.PageSetup.BottomMargin = $($preset.marginBottom) * 2.83465
-    $doc.PageSetup.LeftMargin = $($preset.marginLeft) * 2.83465
-    $doc.PageSetup.RightMargin = $($preset.marginRight) * 2.83465
+    # 1. Page Setup (Convert mm to points via Word COM native MillimetersToPoints)
+    $doc.PageSetup.PaperSize = 7 # 7 = wdPaperA4
+    $doc.PageSetup.TopMargin = $word.MillimetersToPoints($($preset.marginTop))
+    $doc.PageSetup.BottomMargin = $word.MillimetersToPoints($($preset.marginBottom))
+    $doc.PageSetup.LeftMargin = $word.MillimetersToPoints($($preset.marginLeft))
+    $doc.PageSetup.RightMargin = $word.MillimetersToPoints($($preset.marginRight))
+    
+    # Save PageSetup as Template Default via Reflection
+    $type = $doc.PageSetup.GetType()
+    $type.InvokeMember("SetAsTemplateDefault", [System.Reflection.BindingFlags]::InvokeMethod, $null, $doc.PageSetup, $null)
     
     # 2. Font Setup (Normal Style)
     $styleNormal = $doc.Styles.Item("Normal")
     $styleNormal.Font.Name = "$($preset.fontName)"
     $styleNormal.Font.Size = $($preset.fontSizeBody)
-    $styleNormal.ParagraphFormat.LineSpacingRule = 4 # Multiple
-    $styleNormal.ParagraphFormat.LineSpacing = [float]$($preset.lineSpacing) * 12 # Line spacing
+    $styleNormal.ParagraphFormat.LineSpacing = [float]($($preset.lineSpacing) * 12) # Line spacing
     $styleNormal.ParagraphFormat.SpaceAfter = 6 # Spacing after paragraph
     
-    # Save these settings to the global Normal.dotm template so all new documents use this
+    # Save Normal.dotm template
     $word.NormalTemplate.Save()
     
-    # Close document without saving changes to the temporary doc
-    $doc.Close([ref][Microsoft.Office.Interop.Word.WdSaveOptions]::wdDoNotSaveChanges)
+    $doc.Close(0) # 0 = wdDoNotSaveChanges
     $word.Quit()
     
     Write-Host ""
     Write-Host "====================================================================" -ForegroundColor Green
     Write-Host "[+] ĐÃ THIẾT LẬP CHUẨN VĂN BẢN HÀNH CHÍNH VIỆT NAM THÀNH MẶC ĐỊNH!" -ForegroundColor Green
     Write-Host "    Từ giờ, mỗi khi bạn mở Microsoft Word mới, trang soạn thảo sẽ tự động"
-    Write-Host "    được chia lề và thiết lập cỡ chữ chuẩn theo đúng Nghị định 30/2020."
+    Write-Host "    được căn lề chuẩn (Trên 2cm, Dưới 2cm, Trái 3cm, Phải 1.5cm)"
+    Write-Host "    và cỡ chữ Times New Roman 14pt đúng Nghị định 30/2020!"
     Write-Host "====================================================================" -ForegroundColor Green
 } catch {
     Write-Host ""
-    Write-Host "[!] LỖI: Không thể tự động kết nối với Microsoft Word." -ForegroundColor Red
-    Write-Host "    - Đảm bảo bạn đã cài đặt Microsoft Word Office trên máy tính này."
-    Write-Host "      + Tab Layout -> Margins -> Custom Margins (Nhập: Top $($preset.marginTop)mm, Bottom $($preset.marginBottom)mm, Left $($preset.marginLeft)mm, Right $($preset.marginRight)mm)"
-    Write-Host "      + Chọn Set As Default ở góc dưới bên trái tab Page Setup."
+    Write-Host "[!] LỖI: Không thể tự động cập nhật Mẫu chuẩn Normal.dotm." -ForegroundColor Red
+    Write-Host "    Chi tiết lỗi: $_" -ForegroundColor Red
 }
 `;
 }
@@ -508,7 +541,16 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 
 Write-Host "Đang chuẩn hóa định dạng ngày tháng hệ thống thành dd/MM/yyyy..."
 Set-ItemProperty -Path "HKCU:\\Control Panel\\International" -Name "sShortDate" -Value "dd/MM/yyyy"
-Write-Host "Hoàn tất chuẩn hóa! Vui lòng khởi động lại Excel."
+Set-ItemProperty -Path "HKCU:\\Control Panel\\International" -Name "sDate" -Value "/"
+Set-ItemProperty -Path "HKCU:\\Control Panel\\International" -Name "iDate" -Value "1"
+
+# Notify Windows of setting change
+$signature = '[DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)] public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wParam, string lParam, uint flags, uint timeout, out UIntPtr result);'
+$type = Add-Type -MemberDefinition $signature -Name "Win32SendMessage" -Namespace "Win32" -PassThru
+$result = [UIntPtr]::Zero
+$type::SendMessageTimeout([IntPtr]0xffff, 0x001A, [UIntPtr]::Zero, "Control Panel", 2, 5000, [ref]$result)
+
+Write-Host "Hoàn tất chuẩn hóa dd/MM/yyyy! Hệ thống đã cập nhật tức thì."
 `;
 }
 

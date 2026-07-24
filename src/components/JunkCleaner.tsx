@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Trash2, AlertCircle, CheckCircle, Download, List, Shield, Settings, Play, Database, History, RefreshCw, FileWarning } from 'lucide-react';
 import { JunkCategory } from '../types';
 import { generateJunkCleanerScript, downloadFile } from '../utils/scriptGenerator';
+import ProgressBarComponent from './ProgressBarComponent';
+import { useTaskManager } from '../context/TaskManagerContext';
 
 const initialJunkCategories: JunkCategory[] = [
   {
@@ -128,16 +130,20 @@ export default function JunkCleaner() {
     }
   };
 
+  const { startTask, updateTask, completeTask, failTask } = useTaskManager();
+
   const handleClean = async () => {
     setCleaning(true);
     setCleanProgress(0);
+    startTask('junk-cleaner', 'Dọn Dẹp Rác Hệ Thống', 'Dọn Rác', 'Đang quét và giải phóng bộ nhớ tạm...', 'cleaner', 'from-emerald-500 to-teal-600');
     
     // Simulate Progress UI for Cleaning
     let currentP = 0;
     const pInterval = setInterval(() => {
-      currentP += Math.floor(Math.random() * 20) + 5;
+      currentP += Math.floor(Math.random() * 15) + 5;
       if (currentP > 90) currentP = 90;
       setCleanProgress(currentP);
+      updateTask('junk-cleaner', currentP, `Đang giải phóng bộ nhớ đệm: ${currentP}%`, `[+] Tiến trình dọn rác đạt ${currentP}%`);
     }, 300);
 
     const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
@@ -147,6 +153,7 @@ export default function JunkCleaner() {
       clearInterval(pInterval);
       setCleanProgress(100);
       setTotalReclaimed(mb);
+      completeTask('junk-cleaner', `Đã dọn dẹp thành công ${mb} MB rác hệ thống!`);
       setTimeout(() => {
         setCleaning(false);
         setCleaned(true);
@@ -162,6 +169,7 @@ export default function JunkCleaner() {
       } catch (err: any) {
         clearInterval(pInterval);
         setCleaning(false);
+        failTask('junk-cleaner', "Lỗi dọn rác: " + err.message);
         alert("Lỗi dọn rác: " + err.message);
       }
     } else {
@@ -267,17 +275,11 @@ export default function JunkCleaner() {
           <span className="text-2xl font-black text-blue-600 font-mono">{(totalSelectedSize / 1024).toFixed(2)} <span className="text-sm font-bold text-slate-500">GB</span></span>
         </div>
         
-        <div className="w-full md:w-[300px]">
-          {cleaning ? (
-            <div className="space-y-2">
-              <div className="flex justify-between text-[11px] font-bold text-slate-500 uppercase">
-                <span>Đang dọn dẹp...</span>
-                <span>{cleanProgress}%</span>
-              </div>
-              <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-600 transition-all duration-300" style={{ width: `${cleanProgress}%` }} />
-              </div>
-            </div>
+        <div className="w-full md:w-[350px]">
+          {scanning ? (
+            <ProgressBarComponent progress={65} progressText="Đang phân tích bộ nhớ đệm..." color="from-amber-500 to-rose-500" />
+          ) : cleaning ? (
+            <ProgressBarComponent progress={cleanProgress} progressText="Đang dọn dẹp đĩa C..." color="from-rose-500 to-blue-600" />
           ) : cleaned ? (
             <div className="flex items-center justify-center gap-2 p-3 bg-emerald-50 text-emerald-600 rounded-lg border border-emerald-200">
               <CheckCircle className="w-5 h-5" />
