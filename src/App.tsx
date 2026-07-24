@@ -16,6 +16,7 @@ const PrinterUtils = lazy(() => import('./components/PrinterUtils'));
 const LaptopTester = lazy(() => import('./components/LaptopTester'));
 const TouchScreenTester = lazy(() => import('./components/TouchScreenTester'));
 const AdvancedActivation = lazy(() => import('./components/AdvancedActivation'));
+const AppSettings = lazy(() => import('./components/AppSettings'));
 
 import { Monitor, RefreshCw, Terminal, Cpu, MemoryStick, Activity } from 'lucide-react';
 import AutoUpdater from './components/AutoUpdater';
@@ -245,6 +246,11 @@ export default function App() {
             <div style={{ display: activeSection === 'windows-settings' ? 'block' : 'none' }}>
               <Suspense fallback={<PageSkeleton />}>
                 <PageWrapper><WindowsSettings /></PageWrapper>
+              </Suspense>
+            </div>
+            <div style={{ display: activeSection === 'app-settings' ? 'block' : 'none' }}>
+              <Suspense fallback={<PageSkeleton />}>
+                <PageWrapper><AppSettings /></PageWrapper>
               </Suspense>
             </div>
             <div style={{ display: activeSection === 'backup' ? 'block' : 'none' }}>
