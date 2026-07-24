@@ -2297,6 +2297,50 @@ Write-Output "OK"
     }
   });
 
+  ipcMain.handle('restore-oem-bios-key', async () => {
+    try {
+      const script = `
+        $OutputEncoding = [System.Text.Encoding]::UTF8
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+        $oae = (Get-CimInstance -ClassName SoftwareLicensingService -ErrorAction SilentlyContinue).OA3xOriginalProductKey
+        if (-not $oae) {
+            Write-Host "NO_BIOS_KEY"
+            exit 0
+        }
+
+        Write-Host "KEY_FOUND:$oae"
+        Write-Host "Đang xóa Key hiện tại trên máy..."
+        cscript //Nologo "$env:windir\\system32\\slmgr.vbs" /upk >$null 2>&1
+        cscript //Nologo "$env:windir\\system32\\slmgr.vbs" /cpky >$null 2>&1
+
+        Write-Host "Đang nạp Key gốc từ BIOS ($oae)..."
+        cscript //Nologo "$env:windir\\system32\\slmgr.vbs" /ipk $oae >$null 2>&1
+
+        Write-Host "Đang kích hoạt trực tuyến với máy chủ Microsoft..."
+        cscript //Nologo "$env:windir\\system32\\slmgr.vbs" /ato >$null 2>&1
+
+        Write-Host "RESTORE_SUCCESS"
+      `;
+      const output = await runPowerShellScriptElevated(script);
+      const trimmed = output.trim();
+
+      if (trimmed.includes("NO_BIOS_KEY")) {
+        return { success: false, reason: 'NO_BIOS_KEY', message: 'Mainboard của máy tính này không được tích hợp sẵn Key OEM trong BIOS.' };
+      }
+
+      if (trimmed.includes("RESTORE_SUCCESS") || trimmed.includes("KEY_FOUND")) {
+        const keyMatch = trimmed.match(/KEY_FOUND:(.+)/);
+        const key = keyMatch ? keyMatch[1].trim() : '';
+        return { success: true, key, message: `Khôi phục thành công Key gốc từ BIOS (${key}) và đã kích hoạt bản quyền!` };
+      }
+
+      return { success: true, message: 'Đã hoàn tất khôi phục Key gốc từ BIOS!' };
+    } catch (err) {
+      return { success: false, reason: 'ERROR', message: err.message };
+    }
+  });
+
   ipcMain.handle('show-confirm-dialog', async (event, options) => {
     const { response } = await dialog.showMessageBox({
       type: options.type || 'question',

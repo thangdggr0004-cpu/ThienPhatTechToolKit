@@ -105,6 +105,35 @@ export default function LicenseManager() {
     }
   };
 
+  const [isRestoringOem, setIsRestoringOem] = useState<boolean>(false);
+
+  const handleRestoreOemBiosKey = async () => {
+    const confirm = await (window as any).electronAPI.showConfirmDialog({
+      title: 'Khôi phục Key gốc từ BIOS',
+      message: 'Công cụ sẽ tự động đọc Key OEM nhúng trên Mainboard (BIOS), gỡ bỏ Key hiện tại và kích hoạt lại bản quyền chính hãng với Microsoft. Bạn có muốn tiếp tục không?',
+      type: 'question'
+    });
+
+    if (!confirm) return;
+
+    setIsRestoringOem(true);
+    setError(null);
+    try {
+      const res = await (window as any).electronAPI.restoreOemBiosKey();
+      await (window as any).electronAPI.showInfoDialog({
+        title: res.success ? 'Thành công' : 'Thông báo',
+        message: res.message
+      });
+      if (res.success) {
+        handleStartScan();
+      }
+    } catch (err: any) {
+      setError('Lỗi khi khôi phục Key BIOS: ' + err.message);
+    } finally {
+      setIsRestoringOem(false);
+    }
+  };
+
   const handleResetActivation = async () => {
       const type = activeTab;
       const confirm = await (window as any).electronAPI.showConfirmDialog({
@@ -476,12 +505,20 @@ export default function LicenseManager() {
           <div className="space-y-6">
             <MainResultCard />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <button onClick={handleStartScan} disabled={isLoading || isResetting} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors shadow-sm disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center text-xs">
+            <div className={`grid grid-cols-1 ${activeTab === 'windows' ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-3`}>
+              <button onClick={handleStartScan} disabled={isLoading || isResetting || isRestoringOem} className="w-full bg-blue-600 text-white font-bold py-3 px-3 rounded-lg hover:bg-blue-700 transition-colors shadow-sm disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center text-xs">
                 {isLoading ? <Loader className="animate-spin mr-2 h-4 w-4" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
                 {isLoading ? 'Đang Quét...' : activeTab === 'windows' ? 'Quét Bản Quyền Windows (8 Bước)' : 'Quét Bản Quyền MS Office (8 Bước)'}
               </button>
-              <button onClick={handleResetActivation} disabled={isLoading || isResetting} className="w-full bg-slate-800 text-white font-bold py-3 px-4 rounded-lg hover:bg-slate-900 transition-colors shadow-sm disabled:bg-slate-500 disabled:cursor-not-allowed flex items-center justify-center text-xs">
+
+              {activeTab === 'windows' && (
+                <button onClick={handleRestoreOemBiosKey} disabled={isLoading || isResetting || isRestoringOem} className="w-full bg-emerald-600 text-white font-bold py-3 px-3 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm disabled:bg-emerald-400 disabled:cursor-not-allowed flex items-center justify-center text-xs">
+                  {isRestoringOem ? <Loader className="animate-spin mr-2 h-4 w-4" /> : <KeyRound className="mr-2 h-4 w-4" />}
+                  {isRestoringOem ? 'Đang Khôi Phục...' : 'Khôi Phục Key Gốc từ BIOS'}
+                </button>
+              )}
+
+              <button onClick={handleResetActivation} disabled={isLoading || isResetting || isRestoringOem} className="w-full bg-slate-800 text-white font-bold py-3 px-3 rounded-lg hover:bg-slate-900 transition-colors shadow-sm disabled:bg-slate-500 disabled:cursor-not-allowed flex items-center justify-center text-xs">
                 {isResetting ? <Loader className="animate-spin mr-2 h-4 w-4" /> : <ShieldX className="mr-2 h-4 w-4" />}
                 {isResetting ? 'Đang Đặt Lại...' : activeTab === 'windows' ? 'Đặt Lại Bản Quyền Windows Gốc' : 'Đặt Lại Bản Quyền Office Gốc'}
               </button>

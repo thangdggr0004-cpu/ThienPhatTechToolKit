@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deepCleanActivation: (type) => ipcRenderer.invoke('deep-clean-activation', type),
   showConfirmDialog: (options) => ipcRenderer.invoke('show-confirm-dialog', options),
   showInfoDialog: (options) => ipcRenderer.invoke('show-info-dialog', options),
+  restoreOemBiosKey: () => ipcRenderer.invoke('restore-oem-bios-key'),
   executeActivationAction: (args) => ipcRenderer.invoke('execute-activation-action', args),
   scanJunk: () => ipcRenderer.invoke('scan-junk'),
   cleanJunk: (categories) => ipcRenderer.invoke('clean-junk', categories),
