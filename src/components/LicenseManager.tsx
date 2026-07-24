@@ -397,23 +397,28 @@ export default function LicenseManager() {
         </div>
     );
 
-    if (totalScore > 5) return (
+    if (dangerCount > 0) return (
         <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-lg">
-            <h3 className="font-bold flex items-center gap-2"><ShieldX className="h-5 w-5" />Phát Hiện Rủi Ro Cao</h3>
-            <p className="text-sm mt-1">{isWindows ? 'Windows' : 'MS Office'} có dấu hiệu rõ rệt của việc can thiệp bản quyền bằng phần mềm bẻ khóa.</p>
+            <h3 className="font-bold flex items-center gap-2 text-base"><ShieldX className="h-5 w-5 text-red-600" />🔴 PHÁT HIỆN TIẾN TRÌNH BẺ KHÓA / RISKY TAMPERING</h3>
+            <p className="text-sm mt-1 text-red-700">
+              Phát hiện dấu hiệu can thiệp bản quyền lậu ({isWindows ? 'KMS Server / Task bẻ khóa ngầm' : 'Ohook DLL / KMS Client'}). Bạn nên bấm "Đặt Lại Kênh Bản Quyền Gốc" để làm sạch.
+            </p>
         </div>
     );
-     if (totalScore > 0) return (
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-lg">
-            <h3 className="font-bold flex items-center gap-2"><ShieldAlert className="h-5 w-5" />Cảnh Báo Rủi Ro Thấp</h3>
-            <p className="text-sm mt-1">{isWindows ? 'Windows' : 'MS Office'} có một vài dấu hiệu bất thường, nhưng có thể không phải do bẻ khóa.</p>
+
+    if (warningCount > 0) return (
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-lg">
+            <h3 className="font-bold flex items-center gap-2 text-base"><ShieldCheck className="h-5 w-5 text-emerald-600" />👉 MÁY SẠCH: KHÔNG CÓ TIẾN TRÌNH CRACK CHẠY NGẦM</h3>
+            <p className="text-sm mt-1.5 text-slate-700 leading-relaxed">
+              Hệ thống hoàn toàn an toàn. Máy đang sử dụng <strong>Giấy Phép Kỹ Thuật Số (Digital License / HWID)</strong> với Key chung (Generic Key), không đi kèm Key nhúng BIOS. Đây là hành vi bản quyền hợp lệ liên kết phần cứng, không phải phần mềm bẻ khóa lậu.
+            </p>
         </div>
     );
 
     return (
         <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-lg">
-            <h3 className="font-bold flex items-center gap-2"><ShieldCheck className="h-5 w-5" />{isWindows ? 'Windows' : 'MS Office'} Bản Quyền Chính Hãng</h3>
-            <p className="text-sm mt-1">Không phát hiện dấu hiệu bất thường hoặc can thiệp bẻ khóa.</p>
+            <h3 className="font-bold flex items-center gap-2 text-base"><ShieldCheck className="h-5 w-5 text-emerald-600" />✅ {isWindows ? 'Windows' : 'MS Office'} BẢN QUYỀN CHÍNH HÃNG NGUYÊN BẢN</h3>
+            <p className="text-sm mt-1 text-emerald-700">Hệ thống hoàn toàn sạch sẽ, không có bất kỳ dấu hiệu can thiệp hay bẻ khóa nào.</p>
         </div>
     );
   }
