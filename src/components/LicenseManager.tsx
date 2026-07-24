@@ -77,8 +77,8 @@ export default function LicenseManager() {
   const [activeStep, setActiveStep] = useState<number>(1);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isResetting, setIsResetting] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [scanResult, setScanResult] = useState<any>(null);
+  const [windowsScanResult, setWindowsScanResult] = useState<any>(null);
+  const [officeScanResult, setOfficeScanResult] = useState<any>(null);
 
   const handleStartScan = async () => {
     setIsLoading(true);
@@ -90,15 +90,11 @@ export default function LicenseManager() {
       const type = activeTab;
       const result = await (window as any).electronAPI.scanActivation({ type });
       
-      setScanResult((prev: any) => ({
-         ...prev,
-         ...(type === 'windows' ? { Windows: result?.Windows } : { Office: result?.Office }),
-         System: result?.System
-      }));
-
       if (type === 'windows') {
+          setWindowsScanResult(result);
           processWindowsScanResults(result);
       } else {
+          setOfficeScanResult(result);
           processOfficeScanResults(result);
       }
     } catch (err: any) {
@@ -376,12 +372,14 @@ export default function LicenseManager() {
 
   const selectedStepDetails = diagnosticSteps.find(step => step.id === activeStep);
 
+  const currentScanResult = activeTab === 'windows' ? windowsScanResult : officeScanResult;
+
   const MainResultCard = () => {
     const isWindows = activeTab === 'windows';
     if (isLoading) return (
         <div className="bg-slate-50 border border-slate-200 text-slate-800 p-4 rounded-lg flex items-center justify-center">
             <Loader className="animate-spin mr-3 h-5 w-5" />
-            <h3 className="font-bold">Đang thực hiện quét 8 bước chuyên sâu...</h3>
+            <h3 className="font-bold">Đang thực hiện quét {isWindows ? 'Windows' : 'MS Office'} 8 bước chuyên sâu...</h3>
         </div>
     );
     if (error) return (
@@ -390,10 +388,10 @@ export default function LicenseManager() {
             <p className="text-sm mt-1">{error}</p>
         </div>
     );
-    if (!scanResult) return (
+    if (!currentScanResult) return (
         <div className="bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-lg">
-            <h3 className="font-bold">Chưa có kết quả</h3>
-            <p className="text-sm mt-1">Nhấn nút "Bắt đầu Quét" để chẩn đoán tình trạng bản quyền hệ thống của bạn.</p>
+            <h3 className="font-bold">Chưa có kết quả chẩn đoán {isWindows ? 'Windows' : 'MS Office'}</h3>
+            <p className="text-sm mt-1">Nhấn nút "Quét Bản Quyền {isWindows ? 'Windows' : 'MS Office'}" bên dưới để kiểm tra độc lập.</p>
         </div>
     );
 
@@ -401,7 +399,7 @@ export default function LicenseManager() {
         <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-lg">
             <h3 className="font-bold flex items-center gap-2 text-base"><ShieldX className="h-5 w-5 text-red-600" />🔴 PHÁT HIỆN TIẾN TRÌNH BẺ KHÓA / RISKY TAMPERING</h3>
             <p className="text-sm mt-1 text-red-700">
-              Phát hiện dấu hiệu can thiệp bản quyền lậu ({isWindows ? 'KMS Server / Task bẻ khóa ngầm' : 'Ohook DLL / KMS Client'}). Bạn nên bấm "Đặt Lại Kênh Bản Quyền Gốc" để làm sạch.
+              Phát hiện dấu hiệu can thiệp bản quyền lậu ({isWindows ? 'KMS Server / Task bẻ khóa ngầm' : 'Ohook DLL / KMS Client'}). Bạn nên bấm "Đặt Lại Bản Quyền {isWindows ? 'Windows' : 'MS Office'} Gốc" để làm sạch.
             </p>
         </div>
     );
@@ -457,17 +455,17 @@ export default function LicenseManager() {
             <MainResultCard />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <button onClick={handleStartScan} disabled={isLoading || isResetting} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors shadow-sm disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center">
-                {isLoading ? <Loader className="animate-spin mr-2 h-5 w-5" /> : <ShieldCheck className="mr-2 h-5 w-5" />}
-                {isLoading ? 'Đang Quét...' : 'Bắt đầu Quét 8 Bước'}
+              <button onClick={handleStartScan} disabled={isLoading || isResetting} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors shadow-sm disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center text-xs">
+                {isLoading ? <Loader className="animate-spin mr-2 h-4 w-4" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
+                {isLoading ? 'Đang Quét...' : activeTab === 'windows' ? 'Quét Bản Quyền Windows (8 Bước)' : 'Quét Bản Quyền MS Office (8 Bước)'}
               </button>
-              <button onClick={handleResetActivation} disabled={isLoading || isResetting} className="w-full bg-slate-800 text-white font-bold py-3 px-4 rounded-lg hover:bg-slate-900 transition-colors shadow-sm disabled:bg-slate-500 disabled:cursor-not-allowed flex items-center justify-center">
-                {isResetting ? <Loader className="animate-spin mr-2 h-5 w-5" /> : <ShieldX className="mr-2 h-5 w-5" />}
-                {isResetting ? 'Đang Đặt Lại...' : 'Đặt Lại Kênh Bản Quyền Gốc'}
+              <button onClick={handleResetActivation} disabled={isLoading || isResetting} className="w-full bg-slate-800 text-white font-bold py-3 px-4 rounded-lg hover:bg-slate-900 transition-colors shadow-sm disabled:bg-slate-500 disabled:cursor-not-allowed flex items-center justify-center text-xs">
+                {isResetting ? <Loader className="animate-spin mr-2 h-4 w-4" /> : <ShieldX className="mr-2 h-4 w-4" />}
+                {isResetting ? 'Đang Đặt Lại...' : activeTab === 'windows' ? 'Đặt Lại Bản Quyền Windows Gốc' : 'Đặt Lại Bản Quyền Office Gốc'}
               </button>
             </div>
             
-            {scanResult && <div className="grid grid-cols-3 gap-4 text-center">
+            {currentScanResult && <div className="grid grid-cols-3 gap-4 text-center">
                 <div className="bg-emerald-100/60 p-3 rounded-lg"><span className="font-bold text-emerald-700 text-xl">{cleanCount}</span><p className="text-xs text-emerald-600">SẠCH</p></div>
                 <div className="bg-amber-100/60 p-3 rounded-lg"><span className="font-bold text-amber-700 text-xl">{warningCount}</span><p className="text-xs text-amber-600">CẢNH BÁO</p></div>
                 <div className="bg-red-100/60 p-3 rounded-lg"><span className="font-bold text-red-700 text-xl">{dangerCount}</span><p className="text-xs text-red-600">NGUY HIỂM</p></div>
@@ -478,7 +476,7 @@ export default function LicenseManager() {
 
       <div className="mt-8">
         <div className="flex justify-between items-center mb-4">
-            <h2 className="text-base font-bold text-slate-800">KẾT QUẢ CHẨN ĐOÁN BẢN QUYỀN</h2>
+            <h2 className="text-base font-bold text-slate-800">KẾT QUẢ CHẨN ĐOÁN BẢN QUYỀN ({activeTab === 'windows' ? 'WINDOWS' : 'MS OFFICE'})</h2>
             <div className="flex items-center gap-2 rounded-lg bg-slate-200 p-0.5">
                 <button onClick={() => setViewMode('visual')} className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${viewMode === 'visual' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
                     <FileText className="inline w-3 h-3 mr-1.5"/>8 Bước Trực Quan
@@ -489,7 +487,7 @@ export default function LicenseManager() {
             </div>
         </div>
 
-        {viewMode === 'visual' && scanResult && (
+        {viewMode === 'visual' && currentScanResult && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                     {diagnosticSteps.map(step => (
@@ -512,8 +510,8 @@ export default function LicenseManager() {
             <div className="bg-gray-900 text-white font-mono text-xs rounded-lg p-4 h-96 overflow-y-auto">
                 {isLoading && <p>&gt; Starting diagnostic scan...</p>}
                 {error && <p className="text-red-400">&gt; ERROR: {error}</p>}
-                {scanResult && <pre>{JSON.stringify(scanResult, null, 2)}</pre>}
-                {!isLoading && !scanResult && !error && <p className="text-gray-500">&gt; Bảng điều khiển log sẽ hiển thị dữ liệu JSON thô sau khi quét.</p>}
+                {currentScanResult && <pre>{JSON.stringify(currentScanResult, null, 2)}</pre>}
+                {!isLoading && !currentScanResult && !error && <p className="text-gray-500">&gt; Bảng điều khiển log sẽ hiển thị dữ liệu JSON thô sau khi quét.</p>}
             </div>
         )}
       </div>

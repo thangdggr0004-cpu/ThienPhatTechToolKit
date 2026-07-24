@@ -2262,9 +2262,11 @@ Write-Output "OK"
           }
           foreach ($file in $suspiciousFiles) {
               if (Test-Path $file) {
-                  Write-Host "-> Phát hiện file nghi ngờ: $file. Đang xử lý..."
+                  Write-Host "-> Phát hiện file nghi ngờ: $file. Đang tước quyền sở hữu và xóa bỏ..."
                   Set-ItemProperty -Path $file -Name IsReadOnly -Value $false -ErrorAction SilentlyContinue
                   Set-ItemProperty -Path $file -Name Attributes -Value "Normal" -ErrorAction SilentlyContinue
+                  cmd /c "takeown /f `"$file`" /a >nul 2>&1"
+                  cmd /c "icacls `"$file`" /grant *S-1-5-32-544:F /c >nul 2>&1"
                   Remove-Item -Path $file -Force -ErrorAction SilentlyContinue
               }
           }
