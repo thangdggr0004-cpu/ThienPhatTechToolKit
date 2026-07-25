@@ -1,49 +1,114 @@
 /**
- * WIN BIOS COLLECTOR V1
+ * WIN BIOS COLLECTOR V1.1 (PURE EVIDENCE COLLECTOR)
  * Category: WINDOWS | Priority: CRITICAL (1)
- * Description: Reads OEM OA3 product key from ACPI MSDM Firmware Table via SoftwareLicensingService.
+ * Description: Reads OEM OA3 product key & ACPI MSDM Firmware Table metadata without scoring or decisions.
  */
 
 const path = require('path');
 const frameworkPath = path.resolve(__dirname, '../../EnterpriseCollectorFramework.cjs');
-const { BaseCollector, COLLECTOR_CATEGORIES, COLLECTOR_PRIORITIES, NORMALIZED_STATES } = require(frameworkPath);
+const { BaseCollector, COLLECTOR_CATEGORIES, COLLECTOR_PRIORITIES } = require(frameworkPath);
 
 class WinBIOSCollector extends BaseCollector {
   constructor() {
     super({
       collectorId: 'WinBIOSCollector',
       collectorName: 'Windows OA3 BIOS Key Collector',
-      version: '1.0.0',
+      version: '1.1.0',
       category: COLLECTOR_CATEGORIES.WINDOWS,
       priority: COLLECTOR_PRIORITIES.CRITICAL,
-      confidenceWeight: 20,
       timeoutMs: 5000,
       requires: { wmi: true }
     });
+
+    this.metadata = {
+      collectorName: 'Windows OA3 BIOS Key Collector',
+      collectorVersion: '1.1.0',
+      author: 'Enterprise Windows Diagnostic Engineering',
+      description: 'Gathers ACPI MSDM firmware table information and OA3 OEM product key evidence',
+      category: COLLECTOR_CATEGORIES.WINDOWS,
+      priority: COLLECTOR_PRIORITIES.CRITICAL,
+      executionMode: 'READ_ONLY',
+      readOnly: true,
+      dependencies: [],
+      capability: { powershell: true, wmi: true, winVerifyTrust: false },
+      supportedWindowsVersions: ['Windows 10', 'Windows 11', 'Windows Server 2016+']
+    };
   }
 
   async collect(context = {}) {
     const rawData = context.rawData || {};
     const winData = rawData.Windows || {};
+    const biosData = rawData.BIOS || {};
+
+    const msdmPresent = winData.HasOA3Key === true || !!winData.OA3Key || !!biosData.msdmPresent;
+    const oa3Key = winData.OA3Key || biosData.oa3Key || '';
+    const oa3PartialKey = oa3Key ? (oa3Key.length >= 5 ? oa3Key.slice(-5) : oa3Key) : (biosData.oa3PartialKey || '');
     
-    const hasOA3Key = winData.HasOA3Key === true || !!winData.OA3Key;
-    const oa3KeyPartial = winData.OA3Key || (hasOA3Key ? 'PRESENT' : '');
+    const firmwareVendor = biosData.vendor || winData.BiosVendor || 'UNKNOWN';
+    const firmwareManufacturer = biosData.manufacturer || winData.BiosManufacturer || 'UNKNOWN';
+    const firmwareVersion = biosData.version || winData.BiosVersion || 'UNKNOWN';
+    const firmwareDate = biosData.date || winData.BiosDate || 'UNKNOWN';
+
+    const oemChannel = winData.OA3Channel || (msdmPresent ? 'OEM:DM' : 'UNKNOWN');
+    const oemEdition = biosData.oemEdition || winData.OA3Edition || 'UNKNOWN'; // NO SPECULATION - UNKNOWN IF UNDETECTABLE
+    const currentEdition = winData.Edition || winData.Description || 'UNKNOWN';
+
+    let editionMatch = 'UNKNOWN';
+    if (oemEdition !== 'UNKNOWN' && currentEdition !== 'UNKNOWN') {
+      editionMatch = currentEdition.toLowerCase().includes(oemEdition.toLowerCase()) ? 'MATCH' : 'MISMATCH';
+    }
+
+    const applicationId = '55c92734-d682-4d71-983e-d6ec3f16059f';
+    const rawAcpiInfo = biosData.rawAcpi || winData.RawACPI || null;
+
+    const rawEvidence = {
+      msdmPresent,
+      firmwareVendor,
+      firmwareManufacturer,
+      firmwareVersion,
+      firmwareDate,
+      oa3OriginalProductKey: oa3Key || 'NONE',
+      oa3PartialKey: oa3PartialKey || 'NONE',
+      oemChannel,
+      oemEdition,
+      currentWindowsEdition: currentEdition,
+      editionMatch,
+      applicationId,
+      rawAcpiInfo
+    };
+
+    const evidenceItems = [
+      {
+        componentName: 'Khóa OEM OA3 BIOS (ACPI MSDM Firmware Table)',
+        status: msdmPresent ? 'PASS' : 'WARNING',
+        dataSource: 'WMI (SoftwareLicensingService.OA3xOriginalProductKey / ACPI MSDM)',
+        details: msdmPresent
+          ? `Tìm thấy bảng ACPI MSDM (OEM Key: ...${oa3PartialKey}, Channel: ${oemChannel}, OEM Edition: ${oemEdition})`
+          : 'Không tìm thấy bảng ACPI MSDM trong Firmware BIOS/UEFI (Máy không có tem OEM_DM)'
+      },
+      {
+        componentName: 'Thông Tin Firmware BIOS/UEFI System',
+        status: 'PASS',
+        dataSource: 'WMI (Win32_BIOS / Win32_ComputerSystem)',
+        details: `Firmware Vendor: ${firmwareVendor}, Manufacturer: ${firmwareManufacturer}, Version: ${firmwareVersion}, Date: ${firmwareDate}`
+      }
+    ];
 
     return {
-      normalizedState: hasOA3Key ? NORMALIZED_STATES.LICENSED : NORMALIZED_STATES.UNKNOWN,
-      hasOA3Key,
-      oa3KeyPartial,
-      evidenceItems: [
-        {
-          componentName: 'Khóa OA3 BIOS (ACPI MSDM Firmware)',
-          status: hasOA3Key ? 'PASS' : 'WARNING',
-          dataSource: 'WMI (SoftwareLicensingService.OA3xOriginalProductKey)',
-          confidenceWeight: 20,
-          details: hasOA3Key
-            ? `Phát hiện khóa OA3 nhúng trong BIOS (Key: ...${oa3KeyPartial})`
-            : 'Không phát hiện khóa OA3 trong BIOS/UEFI (Máy tính DIY hoặc không có tem OEM OEM_DM)'
-        }
-      ]
+      collectorName: this.collectorName,
+      collectorVersion: this.version,
+      collectorCategory: this.category,
+      priority: this.priority,
+      executionStatus: 'SUCCESS',
+      readOnly: true,
+      rawEvidence,
+      evidenceItems,
+      evidenceCount: evidenceItems.length,
+      warnings: msdmPresent ? [] : ['MSDM Table not found in System Firmware'],
+      warningCount: msdmPresent ? 0 : 1,
+      errors: [],
+      errorCount: 0,
+      metadata: this.metadata
     };
   }
 }
