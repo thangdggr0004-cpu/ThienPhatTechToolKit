@@ -14,12 +14,17 @@ import {
   Download,
   Filter,
   Check,
-  Info
+  Info,
+  Package,
+  Key,
+  FolderCheck,
+  Cpu,
+  Cog
 } from 'lucide-react';
 
 // Tooltip dictionary chuẩn ngắn gọn (Tối đa 2 câu)
 const TOOLTIPS: Record<string, string> = {
-  KMS: 'Key Management Service - Máy chủ kích hoạt bản quyền nội bộ hoặc công khai.',
+  KMS: 'Key Management Service - Máy chủ quản lý bản quyền nội bộ hoặc công khai.',
   GVLK: 'Generic Volume License Key - Mã khóa mặc định dùng để kích hoạt qua KMS.',
   MAK: 'Multiple Activation Key - Khóa kích hoạt số lượng lớn trực tiếp từ Microsoft.',
   Retail: 'Bản quyền bán lẻ cá nhân, kích hoạt trực tiếp theo tài khoản hoặc key.',
@@ -70,16 +75,16 @@ export default function OfficeLicenseAnalyzer() {
           provenance: {
             activationStatus: 'LICENSED',
             activationMethod: 'KMS Client (GVLK)',
-            activationSource: 'Không xác định được KMS Host',
+            activationSource: 'Chưa xác định',
             confidence: 80,
-            recommendation: '• Không phát hiện lỗi.\n• Nếu cần xác minh nguồn, hãy kiểm tra cấu hình KMS.',
+            recommendation: '✓ Không cần khôi phục.\n✓ Muốn xác minh nguồn kích hoạt → Kiểm tra cấu hình KMS.',
             evidenceUsed: [
               'ActivationType: KMS',
               'License Name: Office19ProPlus2019VL_KMS_Client_AE',
               'Status: LICENSED',
               'Reasoning: KMS Host = No Data'
             ],
-            kmsHostInfo: { host: 'Không đọc được dữ liệu', port: 1688, reachability: 'UNKNOWN', hostType: 'KMS Host = No Data' }
+            kmsHostInfo: { host: 'Chưa xác định', port: 1688, reachability: 'UNKNOWN', hostType: 'KMS Host = No Data' }
           },
           matrix: [
             { componentName: 'Bản Quyền Office (OSPP License)', status: 'PASS', dataSource: 'OSPP', confidenceWeight: 20, details: 'Trạng thái: LICENSED (Key: ...37XMB)' },
@@ -90,18 +95,18 @@ export default function OfficeLicenseAnalyzer() {
           confidenceResult: { confidencePercentage: 100, level: { label: 'Đã xác nhận', code: 'CONFIRMED' } },
           surgicalPlan: {
             stepCount: 0,
-            summary: 'Hệ thống sạch sẽ & nguyên bản. Không cần khôi phục.',
+            summary: '✓ Không phát hiện can thiệp. ✓ Không cần khôi phục.',
             targetActions: []
           },
           impactResult: { riskLevel: 'LOW', officeImpact: 'Bình thường', windowsImpact: 'An toàn', clickToRunImpact: 'Bình thường', licenseImpact: 'Bảo lưu', isSafeToProceed: true },
-          decisionResult: { actionAllowed: 'ALLOW_RESTORE', reason: 'Không phát hiện can thiệp hệ thống. Chi tiết xem tại mục Thông Tin Kích Hoạt.', recommendedNextStep: 'Không cần thao tác khôi phục.' },
+          decisionResult: { actionAllowed: 'ALLOW_RESTORE', reason: '✓ Không phát hiện can thiệp. ✓ Không cần khôi phục.', recommendedNextStep: 'Không cần thao tác khôi phục.' },
           auditLogs: [
             { collectorName: 'CompatibilityLayer', dataSource: 'Registry/Filesystem', details: 'SKU: Office 2021 ProPlusRetail, Build: 16.0.17328', timestamp: new Date().toISOString() },
             { collectorName: 'EnterpriseLicenseCollector', dataSource: 'ospp.vbs+WMI', details: 'Status: LICENSED, Name: Office19ProPlus2019VL_KMS_Client_AE, ActivationType: KMS', timestamp: new Date().toISOString() },
             { collectorName: 'AuthenticodeCollector', dataSource: 'Win32 API', details: 'Signer: CN=Microsoft Corporation', timestamp: new Date().toISOString() }
           ]
         });
-      }, 600);
+      }, 500);
     }
     setIsScanning(false);
   };
@@ -143,7 +148,7 @@ export default function OfficeLicenseAnalyzer() {
           }
         });
         alert("Khôi phục hoàn tất thành công!");
-      }, 1000);
+      }, 800);
     }
     setIsRestoring(false);
   };
@@ -206,11 +211,19 @@ export default function OfficeLicenseAnalyzer() {
     </span>
   );
 
+  const getComponentIcon = (name: string) => {
+    if (name.includes('OSPP') || name.includes('Bản Quyền')) return <Key className="w-4 h-4 text-amber-500 shrink-0" />;
+    if (name.includes('sppc.dll') || name.includes('Chữ Ký')) return <ShieldCheck className="w-4 h-4 text-blue-500 shrink-0" />;
+    if (name.includes('sppcs.dll') || name.includes('Tệp')) return <FolderCheck className="w-4 h-4 text-emerald-500 shrink-0" />;
+    if (name.includes('IFEO') || name.includes('Registry')) return <Cpu className="w-4 h-4 text-indigo-500 shrink-0" />;
+    return <Cog className="w-4 h-4 text-slate-500 shrink-0" />;
+  };
+
   return (
     <div className="bg-slate-50/50 border border-slate-200 rounded-xl p-4 shadow-2xs text-slate-800 space-y-3.5 font-sans">
       
       {/* --------------------------------------------------------------------- */}
-      {/* HEADER & THỊ GIÁC ƯU TIÊN ① & ②: THANH TÓM TẮT NGAN 1 DÒNG             */}
+      {/* HEADER & THỊ GIÁC ƯU TIÊN ① & ②: THANH TÓM TẮT THƯƠNG MẠI            */}
       {/* --------------------------------------------------------------------- */}
       <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2">
@@ -232,52 +245,54 @@ export default function OfficeLicenseAnalyzer() {
           </span>
         </div>
 
-        {/* THANH THỊ GIÁC NỔI BẬT: ① Trạng thái Office -> ② Có cần khôi phục -> ③ Phương thức */}
+        {/* THANH THỊ GIÁC ƯU TIÊN ① ĐẾN ⑤: NỔI BẬT KHU VỰC THÔNG TIN KÍCH HOẠT */}
         {report && (
-          <div className="bg-slate-900 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-mono flex flex-wrap items-center justify-between gap-2 shadow-inner">
+          <div className="bg-slate-900 text-slate-200 px-3 py-2 rounded-lg text-xs font-mono flex flex-wrap items-center justify-between gap-2 shadow-inner">
             <div className="flex flex-wrap items-center gap-3">
-              <span>① Trạng thái: <strong className="text-emerald-400">{report.provenance?.activationStatus || 'N/A'}</strong></span>
+              <span>① Trạng thái: <strong className="text-emerald-400 font-bold px-1.5 py-0.5 bg-emerald-950/80 rounded border border-emerald-800/50">{report.provenance?.activationStatus || 'N/A'}</strong></span>
               <span className="text-slate-700">|</span>
-              <span>② Khôi phục: <strong className={targetActionsCount > 0 ? 'text-amber-400' : 'text-emerald-400 font-bold'}>{targetActionsCount > 0 ? 'Cần thực hiện' : 'Không cần thiết'}</strong></span>
+              <span>② Khôi phục: <strong className={targetActionsCount > 0 ? 'text-amber-400 font-bold' : 'text-emerald-400 font-bold px-1.5 py-0.5 bg-emerald-950/80 rounded border border-emerald-800/50'}>{targetActionsCount > 0 ? 'Cần thực hiện' : 'Không cần thiết'}</strong></span>
               <span className="text-slate-700">|</span>
-              <span>③ Kích hoạt: <strong className="text-blue-300">{report.provenance?.activationMethod || 'N/A'}</strong> {renderTooltipIcon('KMS')}</span>
+              <span>③ Phương thức: <strong className="text-blue-300 font-bold">{report.provenance?.activationMethod || 'N/A'}</strong> {renderTooltipIcon('KMS')}</span>
             </div>
-            <div className="text-[11px]">
-              Độ tin cậy hệ thống: <strong className="text-emerald-400">{systemConfidence}%</strong>
+            <div className="text-[11px] text-slate-300">
+              Độ tin cậy hệ thống: <strong className="text-emerald-400 font-bold">{systemConfidence}%</strong>
             </div>
           </div>
         )}
       </div>
 
       {/* --------------------------------------------------------------------- */}
-      {/* TẦNG 1: THÔNG TIN HỆ THỐNG THU GỌN (COMPACT CARDS - HEIGHT REDUCED)    */}
+      {/* TẦNG 1: THÔNG TIN HỆ THỐNG THU GỌN CHUẨN ĐỒNG NHẤT                     */}
       {/* --------------------------------------------------------------------- */}
       {report && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {/* Ô 1: Phiên Bản Office */}
           <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between space-y-1">
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phiên Bản Office</div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+              <Package className="w-3.5 h-3.5 text-slate-500" /> Phiên Bản Office
+            </div>
             <div className="text-xs font-bold text-slate-900 flex items-center gap-1">
               {report.skuInfo?.skuName || 'Office'}
               {renderTooltipIcon('ClickToRun')}
             </div>
-            <div className="text-[10px] text-slate-500 font-mono">
-              Kênh: <span className="font-semibold text-slate-700">{report.skuInfo?.channel}</span> | Build: <span className="font-semibold text-slate-700">{report.skuInfo?.buildNumber}</span> ({report.skuInfo?.bitness})
+            <div className="text-[10px] text-slate-400 font-mono">
+              Kênh: <span className="text-slate-600 font-medium">{report.skuInfo?.channel}</span> | Build: <span className="text-slate-600 font-medium">{report.skuInfo?.buildNumber}</span> ({report.skuInfo?.bitness})
             </div>
           </div>
 
           {/* Ô 2: Độ tin cậy hệ thống */}
           <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between space-y-1">
             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center">
-              Độ tin cậy hệ thống
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 mr-1" /> Độ tin cậy hệ thống
               {renderTooltipIcon('SystemConfidence')}
             </div>
             <div className="flex items-center gap-2">
               <div className={`text-lg font-black font-mono ${systemConfidence >= 95 ? 'text-emerald-600' : systemConfidence >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
                 {systemConfidence}%
               </div>
-              <div className="text-[10px] text-slate-600 font-semibold">
-                (Đã xác nhận toàn vẹn tệp/Registry)
+              <div className="text-[10px] text-slate-500 font-medium">
+                (Đã xác nhận toàn vẹn)
               </div>
             </div>
             <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden border border-slate-200">
@@ -291,8 +306,9 @@ export default function OfficeLicenseAnalyzer() {
           {/* Ô 3: ④ Kết Luận */}
           <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between space-y-1">
             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">④ Kết Luận</div>
-            <div className="text-xs font-semibold text-slate-800 leading-tight">
-              {report.decisionResult?.reason}
+            <div className="text-xs font-bold text-emerald-700 leading-tight flex items-center gap-1">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>✓ Không phát hiện can thiệp. ✓ Không cần khôi phục.</span>
             </div>
             <div className="text-[10px] text-emerald-700 font-bold">👉 {report.decisionResult?.recommendedNextStep}</div>
           </div>
@@ -300,7 +316,7 @@ export default function OfficeLicenseAnalyzer() {
       )}
 
       {/* --------------------------------------------------------------------- */}
-      {/* TẦNG 2: THÔNG TIN KÍCH HOẠT (THU GỌN 25% CHIỀU CAO)                   */}
+      {/* TẦNG 2: THÔNG TIN KÍCH HOẠT (NHÃN DỘNG MÁY CHỦ KMS + CHECKLIST 2 DÒNG) */}
       {/* --------------------------------------------------------------------- */}
       {report && report.provenance && (
         <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
@@ -329,12 +345,14 @@ export default function OfficeLicenseAnalyzer() {
               </span>
             </div>
 
-            {/* LABEL ĐỘNG: MÁY CHỦ KMS HOẶC NGUỒN KÍCH HOẠT */}
+            {/* NHÃN ĐỘNG: MÁY CHỦ KMS HOẶC NGUỒN KÍCH HOẠT */}
             <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
               <span className="text-[10px] font-bold text-slate-400 block uppercase">
                 {isKmsMethod ? 'Máy chủ KMS' : 'Nguồn kích hoạt'}
               </span>
-              <span className="font-bold text-slate-800 text-xs mt-0.5 block">{report.provenance.activationSource}</span>
+              <span className="font-bold text-slate-800 text-xs mt-0.5 block">
+                {report.provenance.kmsHostInfo?.host === 'Không đọc được dữ liệu' ? 'Chưa xác định' : report.provenance.activationSource}
+              </span>
             </div>
 
             <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
@@ -346,14 +364,14 @@ export default function OfficeLicenseAnalyzer() {
             </div>
           </div>
 
-          {/* KHUYẾN NGHỊ RÚT GỌN 2 DÒNG */}
+          {/* KHUYẾN NGHỊ DẠNG CHECKLIST 2 DÒNG */}
           <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs text-slate-700 flex items-start gap-2">
             <Info className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
-            <div className="text-[11px] leading-relaxed">
-              <strong className="text-slate-900">Khuyến nghị:</strong>
-              <div className="text-slate-600 mt-0.5">
-                • Không cần khôi phục hệ thống.<br />
-                • Nếu muốn xác minh nguồn kích hoạt, hãy kiểm tra cấu hình KMS.
+            <div className="text-[11px] leading-snug">
+              <strong className="text-slate-900 block mb-0.5">Khuyến nghị:</strong>
+              <div className="text-slate-700 font-medium space-y-0.5">
+                <div>✓ Không cần khôi phục.</div>
+                <div>✓ Muốn xác minh nguồn kích hoạt → Kiểm tra cấu hình KMS.</div>
               </div>
             </div>
           </div>
@@ -361,8 +379,8 @@ export default function OfficeLicenseAnalyzer() {
           {/* CHI TIẾT MÁY CHỦ KMS */}
           {report.provenance.kmsHostInfo && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[10px] font-mono bg-slate-900 text-slate-300 p-2 rounded-lg">
-              <div>KMS Host: <span className="font-bold text-white">{report.provenance.kmsHostInfo.host}</span></div>
-              <div>Port: <span className="font-bold text-white">{report.provenance.kmsHostInfo.port || 1688}</span></div>
+              <div>KMS Host: <span className="font-bold text-white">{report.provenance.kmsHostInfo.host === 'Không đọc được dữ liệu' ? 'Chưa xác định' : report.provenance.kmsHostInfo.host}</span></div>
+              <div>Cổng (Port): <span className="font-bold text-white">{report.provenance.kmsHostInfo.port || 1688}</span></div>
               <div>Kết nối: <span className="font-bold text-emerald-400">{report.provenance.kmsHostInfo.reachability || 'UNKNOWN'}</span></div>
               <div>Phân loại: <span className="font-bold text-blue-300">{report.provenance.kmsHostInfo.hostType}</span></div>
             </div>
@@ -377,7 +395,7 @@ export default function OfficeLicenseAnalyzer() {
         <button
           onClick={handleRunScanV3}
           disabled={isScanning || isRestoring}
-          className="w-full py-2.5 px-4 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.99] cursor-pointer disabled:opacity-50"
+          className="w-full h-10 px-4 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.99] cursor-pointer disabled:opacity-50"
         >
           {isScanning ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
           {isScanning ? 'ĐANG QUÉT...' : 'BẮT ĐẦU KIỂM TRA OFFICE'}
@@ -386,7 +404,7 @@ export default function OfficeLicenseAnalyzer() {
         <button
           onClick={handleRestoreV3}
           disabled={isScanning || isRestoring || !report || decision === 'BLOCK_RESTORE' || targetActionsCount === 0}
-          className={`w-full py-2.5 px-4 rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.99] ${
+          className={`w-full h-10 px-4 rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.99] ${
             targetActionsCount > 0 && !isRestoring
               ? 'bg-red-600 hover:bg-red-700 text-white cursor-pointer shadow-red-100'
               : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
@@ -419,7 +437,7 @@ export default function OfficeLicenseAnalyzer() {
       )}
 
       {/* --------------------------------------------------------------------- */}
-      {/* ⑤ CHI TIẾT KỸ THUẬT: TAB KẾT QUẢ                                      */}
+      {/* ⑤ CHI TIẾT KỸ THUẬT: TAB KẾT QUẢ VỚI BẢNG CĂN GIỮA BADGE & ICON 16X16 */}
       {/* --------------------------------------------------------------------- */}
       {report && (
         <div className="space-y-2.5">
@@ -454,7 +472,7 @@ export default function OfficeLicenseAnalyzer() {
 
           <div className="bg-white p-3.5 rounded-xl border border-slate-200 font-mono text-xs text-slate-700 min-h-[140px] shadow-2xs">
             
-            {/* Tab 1: Kết Quả Kiểm Tra với Badge TRỰC QUAN (✔ Đạt / ⚠ Cảnh báo / ✖ Lỗi) */}
+            {/* Tab 1: Kết Quả Kiểm Tra với Badge CĂN GIỮA (✔ Đạt / ⚠ Cảnh báo / ✖ Lỗi) & ICON 16X16 */}
             {activeTab === 'matrix' && (
               <div className="space-y-2.5">
                 <div className="font-bold text-slate-900 text-xs flex items-center justify-between border-b border-slate-100 pb-1.5">
@@ -465,41 +483,42 @@ export default function OfficeLicenseAnalyzer() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-slate-200 text-slate-400 font-bold text-[10px] uppercase">
-                        <th className="py-1.5 px-2.5">Thành Phần</th>
-                        <th className="py-1.5 px-2.5">Trạng Thái</th>
-                        <th className="py-1.5 px-2.5">Nguồn Dữ Liệu</th>
-                        <th className="py-1.5 px-2.5">Trọng Số</th>
-                        <th className="py-1.5 px-2.5">Chi Tiết Bằng Chứng</th>
+                        <th className="py-2 px-3">Thành Phần</th>
+                        <th className="py-2 px-3 text-center">Trạng Thái</th>
+                        <th className="py-2 px-3">Nguồn Dữ Liệu</th>
+                        <th className="py-2 px-3 text-center">Trọng Số</th>
+                        <th className="py-2 px-3">Chi Tiết Bằng Chứng</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-xs">
                       {report.matrix && report.matrix.map((item: any, i: number) => (
                         <tr key={i} className="hover:bg-slate-50 transition-colors">
-                          <td className="py-2 px-2.5 font-bold text-slate-800 flex items-center gap-1">
-                            {item.componentName}
+                          <td className="py-2.5 px-3 font-bold text-slate-800 flex items-center gap-2">
+                            {getComponentIcon(item.componentName)}
+                            <span>{item.componentName}</span>
                             {item.componentName.includes('IFEO') && renderTooltipIcon('IFEO')}
                             {item.componentName.includes('sppc.dll') && renderTooltipIcon('Authenticode')}
                           </td>
-                          <td className="py-2 px-2.5">
+                          <td className="py-2.5 px-3 text-center">
                             {item.status === 'PASS' && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                <CheckCircle2 className="w-3 h-3 text-emerald-600" /> ✔ Đạt
+                              <span className="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-300 shadow-2xs">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> ✔ Đạt
                               </span>
                             )}
                             {item.status === 'WARNING' && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                                <AlertTriangle className="w-3 h-3 text-amber-600" /> ⚠ Cảnh báo
+                              <span className="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-300 shadow-2xs">
+                                <AlertTriangle className="w-3.5 h-3.5 text-amber-600" /> ⚠ Cảnh báo
                               </span>
                             )}
                             {item.status === 'FAIL' && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-red-50 text-red-700 border border-red-200">
-                                <XCircle className="w-3 h-3 text-red-600" /> ✖ Lỗi
+                              <span className="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-bold bg-red-50 text-red-700 border border-red-300 shadow-2xs">
+                                <XCircle className="w-3.5 h-3.5 text-red-600" /> ✖ Lỗi
                               </span>
                             )}
                           </td>
-                          <td className="py-2 px-2.5 text-slate-500">{item.dataSource}</td>
-                          <td className="py-2 px-2.5 font-bold text-slate-700">{item.confidenceWeight}%</td>
-                          <td className="py-2 px-2.5 text-slate-600">{item.details}</td>
+                          <td className="py-2.5 px-3 text-slate-500 text-xs font-semibold">{item.dataSource}</td>
+                          <td className="py-2.5 px-3 text-center font-bold text-slate-800 text-xs">{item.confidenceWeight}%</td>
+                          <td className="py-2.5 px-3 text-slate-600 text-xs">{item.details}</td>
                         </tr>
                       ))}
                     </tbody>
