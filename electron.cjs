@@ -2247,14 +2247,14 @@ Write-Output "OK"
                   Invoke-WebRequest -Uri '${masOfficialUrl}' -OutFile $dest -UseBasicParsing -ErrorAction Stop
               } catch {
                   # Fallback to direct PowerShell MAS loader if raw URL fails
-                  Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"iwr -useb https://get.activated.win | iex`"" -Verb RunAs
+                  Start-Process powershell.exe -ArgumentList '-NoProfile -ExecutionPolicy Bypass -Command "iwr -useb https://get.activated.win | iex"' -Verb RunAs
                   return
               }
           }
           
           if (Test-Path $dest) {
-              $arg = "/k `"$dest`" ${param}"
-              Start-Process cmd.exe -ArgumentList $arg -Verb RunAs
+              $p = "${param}"
+              Start-Process cmd.exe -ArgumentList "/k ""$dest"" $p" -Verb RunAs
           }
         `;
         await runPowerShellScript(script);
