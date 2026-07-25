@@ -1,6 +1,6 @@
 /**
  * ENTERPRISE COLLECTOR FRAMEWORK V1
- * Architecture: Clean Architecture / SOLID / Open-Closed Principle
+ * Architecture: Clean Architecture / SOLID / Open-Closed Principle / Architecture Freeze
  * Description: Standardized, decoupled evidence collection framework for Office Diagnostic Engine V3.
  */
 
@@ -41,6 +41,12 @@ const NORMALIZED_STATES = Object.freeze({
   UNKNOWN: 'UNKNOWN'
 });
 
+const CAPABILITY_DECISION = Object.freeze({
+  RUN: 'RUN',
+  SKIP: 'SKIP',
+  UNSUPPORTED: 'UNSUPPORTED'
+});
+
 // ============================================================================
 // 2. EVIDENCE NORMALIZER
 // ============================================================================
@@ -63,7 +69,54 @@ class EvidenceNormalizer {
 }
 
 // ============================================================================
-// 3. BASE COLLECTOR (ICOLLECTOR INTERFACE)
+// 3. COLLECTOR CAPABILITY MANAGER
+// ============================================================================
+
+class CollectorCapabilityManager {
+  static detectCapabilities(context = {}) {
+    return {
+      osName: context.osName || process.platform,
+      adminRights: context.isAdmin !== undefined ? context.isAdmin : true,
+      powershellAvailable: context.hasPowerShell !== undefined ? context.hasPowerShell : true,
+      wmiAvailable: context.hasWmi !== undefined ? context.hasWmi : true,
+      winVerifyTrustAvailable: context.hasAuthenticode !== undefined ? context.hasAuthenticode : true,
+      officeInstalled: context.officeInstalled !== undefined ? context.officeInstalled : true,
+      installType: context.installType || 'ClickToRun',
+      networkConnected: context.hasNetwork !== undefined ? context.hasNetwork : true
+    };
+  }
+
+  static evaluateCapability(collector, context = {}) {
+    if (!collector || !collector.enabled) return CAPABILITY_DECISION.SKIP;
+
+    const capabilities = this.detectCapabilities(context);
+
+    // Admin requirement check
+    if (collector.requiresAdmin && !capabilities.adminRights) {
+      return CAPABILITY_DECISION.SKIP;
+    }
+
+    // System requirements check
+    if (collector.requires) {
+      if (collector.requires.powershell && !capabilities.powershellAvailable) return CAPABILITY_DECISION.UNSUPPORTED;
+      if (collector.requires.wmi && !capabilities.wmiAvailable) return CAPABILITY_DECISION.UNSUPPORTED;
+      if (collector.requires.winVerifyTrust && !capabilities.winVerifyTrustAvailable) return CAPABILITY_DECISION.UNSUPPORTED;
+      if (collector.requires.network && !capabilities.networkConnected) return CAPABILITY_DECISION.SKIP;
+    }
+
+    // Supported environment check
+    if (collector.supportedEnvironment) {
+      if (collector.supportedEnvironment.installType && collector.supportedEnvironment.installType !== '*' && collector.supportedEnvironment.installType !== capabilities.installType) {
+        return CAPABILITY_DECISION.UNSUPPORTED;
+      }
+    }
+
+    return CAPABILITY_DECISION.RUN;
+  }
+}
+
+// ============================================================================
+// 4. BASE COLLECTOR (ICOLLECTOR INTERFACE WITH METADATA)
 // ============================================================================
 
 class BaseCollector {
@@ -71,23 +124,36 @@ class BaseCollector {
     if (new.target === BaseCollector) {
       throw new TypeError('Cannot construct BaseCollector abstract instances directly.');
     }
+    
+    // Core Identity
     this.collectorId = options.collectorId || this.constructor.name;
     this.collectorName = options.collectorName || 'Unnamed Collector';
+    this.version = options.version || '1.0.0';
+    this.author = options.author || 'Enterprise Engineering Team';
+    this.description = options.description || 'Standard Enterprise Collector';
+
+    // Classification & Weight
     this.category = options.category || COLLECTOR_CATEGORIES.ENVIRONMENT;
     this.priority = options.priority || COLLECTOR_PRIORITIES.MEDIUM;
     this.confidenceWeight = options.confidenceWeight || 10;
-    this.version = options.version || '1.0.0';
+
+    // Performance & Execution Controls
+    this.estimatedExecutionTimeMs = options.estimatedExecutionTimeMs || 100;
+    this.timeoutMs = options.timeoutMs || 5000;
+    this.requiresAdmin = options.requiresAdmin || false;
+    this.canRunParallel = options.canRunParallel !== undefined ? options.canRunParallel : false;
+
+    // Compatibility & Flags
+    this.requires = options.requires || { powershell: false, wmi: false, winVerifyTrust: false, network: false };
+    this.supportedEnvironment = options.supportedEnvironment || { os: 'Windows', office: '*', installType: '*' };
     this.enabled = options.enabled !== undefined ? options.enabled : true;
-    this.supportedEnvironment = options.supportedEnvironment || { windows: true, office: '*' };
+    this.deprecated = options.deprecated || false;
+    this.experimental = options.experimental || false;
   }
 
   isSupported(context = {}) {
-    if (!this.enabled) return false;
-    // Environment compatibility check
-    if (this.supportedEnvironment.os && context.osName && !context.osName.includes(this.supportedEnvironment.os)) {
-      return false;
-    }
-    return true;
+    const decision = CollectorCapabilityManager.evaluateCapability(this, context);
+    return decision === CAPABILITY_DECISION.RUN;
   }
 
   /**
@@ -100,7 +166,7 @@ class BaseCollector {
 }
 
 // ============================================================================
-// 4. COLLECTOR RESULT & HEALTH MONITOR
+// 5. COLLECTOR RESULT & HEALTH MONITOR
 // ============================================================================
 
 class CollectorResult {
@@ -148,7 +214,7 @@ class CollectorHealthMonitor {
       m.lastSuccessTimestamp = new Date().toISOString();
     } else {
       m.failures += 1;
-      m.lastError = error ? error.message : 'Unknown error';
+      m.lastError = error ? (typeof error === 'string' ? error : error.message) : 'Unknown error';
     }
   }
 
@@ -169,7 +235,7 @@ class CollectorHealthMonitor {
 }
 
 // ============================================================================
-// 5. COLLECTOR REGISTRY
+// 6. COLLECTOR REGISTRY
 // ============================================================================
 
 class CollectorRegistry {
@@ -204,7 +270,8 @@ class CollectorRegistry {
 
   getCollectors({ category = null, maxPriority = 999, context = {} } = {}) {
     const list = Array.from(this.collectors.values()).filter(c => {
-      if (!c.isSupported(context)) return false;
+      const decision = CollectorCapabilityManager.evaluateCapability(c, context);
+      if (decision !== CAPABILITY_DECISION.RUN) return false;
       if (category && c.category !== category) return false;
       if (c.priority > maxPriority) return false;
       return true;
@@ -216,7 +283,7 @@ class CollectorRegistry {
 }
 
 // ============================================================================
-// 6. COLLECTOR PIPELINE
+// 7. COLLECTOR PIPELINE WITH SANDBOX & TIMEOUT ENFORCEMENT
 // ============================================================================
 
 class CollectorPipeline {
@@ -235,7 +302,14 @@ class CollectorPipeline {
       let result = null;
 
       try {
-        const rawOutput = await collector.collect(context);
+        // Enforce Timeout via Promise.race
+        const timeoutMs = collector.timeoutMs || 5000;
+        const collectPromise = collector.collect(context);
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error(`Collector [${collector.collectorId}] timed out after ${timeoutMs}ms`)), timeoutMs);
+        });
+
+        const rawOutput = await Promise.race([collectPromise, timeoutPromise]);
         const executionTimeMs = Date.now() - startTime;
         success = true;
 
@@ -318,7 +392,9 @@ module.exports = {
   COLLECTOR_CATEGORIES,
   COLLECTOR_PRIORITIES,
   NORMALIZED_STATES,
+  CAPABILITY_DECISION,
   EvidenceNormalizer,
+  CollectorCapabilityManager,
   BaseCollector,
   CollectorResult,
   CollectorHealthMonitor,

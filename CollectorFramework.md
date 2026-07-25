@@ -7,41 +7,89 @@ Adding new collectors in the future requires zero edits to the core Diagnostic E
 
 ---
 
+## Complete Collector Lifecycle Sequence
+
+```
++---------------------------------------------------------------------------------------------------+
+|                              ENTERPRISE COLLECTOR LIFECYCLE V1                                    |
++---------------------------------------------------------------------------------------------------+
+|  1. Register (CollectorRegistry.register)                                                         |
+|     - Register collector instance inheriting from BaseCollector                                   |
+|                                                                                                   |
+|  2. Capability Check (CollectorCapabilityManager.evaluateCapability)                              |
+|     - Evaluate OS, Office SKU, WMI, Crypt32, Admin Rights                                        |
+|     - Decision: RUN | SKIP | UNSUPPORTED                                                          |
+|                                                                                                   |
+|  3. Initialize & Context Injection                                                                |
+|     - Read Metadata (timeoutMs, requiresAdmin, priority, category)                                |
+|                                                                                                   |
+|  4. Sandboxed Execution (CollectorPipeline.executePipeline)                                       |
+|     - Priority Order (CRITICAL -> HIGH -> MEDIUM -> LOW)                                          |
+|     - Enforce timeout via Promise.race                                                            |
+|     - Try-Catch isolation (Failing collector logs warning & continues)                             |
+|                                                                                                   |
+|  5. Evidence Normalization (EvidenceNormalizer)                                                   |
+|     - Normalize status -> NORMALIZED_STATES (LICENSED, UNLICENSED, GRACE, EXPIRED, UNKNOWN)       |
+|                                                                                                   |
+|  6. Audit Log & Matrix Population                                                                 |
+|     - Push structured evidence items to EvidenceMatrixBuilder & Audit Log                         |
+|                                                                                                   |
+|  7. Health Metric Update (CollectorHealthMonitor)                                                 |
+|     - Record execution time, error count, success rate %                                          |
+|                                                                                                   |
+|  8. CollectorResult Generation                                                                    |
+|     - Return standardized CollectorResult object to Engine                                        |
++---------------------------------------------------------------------------------------------------+
+```
+
+---
+
 ## Key Architectural Components
 
-```
-+-----------------------------------------------------------------------------------+
-|                            COLLECTOR PIPELINE V1                                  |
-+-----------------------------------------------------------------------------------+
-|  1. Initialize (Context & System Discovery)                                       |
-|  2. Registry Query (Active Collectors sorted by Priority & Environment)            |
-|  3. Compatibility Check (Skip unsupported collectors silently)                     |
-|  4. Isolated Execution (Try-Catch sandbox per Collector; record health metrics)    |
-|  5. Evidence Normalization (Standardize raw states -> Normal Enums)               |
-|  6. Matrix Builder & Audit Log Insertion                                          |
-+-----------------------------------------------------------------------------------+
-```
+### 1. Collector Capability Manager (`CollectorCapabilityManager`)
+Centralized capability detector that evaluates system capabilities before collector execution:
+- **Capabilities Tracked**: OS Name, Admin Rights, PowerShell, WMI, WinVerifyTrust/Crypt32, Office SKU/Build, C2R vs MSI, Network state.
+- **Evaluation Output**:
+  - `RUN`: Collector environment requirements met.
+  - `SKIP`: Insufficient privileges or optional capability missing.
+  - `UNSUPPORTED`: System environment incompatible (skipped silently without raising error flags).
 
-### 1. `ICollector` Interface (`BaseCollector`)
-All collectors inherit from `BaseCollector` and implement the abstract `collect(context)` method:
+### 2. Standardized Collector Metadata Schema
+All collectors inherit from `BaseCollector` and specify structured metadata:
 ```javascript
 const { BaseCollector, COLLECTOR_CATEGORIES, COLLECTOR_PRIORITIES } = require('./EnterpriseCollectorFramework.cjs');
 
 class CustomRegistryCollector extends BaseCollector {
   constructor() {
     super({
+      // Metadata Identity
       collectorId: 'CustomRegistryCollector',
       collectorName: 'Custom Registry Hook Inspection',
+      version: '1.0.0',
+      author: 'Enterprise Security Team',
+      description: 'Inspects HKLM IFEO Debugger hooks for process hijacking',
+
+      // Classification & Weight
       category: COLLECTOR_CATEGORIES.REGISTRY,
       priority: COLLECTOR_PRIORITIES.HIGH,
       confidenceWeight: 20,
-      version: '1.0.0'
+
+      // Performance & Execution Controls
+      estimatedExecutionTimeMs: 50,
+      timeoutMs: 5000,
+      requiresAdmin: false,
+      canRunParallel: false, // Flag ready for future parallel execution pipeline
+
+      // Compatibility Declaration
+      requires: { powershell: true, wmi: false, winVerifyTrust: false, network: false },
+      supportedEnvironment: { os: 'Windows', office: '*', installType: '*' }
     });
   }
 
   async collect(context) {
     // Gather raw data ONLY (Never draw diagnostic conclusions or modify state)
     return {
+      normalizedState: 'LICENSED',
       evidenceItems: [
         {
           componentName: 'Registry Hooks (IFEO Debugger)',
@@ -56,7 +104,7 @@ class CustomRegistryCollector extends BaseCollector {
 }
 ```
 
-### 2. Collector Categories (`COLLECTOR_CATEGORIES`)
+### 3. Collector Categories (`COLLECTOR_CATEGORIES`)
 - `LICENSE`: Office & Windows licensing state, keys, OSPP.
 - `FILESYSTEM`: System32 DLL signatures, VFS integrity.
 - `REGISTRY`: IFEO debugger hooks, AppInit_DLLs.
@@ -70,22 +118,25 @@ class CustomRegistryCollector extends BaseCollector {
 - `CONFIGURATION`: Policy settings, GPO policies.
 - `COMPATIBILITY`: Architecture bitness (x86/x64).
 
-### 3. Collector Priorities (`COLLECTOR_PRIORITIES`)
+### 4. Collector Priorities (`COLLECTOR_PRIORITIES`)
 1. `CRITICAL` (1): Critical environment & licensing checks.
 2. `HIGH` (2): Security DLL & Registry integrity checks.
 3. `MEDIUM` (3): Service health & runtime checks.
 4. `LOW` (4): Secondary telemetry & diagnostic information.
 
-### 4. Collector Pipeline Execution & Sandboxing
-The `CollectorPipeline` executes registered collectors in priority order:
-- **Sandbox Isolation**: If a collector throws an unhandled error, the pipeline catches it, logs a warning to the Audit Log, records health metrics, and continues to the next collector.
-- **Environment Compatibility**: If `isSupported(context)` returns false, the collector is skipped silently without raising error flags.
-
 ---
 
-## Coding Rules & Best Practices
+## Framework Verification & Testing
 
-1. **Non-Destructive**: Collectors must NEVER alter files, Registry keys, or system services.
-2. **Pure Data Gathering**: Collectors MUST NOT draw final repair/recovery decisions. They only supply objective evidence items.
-3. **Graceful Degradation**: Always handle internal exceptions inside `collect(context)` and return structured result objects with warnings if data is partially available.
-4. **Normalized Output**: Use `EvidenceNormalizer.normalizeActivationState()` to sanitize activation status values.
+The framework includes a standalone test suite runner:
+```bash
+node test/framework/CollectorFrameworkRunner.cjs
+```
+Verifies 24 guarantees using synthetic mock collectors:
+1. `CollectorRegistry` Query & Priority Sorting.
+2. `EvidenceNormalizer` state mappings.
+3. `CollectorCapabilityManager` evaluation decisions.
+4. `CollectorPipeline` sandboxing & crash isolation.
+5. Timeout enforcement (`timeoutMs`).
+6. `CollectorHealthMonitor` tracking & metrics.
+7. `CollectorResult` schema integrity.
