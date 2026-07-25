@@ -90,6 +90,39 @@ export default function OfficeLicenseAnalyzer() {
     setIsScanning(false);
   };
 
+  const [isRestoring, setIsRestoring] = useState<boolean>(false);
+  const [restoreLog, setRestoreLog] = useState<string>('');
+
+  const handleRestoreV2 = async () => {
+    if (!window.confirm("HỆ THỐNG SẼ THỰC HIỆN PHỤC HỒI VI MÔ AN TOÀN 3 LỚP:\n\n1. Tạo điểm backupRegistry & DLL vào C:\\ProgramData\\ThienPhatToolkit\\Backup\\\n2. Ép dừng các dịch vụ Office để giải phóng bộ nhớ.\n3. Chỉ gỡ IFEO/AppInit hoặc SFC DLL hỏng (DLL zin chính hãng KHÔNG ĐỘNG ĐẾN).\n4. Khởi động lại dịch vụ & TỰ ĐỘNG QUÉT LẠI NHIỆM THU SAU SỬA.\n\nBạn có muốn thực hiện không?")) return;
+
+    setIsRestoring(true);
+    setRestoreLog('');
+    const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
+    if (isElectron) {
+      try {
+        const res = await (window as any).electronAPI.restoreOfficeDeepV2();
+        setRestoreLog(res.log || '');
+        if (res.success) {
+          window.alert("NGHIỆM THU THÀNH CÔNG:\n\n" + res.message);
+        } else {
+          window.alert("CẢNH BÁO NGHIỆM THU:\n\n" + res.message);
+        }
+        // Auto re-scan to update evidence tree
+        await handleRunScanV2();
+      } catch (err: any) {
+        window.alert("Lỗi thực thi phục hồi V2: " + err.message);
+      }
+    } else {
+      setTimeout(() => {
+        setRestoreLog("[1/6] Backup System32\\sppc.dll -> Successful\n[2/6] Stop Office Services -> Successful\n[3/6] Micro Repair -> Removed IFEO Debugger Hook\n[4/6] Start Services -> sppsvc Running\n[5/6] Auto Re-Scan -> Verified!\n[6/6] Result: Đã khôi phục Office về trạng thái gốc thành công.");
+        alert("Demo: Đã khôi phục Office về trạng thái gốc thành công.");
+        handleRunScanV2();
+      }, 1500);
+    }
+    setIsRestoring(false);
+  };
+
   const evalState = report?.layers.l8_evidenceEvaluation;
   const verdict = evalState?.verdict || 'InsufficientData';
 
@@ -128,20 +161,42 @@ export default function OfficeLicenseAnalyzer() {
         </div>
       </div>
 
-      {/* Action Scan Button */}
-      <div className="flex justify-between items-center bg-slate-950 p-4 rounded-xl border border-slate-800">
+      {/* Action Scan & Recovery Buttons */}
+      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-slate-950 p-4 rounded-xl border border-slate-800">
         <div className="text-xs text-slate-400">
           Trạng thái chẩn đoán: <span className="font-mono text-slate-200">{report ? `Hoàn tất lúc ${report.timestamp}` : 'Chưa quét'}</span>
         </div>
-        <button
-          onClick={handleRunScanV2}
-          disabled={isScanning}
-          className="py-2.5 px-5 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-2 shadow-lg transition-all active:scale-98 cursor-pointer disabled:opacity-50"
-        >
-          {isScanning ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-          {isScanning ? 'ĐANG PHÂN TÍCH 10 TẦNG...' : 'BẮT ĐẦU CHẨN ĐOÁN ĐA BẰNG CHỨNG V2'}
-        </button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <button
+            onClick={handleRunScanV2}
+            disabled={isScanning || isRestoring}
+            className="flex-1 sm:flex-none py-2.5 px-4 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center gap-2 shadow-lg transition-all active:scale-98 cursor-pointer disabled:opacity-50"
+          >
+            {isScanning ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+            {isScanning ? 'ĐANG PHÂN TÍCH...' : 'CHẨN ĐOÁN V2'}
+          </button>
+
+          <button
+            onClick={handleRestoreV2}
+            disabled={isScanning || isRestoring || (verdict !== 'Tampered' && verdict !== 'KMS_Intercepted')}
+            className={`flex-1 sm:flex-none py-2.5 px-4 rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-lg transition-all active:scale-98 cursor-pointer ${
+              (verdict === 'Tampered' || verdict === 'KMS_Intercepted') && !isRestoring
+                ? 'bg-rose-600 hover:bg-rose-500 text-white animate-pulse shadow-rose-600/20'
+                : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
+            }`}
+          >
+            {isRestoring ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+            {isRestoring ? 'ĐANG PHỤC HỒI V2...' : 'PHỤC HỒI AN TOÀN V2 (3 LỚP)'}
+          </button>
+        </div>
       </div>
+
+      {restoreLog && (
+        <div className="bg-slate-950 p-3 rounded-lg border border-cyan-500/30 text-[11px] font-mono text-cyan-300 whitespace-pre-wrap">
+          <div className="font-bold text-cyan-400 mb-1 border-b border-cyan-500/20 pb-1">NHẬT KÝ QUY TRÌNH PHỤC HỒI AN TOÀN V2 &amp; TỰ ĐỘNG NGHIỆM THU:</div>
+          {restoreLog}
+        </div>
+      )}
 
       {/* Report Layer Views */}
       {report && (

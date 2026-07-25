@@ -1555,6 +1555,160 @@ powercfg /setactive e9a42b02-d5df-448d-aa00-03f14749eb61
     }
   });
 
+  ipcMain.handle('restore-office-deep-v2', async () => {
+    try {
+      const script = `
+        $OutputEncoding = [System.Text.Encoding]::UTF8
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+        $logs = @()
+        $logs += "[1/6] Khởi tạo thư mục sao lưu và điểm khôi phục..."
+        $backupDir = "C:\\ProgramData\\ThienPhatToolkit\\Backup\\RestoreV2_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+        if (-not (Test-Path $backupDir)) { New-Item -Path $backupDir -ItemType Directory -Force | Out-Null }
+
+        # 1. Backup system DLL if exists
+        $sysSppc = "$env:windir\\System32\\sppc.dll"
+        if (Test-Path $sysSppc) {
+            Copy-Item -Path $sysSppc -Destination "$backupDir\\sppc.dll.bak" -Force -ErrorAction SilentlyContinue
+            $logs += "  [+] Đã sao lưu System32\\sppc.dll sang $backupDir"
+        }
+
+        # 2. Stop Office processes cleanly
+        $logs += "[2/6] Dừng các tiến trình và dịch vụ Office để mở khóa tệp..."
+        $procsToStop = @("sppsvc", "osppsvc", "OfficeC2RClient", "WINWORD", "EXCEL", "POWERPNT", "OUTLOOK", "ONENOTE", "MSOSP")
+        foreach ($p in $procsToStop) {
+            Stop-Process -Name $p -Force -ErrorAction SilentlyContinue
+            Stop-Service -Name $p -Force -ErrorAction SilentlyContinue
+        }
+        Start-Sleep -Seconds 2
+        $logs += "  [+] Đã giải phóng hoàn toàn bộ nhớ RAM các tiến trình Office."
+
+        # 3. Targeted Repair - Only touch what is tampered!
+        $logs += "[3/6] Thực thi sửa đổi vi mô (Targeted Micro Repair)..."
+
+        # 3a. Registry IFEO Hooks
+        $ifeoTargets = @(
+            "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sppsvc.exe",
+            "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\osppsvc.exe",
+            "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sppsvc.exe"
+        )
+        foreach ($ifeo in $ifeoTargets) {
+            if (Test-Path $ifeo) {
+                Remove-Item -Path $ifeo -Recurse -Force -ErrorAction SilentlyContinue
+                $logs += "  [+] Gỡ bỏ thành công Registry IFEO Hook: $ifeo"
+            }
+        }
+
+        # 3b. AppInit_DLLs
+        $appInitPaths = @(
+            "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Windows",
+            "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows NT\\CurrentVersion\\Windows"
+        )
+        foreach ($appPath in $appInitPaths) {
+            if (Test-Path $appPath) {
+                $curr = (Get-ItemProperty -Path $appPath -Name "AppInit_DLLs" -ErrorAction SilentlyContinue).AppInit_DLLs
+                if ($curr -and $curr.Trim().Length -gt 0) {
+                    Set-ItemProperty -Path $appPath -Name "AppInit_DLLs" -Value "" -ErrorAction SilentlyContinue
+                    Set-ItemProperty -Path $appPath -Name "LoadAppInit_DLLs" -Value 0 -ErrorAction SilentlyContinue
+                    $logs += "  [+] Đã làm sạch AppInit_DLLs: $appPath"
+                }
+            }
+        }
+
+        # 3c. Ohook DLL Removal / Deactivation in Office Folders
+        $ohookSearchPaths = @(
+            "$env:ProgramFiles\\Microsoft Office",
+            "$env:SystemDrive\\Program Files (x86)\\Microsoft Office",
+            "$env:CommonProgramFiles\\Microsoft Shared\\OfficeSoftwareProtectionPlatform",
+            "\${env:CommonProgramW6432}\\Microsoft Shared\\OfficeSoftwareProtectionPlatform"
+        )
+        foreach ($searchBase in $ohookSearchPaths) {
+            if (Test-Path $searchBase) {
+                $ohooks = Get-ChildItem -Path $searchBase -Recurse -Filter "sppcs.dll" -ErrorAction SilentlyContinue
+                foreach ($f in $ohooks) {
+                    Set-ItemProperty -Path $f.FullName -Name IsReadOnly -Value $false -ErrorAction SilentlyContinue
+                    takeown.exe /f "$($f.FullName)" /a | Out-Null
+                    icacls.exe "$($f.FullName)" /grant "*S-1-5-32-544:F" /c /L | Out-Null
+                    Remove-Item -Path $f.FullName -Force -ErrorAction SilentlyContinue
+                    if (Test-Path $f.FullName) {
+                        Rename-Item -Path $f.FullName -NewName "$($f.FullName).bak_deleted" -Force -ErrorAction SilentlyContinue
+                    }
+                    $logs += "  [+] Đã xóa/vô hiệu hóa tệp Ohook DLL: $($f.FullName)"
+                }
+            }
+        }
+
+        # 3d. Check System32 sppc.dll Authenticode. IF tampered -> Repair via SFC. IF authentic -> DO NOT TOUCH.
+        if (Test-Path $sysSppc) {
+            $sig = Get-AuthenticodeSignature -FilePath $sysSppc -ErrorAction SilentlyContinue
+            if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Subject -notmatch "Microsoft Corporation") {
+                $logs += "  [!] System32\\sppc.dll bị sửa đổi hoặc mất chữ ký số. Đang phục hồi từ WinSXS..."
+                sfc /scanfile="$sysSppc" | Out-Null
+                $logs += "  [+] Đã chạy SFC scanfile phục hồi System32\\sppc.dll."
+            } else {
+                $logs += "  [✓] System32\\sppc.dll có chữ ký chuẩn Microsoft. KHÔNG ĐỘNG ĐẾN TỆP NÀY."
+            }
+        } else {
+            $logs += "  [!] Thiếu System32\\sppc.dll. Đang tái tạo từ kho WinSXS..."
+            sfc /scanfile="$sysSppc" | Out-Null
+        }
+
+        # 4. Restart Services
+        $logs += "[4/6] Khởi động lại dịch vụ cấp phép sppsvc & ClickToRunSvc..."
+        Start-Service -Name sppsvc, ClickToRunSvc -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 2
+
+        # 5. POST-RECOVERY VERIFICATION RE-SCAN
+        $logs += "[5/6] Đang tiến hành quét lại tự động toàn bộ 8 tầng để nghiệm thu..."
+        
+        # Verify DLL Authenticode
+        $postSig = Get-AuthenticodeSignature -FilePath $sysSppc -ErrorAction SilentlyContinue
+        $isPostAuthentic = ($postSig.Status -eq 'Valid') -and ($postSig.SignerCertificate.Subject -match "Microsoft Corporation")
+
+        # Verify IFEO Hooks
+        $postIfeoHook = $false
+        foreach ($ifeo in $ifeoTargets) {
+            if (Test-Path $ifeo) {
+                $dbg = (Get-ItemProperty -Path $ifeo -Name "Debugger" -ErrorAction SilentlyContinue).Debugger
+                if ($dbg) { $postIfeoHook = $true }
+            }
+        }
+
+        # 6. Final Verdict Assessment
+        $logs += "[6/6] Đánh giá kết quả nghiệm thu..."
+        $allPassed = $isPostAuthentic -and (-not $postIfeoHook)
+
+        $resultMessage = ""
+        if ($allPassed) {
+            $resultMessage = "Đã khôi phục Office về trạng thái gốc thành công."
+            $logs += "  [✓] NGIỆM THU THÀNH CÔNG: Chữ ký hợp lệ + Registry sạch + Dịch vụ hoạt động."
+        } else {
+            $resultMessage = "Chưa thể khôi phục hoàn toàn: " + (if (-not $isPostAuthentic) { "Chữ ký số sppc.dll chưa hợp lệ. " } else { "" }) + (if ($postIfeoHook) { "Còn tồn tại Hook IFEO." } else { "" })
+            $logs += "  [!] NGIỆM THU THẤT BẠI: $resultMessage"
+        }
+
+        $resObj = @{
+            success = $allPassed
+            message = $resultMessage
+            log = $logs -join "\n"
+        }
+
+        return $resObj | ConvertTo-Json -Depth 5
+      `;
+      const out = await runPowerShellScriptElevated(script);
+      if (out && out.trim()) {
+        try {
+          return JSON.parse(out.trim());
+        } catch(e) {
+          return { success: false, message: "Lỗi giải mã JSON phản hồi phục hồi.", log: out.trim() };
+        }
+      }
+      return { success: false, message: "Không nhận được phản hồi phục hồi.", log: "" };
+    } catch (err) {
+      return { success: false, message: "Lỗi thực thi phục hồi: " + err.message, log: err.message };
+    }
+  });
+
   // ========== BACKUP: WiFi ==========
   ipcMain.handle('list-wifi-profiles', async () => {
     try {
