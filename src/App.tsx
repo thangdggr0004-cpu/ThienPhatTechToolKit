@@ -113,6 +113,22 @@ export default function App() {
     return localStorage.getItem('ecoHintShown') !== 'true';
   });
 
+  const [appConfig, setAppConfig] = useState<any>(() => {
+    const saved = localStorage.getItem('thienphat_app_config');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return { refreshInterval: 3, cpuTempAlert: true, cpuTempThreshold: 85, ecoOnBattery: true, autoRamClean: false };
+  });
+
+  useEffect(() => {
+    const handleConfigChange = (e: any) => {
+      if (e.detail) setAppConfig(e.detail);
+    };
+    window.addEventListener('app-config-changed', handleConfigChange);
+    return () => window.removeEventListener('app-config-changed', handleConfigChange);
+  }, []);
+
   // Track if we auto-enabled it so the hint can reflect that
   const isAutoDetected = localStorage.getItem('ecoHintAutoDetected') === 'true';
 
@@ -161,6 +177,11 @@ export default function App() {
         }
       }
     }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    let intervalSeconds = appConfig.refreshInterval ?? 3;
+    if (intervalSeconds === 0) return; // Paused
 
     const timer = setInterval(async () => {
       if ((window as any).__ecoMode) return; // Skip polling in eco mode
@@ -175,11 +196,24 @@ export default function App() {
           netUp: m.netUp || 0,
           netDown: m.netDown || 0
         }));
+
+        // Check Battery for eco mode
+        if (appConfig.ecoOnBattery && (navigator as any).getBattery) {
+          const battery = await (navigator as any).getBattery();
+          if (!battery.charging && localStorage.getItem('ecoMode') !== 'true') {
+            setEcoMode(true);
+            console.log('[Auto] Eco Mode enabled due to battery power.');
+          }
+        }
       } catch (e) {
         // ignore
       }
-    }, 15000);
+    }, intervalSeconds * 1000);
 
+    return () => clearInterval(timer);
+  }, [appConfig.refreshInterval, appConfig.ecoOnBattery]);
+
+  useEffect(() => {
     // Also do initial fetch immediately
     (async () => {
       try {
@@ -194,8 +228,6 @@ export default function App() {
         }));
       } catch (e) {}
     })();
-
-    return () => clearInterval(timer);
   }, []);
 
   return (
@@ -289,7 +321,7 @@ export default function App() {
         {/* App Status Footer */}
         <div className="bg-[#f1f5f9] px-6 py-2.5 border-t border-slate-200 text-[10px] font-mono text-slate-600 flex justify-between items-center shrink-0">
           <div className="flex gap-6">
-            <span>TEMP: <span className="text-orange-600 font-bold">{footerMetrics.loaded ? `${footerMetrics.temp}°C` : '...'}</span></span>
+            <span>TEMP: <span className={`font-bold ${(appConfig.cpuTempAlert && footerMetrics.temp && footerMetrics.temp >= appConfig.cpuTempThreshold) ? 'text-red-600 animate-pulse text-[11px]' : 'text-orange-600'}`}>{footerMetrics.loaded ? `${footerMetrics.temp}°C` : '...'}</span></span>
             <span>RAM: <span className="text-blue-600 font-bold">{footerMetrics.loaded && footerMetrics.ram != null && footerMetrics.ramTotal != null ? `${footerMetrics.ram.toFixed(1)}/${footerMetrics.ramTotal.toFixed(1)} GB` : '...'}</span></span>
             <span>NET: <span className="text-emerald-600 font-bold">{footerMetrics.loaded ? `↑ ${footerMetrics.netUp}Kb/s ↓ ${((footerMetrics.netDown || 0) / 1024).toFixed(1)}Mb/s` : '...'}</span></span>
           </div>

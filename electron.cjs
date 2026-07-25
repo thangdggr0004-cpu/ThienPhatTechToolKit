@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, dialog, Tray, Menu } = require('electron');
 const path = require('path');
 const { exec } = require('child_process');
 const fs = require('fs');
@@ -395,8 +395,63 @@ function createWindow() {
   });
   
   ipcMain.on('window-close', () => {
-    win.close();
+    if (isCloseToTrayEnabled && !isQuittingApp) {
+      createSystemTray(win);
+      win.hide();
+    } else {
+      isQuittingApp = true;
+      win.close();
+    }
   });
+
+  win.on('close', (e) => {
+    if (isCloseToTrayEnabled && !isQuittingApp) {
+      e.preventDefault();
+      createSystemTray(win);
+      win.hide();
+    }
+  });
+}
+
+let appTray = null;
+let isQuittingApp = false;
+let isCloseToTrayEnabled = true;
+
+function createSystemTray(win) {
+  if (appTray) return;
+  try {
+    const iconPath = app.isPackaged ? path.join(__dirname, 'dist', 'logo.ico') : path.join(__dirname, 'public', 'logo.ico');
+    appTray = new Tray(iconPath);
+    appTray.setToolTip('Thiên Phát Tech Toolkit Pro');
+    const contextMenu = Menu.buildFromTemplate([
+      {
+        label: 'Mở Thiên Phát Tech Toolkit',
+        click: () => {
+          if (win) {
+            win.show();
+            win.focus();
+          }
+        }
+      },
+      { type: 'separator' },
+      {
+        label: 'Thoát Hoàn Toàn',
+        click: () => {
+          isQuittingApp = true;
+          app.quit();
+        }
+      }
+    ]);
+    appTray.setContextMenu(contextMenu);
+    appTray.on('double-click', () => {
+      if (win) {
+        win.show();
+        win.focus();
+      }
+    });
+  } catch (err) {
+    console.error('Failed to create system tray:', err);
+  }
 }
 
 app.whenReady().then(() => {
@@ -423,6 +478,53 @@ app.whenReady().then(() => {
         console.error('[HW Cache] Failed to pre-warm cache:', err);
       });
   }, 1500);
+
+  ipcMain.handle('set-auto-start', async (event, enabled) => {
+    try {
+      app.setLoginItemSettings({
+        openAtLogin: !!enabled,
+        path: process.execPath
+      });
+      return { success: true, openAtLogin: !!enabled };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('get-auto-start', async () => {
+    try {
+      const settings = app.getLoginItemSettings();
+      return { success: true, openAtLogin: settings.openAtLogin };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('set-close-to-tray', async (event, enabled) => {
+    isCloseToTrayEnabled = !!enabled;
+    const win = BrowserWindow.getAllWindows()[0];
+    if (enabled && win) {
+      createSystemTray(win);
+    }
+    return { success: true, closeToTray: isCloseToTrayEnabled };
+  });
+
+  ipcMain.handle('clean-ram-now', async () => {
+    try {
+      const script = `
+        $OutputEncoding = [System.Text.Encoding]::UTF8
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+        [System.GC]::Collect()
+        [System.GC]::WaitForPendingFinalizers()
+        Get-Process | ForEach-Object { try { $_.EmptyWorkingSet() } catch {} }
+        Write-Output "OK"
+      `;
+      await runPowerShellScriptElevated(script);
+      return { success: true, message: 'Đã tự động giải phóng bộ nhớ RAM!' };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
 
   ipcMain.handle('get-hardware-info', async (event, forceRefresh) => {
     // Return cached data immediately if available and not forcing refresh

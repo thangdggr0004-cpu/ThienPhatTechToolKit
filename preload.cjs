@@ -62,6 +62,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   toggleDefenderStatus: (enable) => ipcRenderer.invoke('toggle-defender-status', enable),
   // Advanced MAS Activation
   runMasAction: (mode) => ipcRenderer.invoke('run-mas-action', mode),
+  // App Settings
+  setAutoStart: (enabled) => ipcRenderer.invoke('set-auto-start', enabled),
+  getAutoStart: () => ipcRenderer.invoke('get-auto-start'),
+  setCloseToTray: (enabled) => ipcRenderer.invoke('set-close-to-tray', enabled),
+  cleanRamNow: () => ipcRenderer.invoke('clean-ram-now'),
   // Window controls
   windowMinimize: () => ipcRenderer.send('window-minimize'),
   windowMaximize: () => ipcRenderer.send('window-maximize'),

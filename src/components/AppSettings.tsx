@@ -62,10 +62,48 @@ export default function AppSettings() {
     } else {
       document.documentElement.classList.add('dark');
     }
+    
+    // Apply animations globally
+    if (config.animations) {
+      document.body.classList.remove('no-animations');
+    } else {
+      document.body.classList.add('no-animations');
+    }
   }, [config]);
 
+  useEffect(() => {
+    // Initial sync with backend
+    const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
+    if (isElectron) {
+      (window as any).electronAPI.setAutoStart(config.autoStart);
+      (window as any).electronAPI.setCloseToTray(config.closeToTray);
+    }
+  }, []);
+
   const updateConfig = (key: keyof AppConfig, value: any) => {
-    setConfig(prev => ({ ...prev, [key]: value }));
+    setConfig(prev => {
+      const nextConfig = { ...prev, [key]: value };
+      
+      const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
+      if (isElectron) {
+        if (key === 'autoStart') {
+          (window as any).electronAPI.setAutoStart(value);
+        }
+        if (key === 'closeToTray') {
+          (window as any).electronAPI.setCloseToTray(value);
+        }
+        if (key === 'autoRamClean' && value === true) {
+          (window as any).electronAPI.cleanRamNow().then((res: any) => {
+            if (res && res.success) console.log(res.message);
+          });
+        }
+      }
+      
+      // Notify other components (like App.tsx) about the change
+      window.dispatchEvent(new CustomEvent('app-config-changed', { detail: nextConfig }));
+
+      return nextConfig;
+    });
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 2000);
   };
