@@ -5,6 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const https = require('https');
 const si = require('systeminformation');
+const { OfficeDiagnosticEngineV3 } = require('./OfficeDiagnosticEngineV3.cjs');
 
 // 1. MUST BE VERY TOP: Global error logging for debugging crashes on other PCs
 process.on('uncaughtException', (error) => {
@@ -1571,6 +1572,17 @@ powercfg /setactive e9a42b02-d5df-448d-aa00-03f14749eb61
       return { timestamp: new Date().toLocaleString('vi-VN'), hasIssues: false, summary: "Không nhận được phản hồi chẩn đoán." };
     } catch (err) {
       return { timestamp: new Date().toLocaleString('vi-VN'), hasIssues: true, summary: "Lỗi thực thi chẩn đoán V2: " + err.message };
+    }
+  });
+
+  // Enterprise MS Office Diagnostic & Recovery Engine V3 IPC Handler
+  ipcMain.handle('scan-office-engine-v3', async () => {
+    try {
+      const engine = new OfficeDiagnosticEngineV3(runPowerShellScript);
+      const report = await engine.runFullDiagnostics();
+      return { success: true, report };
+    } catch (err) {
+      return { success: false, error: "Lỗi thực thi Enterprise Engine V3: " + err.message };
     }
   });
 
