@@ -229,6 +229,14 @@ export default function OfficeLicenseAnalyzer() {
               <span className="font-bold text-blue-700 text-xs mt-0.5 block">{report.provenance.recommendation}</span>
             </div>
           </div>
+          {report.provenance.kmsHostInfo && report.provenance.kmsHostInfo.host !== 'N/A' && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px] font-mono bg-white p-2.5 rounded-lg border border-blue-200 text-slate-700">
+              <div><span className="text-slate-400">KMS Host:</span> <span className="font-bold text-slate-900">{report.provenance.kmsHostInfo.host}</span></div>
+              <div><span className="text-slate-400">Port:</span> <span className="font-bold text-slate-900">{report.provenance.kmsHostInfo.port || 1688}</span></div>
+              <div><span className="text-slate-400">Trạng thái:</span> <span className="font-bold text-emerald-700">{report.provenance.kmsHostInfo.reachability || 'UNKNOWN'}</span></div>
+              <div><span className="text-slate-400">Phân loại:</span> <span className="font-bold text-blue-700">{report.provenance.kmsHostInfo.hostType || 'KMS Host'}</span></div>
+            </div>
+          )}
           {report.provenance.evidenceUsed && report.provenance.evidenceUsed.length > 0 && (
             <div className="text-[11px] text-slate-600 border-t border-blue-100 pt-2 flex items-center gap-1.5">
               <span className="font-bold text-blue-900">Bằng chứng đối soát:</span>

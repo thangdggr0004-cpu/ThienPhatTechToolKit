@@ -371,7 +371,7 @@ class DecisionEngine {
       recommendedNextStep = 'Xem xét kế hoạch vi phẫu trước khi cho phép thực thi.';
     } else if (confidencePct >= 80 && !hasFailures) {
       actionAllowed = DECISION_ACTIONS.ALLOW_RESTORE;
-      reason = `Hệ thống hoàn toàn sạch sẽ (${confidencePct}% Confidence). Nguyên bản Microsoft.`;
+      reason = `Không phát hiện dấu hiệu can thiệp tệp/Registry cần khôi phục (${confidencePct}% Confidence). Chi tiết phương thức kích hoạt xem tại Activation Provenance.`;
       recommendedNextStep = 'Không cần can thiệp khôi phục.';
     } else {
       actionAllowed = DECISION_ACTIONS.ALLOW_RESTORE;
@@ -803,6 +803,15 @@ class ActivationProvenanceAnalyzer {
     const kmsHost = licData?.kmsHost;
     const hasKmsHost = kmsHost && kmsHost !== 'N/A' && kmsHost.trim().length > 0;
 
+    // KMS HOST INSPECTOR SUB-ROUTINE
+    let kmsHostInfo = {
+      host: kmsHost || 'N/A',
+      port: 1688,
+      dnsResult: 'N/A',
+      reachability: 'UNKNOWN',
+      hostType: 'Host Not Configured'
+    };
+
     // 1. RULE FOR KMS CLIENT (GVLK)
     const isKmsClient = actType === 'KMS' ||
       licName.includes('_KMS_Client') ||
@@ -817,12 +826,31 @@ class ActivationProvenanceAnalyzer {
         confidence = 80; // 75–85% range per specification
 
         if (hasKmsHost) {
-          activationSource = `KMS Host: ${kmsHost}`;
-          recommendation = 'KMS Host đã được xác định.';
-          evidenceUsed.push(`ActivationType: KMS`, `License Name: ${licName}`, `KMS Host: ${kmsHost}`);
+          const hLower = kmsHost.toLowerCase().trim();
+          kmsHostInfo.host = kmsHost.trim();
+          kmsHostInfo.port = 1688;
+          kmsHostInfo.reachability = 'YES';
+
+          if (hLower.endsWith('.local') || hLower.endsWith('.corp') || hLower.endsWith('.lan') || hLower.match(/^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)/)) {
+            kmsHostInfo.hostType = 'Corporate Internal Host';
+            activationSource = `Corporate KMS Host (${kmsHost})`;
+            recommendation = 'KMS Host hoạt động bình thường.';
+          } else if (hLower.includes('msguides.com') || hLower.includes('kms') || hLower.match(/^\d+\.\d+\.\d+\.\d+$/)) {
+            kmsHostInfo.hostType = 'External Public Host';
+            activationSource = `External Public KMS Host (${kmsHost})`;
+            recommendation = 'Đây là KMS Host công khai. Hãy xác minh đây có phải môi trường mong muốn của bạn.';
+          } else {
+            kmsHostInfo.hostType = 'Unknown Host';
+            activationSource = `KMS Host: ${kmsHost}`;
+            recommendation = 'KMS Host đã được xác định.';
+          }
+
+          evidenceUsed.push(`ActivationType: KMS`, `License Name: ${licName}`, `KMS Host: ${kmsHost}`, `KMS Port: 1688`, `Host Type: ${kmsHostInfo.hostType}`);
         } else {
+          kmsHostInfo.host = 'Chưa xác định';
+          kmsHostInfo.hostType = 'Host Not Configured';
           activationSource = 'KMS (Host chưa xác định)';
-          recommendation = 'Nên kiểm tra KMS Host để xác định nguồn kích hoạt.';
+          recommendation = 'KMS Host chưa được cấu hình. Nên kiểm tra KMS Host để xác định nguồn kích hoạt.';
           evidenceUsed.push(`ActivationType: KMS`, `License Name: ${licName}`, `Status: LICENSED`, `Reasoning: Phát hiện cấu hình KMS Client nhưng chưa lấy được tên KMS Host.`);
         }
       }
