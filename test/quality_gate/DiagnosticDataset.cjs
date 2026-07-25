@@ -536,6 +536,76 @@ const DATASET_SCENARIOS = [
       hasTampering: false,
       recoveryAction: 'NONE'
     }
+  },
+  {
+    testId: 'TC-24',
+    name: 'Office ClickToRun Update Channel Offline',
+    description: 'Kênh cập nhật ClickToRun bị tạm ngắt trong môi trường ngoại tuyến.',
+    inputData: {
+      sku: { skuName: 'Office 2021 ProPlus2021Volume', channel: 'Volume', bitness: 'x64', installType: 'ClickToRun', buildNumber: '16.0.14332' },
+      licenseStatus: 'LICENSED',
+      sysSppcAuthenticode: 'Valid',
+      sysSppcSigner: 'CN=Microsoft Corporation',
+      ohookDllFound: false,
+      ifeoHooks: [],
+      appInitDlls: '',
+      services: [{ name: 'ClickToRunSvc', status: 'Running' }, { name: 'sppsvc', status: 'Running' }]
+    },
+    expected: {
+      evidenceStatus: { license: 'PASS', authenticode: 'PASS', ohook: 'PASS', registry: 'PASS' },
+      confidenceMin: 95,
+      confidenceMax: 100,
+      decision: 'ALLOW_RESTORE',
+      hasTampering: false,
+      recoveryAction: 'NONE'
+    }
+  },
+  {
+    testId: 'TC-25',
+    name: 'SPP Software Protection Token Reset',
+    description: 'Dịch vụ SPP khôi phục bộ nhớ đệm chứng chỉ bản quyền.',
+    inputData: {
+      sku: { skuName: 'Office 2021 ProPlusRetail', channel: 'Retail', bitness: 'x64', installType: 'ClickToRun', buildNumber: '16.0.17328' },
+      licenseStatus: 'LICENSED',
+      sysSppcAuthenticode: 'Valid',
+      sysSppcSigner: 'CN=Microsoft Corporation',
+      ohookDllFound: false,
+      ifeoHooks: [],
+      appInitDlls: '',
+      services: [{ name: 'ClickToRunSvc', status: 'Running' }, { name: 'sppsvc', status: 'Running' }]
+    },
+    expected: {
+      evidenceStatus: { license: 'PASS', authenticode: 'PASS', ohook: 'PASS', registry: 'PASS' },
+      confidenceMin: 95,
+      confidenceMax: 100,
+      decision: 'ALLOW_RESTORE',
+      hasTampering: false,
+      recoveryAction: 'NONE'
+    }
+  },
+  {
+    testId: 'TC-26',
+    name: 'WMI Licensing Provider MultiSource Verification',
+    description: 'Đối soát đa nguồn giữa WMI SoftwareLicensingProduct và ospp.vbs.',
+    inputData: {
+      sku: { skuName: 'Microsoft 365 Apps for enterprise', channel: 'Microsoft 365', bitness: 'x64', installType: 'ClickToRun', buildNumber: '16.0.17328' },
+      licenseStatus: 'LICENSED',
+      licData: { sourcesUsed: ['ospp.vbs', 'WMI_SoftwareLicensingProduct'] },
+      sysSppcAuthenticode: 'Valid',
+      sysSppcSigner: 'CN=Microsoft Corporation',
+      ohookDllFound: false,
+      ifeoHooks: [],
+      appInitDlls: '',
+      services: [{ name: 'ClickToRunSvc', status: 'Running' }]
+    },
+    expected: {
+      evidenceStatus: { license: 'PASS', authenticode: 'PASS', ohook: 'PASS', registry: 'PASS' },
+      confidenceMin: 95,
+      confidenceMax: 100,
+      decision: 'ALLOW_RESTORE',
+      hasTampering: false,
+      recoveryAction: 'NONE'
+    }
   }
 ];
 

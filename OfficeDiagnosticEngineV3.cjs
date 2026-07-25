@@ -476,6 +476,9 @@ const AuthenticodeCollector = require('./src/collectors/AuthenticodeCollector.cj
 const OhookCollector = require('./src/collectors/OhookCollector.cjs');
 const RegistryCollector = require('./src/collectors/RegistryCollector.cjs');
 const ServicesCollector = require('./src/collectors/ServicesCollector.cjs');
+const SPPCollector = require('./src/collectors/SPPCollector.cjs');
+const OfficeUpdateCollector = require('./src/collectors/OfficeUpdateCollector.cjs');
+const WMICollector = require('./src/collectors/WMICollector.cjs');
 
 class OfficeDiagnosticEngineV3 {
   constructor(powerShellRunner) {
@@ -485,12 +488,15 @@ class OfficeDiagnosticEngineV3 {
     this.collectorHealthMonitor = new CollectorHealthMonitor();
     this.collectorPipeline = new CollectorPipeline(this.collectorRegistry, this.collectorHealthMonitor);
 
-    // Register Phase 2 Collectors
+    // Register Phase 2 & Phase 3 Collectors
     this.collectorRegistry.register(new LicenseCollector());
     this.collectorRegistry.register(new AuthenticodeCollector());
     this.collectorRegistry.register(new OhookCollector());
     this.collectorRegistry.register(new RegistryCollector());
     this.collectorRegistry.register(new ServicesCollector());
+    this.collectorRegistry.register(new SPPCollector());
+    this.collectorRegistry.register(new OfficeUpdateCollector());
+    this.collectorRegistry.register(new WMICollector());
   }
 
   async runFullDiagnostics() {
