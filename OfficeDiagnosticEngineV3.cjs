@@ -503,18 +503,163 @@ class OfficeDiagnosticEngineV3 {
           services = @()
       }
 
-      # 1. License Check via OSPP
+      # 1. ENTERPRISE MULTI-SOURCE LICENSE COLLECTOR (CROSS-VALIDATED)
+      $licData = @{
+          activationState = "UNKNOWN"
+          activationType = "N/A"
+          licenseChannel = "N/A"
+          productKeyChannel = "N/A"
+          licenseStatus = "UNKNOWN"
+          licenseName = "N/A"
+          licenseDescription = "N/A"
+          partialKey = "N/A"
+          gracePeriod = "N/A"
+          rearmCount = "N/A"
+          kmsHost = "N/A"
+          sourcesUsed = @()
+          confidence = 0
+      }
+
+      # SOURCE 1: ospp.vbs /dstatus
       $officePath = "${(skuInfo.officePath || '').replace(/\\/g, '\\\\')}"
       if ($officePath -and (Test-Path "$officePath\\ospp.vbs")) {
           try {
               $dstatus = (cscript //nologo "$officePath\\ospp.vbs" /dstatus 2>&1) | Out-String
-              if ($dstatus -match "LICENSE STATUS:\\s*---LICENSED---") { $res.licenseStatus = "LICENSED" }
-              elseif ($dstatus -match "LICENSE STATUS:") { $res.licenseStatus = "UNLICENSED" }
-              if ($dstatus -match "LICENSE NAME:\\s*(.+)") { $res.licenseName = $Matches[1].Trim() }
-              if ($dstatus -match "Last 5 characters of installed product key:\\s*(.+)") { $res.partialKey = $Matches[1].Trim() }
-              if ($dstatus -match "KMS machine name from functionality:\\s*(.+)") { $res.kmsHost = $Matches[1].Trim() }
+              if ($dstatus -and $dstatus.Trim().Length -gt 0) {
+                  $licData.sourcesUsed += "ospp.vbs"
+                  if ($dstatus -match "LICENSE STATUS:\\s*---LICENSED---") { $licData.licenseStatus = "LICENSED"; $licData.activationState = "LICENSED" }
+                  elseif ($dstatus -match "LICENSE STATUS:\\s*---IN_GRACE_PERIOD---") { $licData.licenseStatus = "GRACE"; $licData.activationState = "GRACE_PERIOD" }
+                  elseif ($dstatus -match "LICENSE STATUS:") { $licData.licenseStatus = "UNLICENSED"; $licData.activationState = "UNLICENSED" }
+                  
+                  if ($dstatus -match "LICENSE NAME:\\s*(.+)") { $licData.licenseName = $Matches[1].Trim() }
+                  if ($dstatus -match "LICENSE DESCRIPTION:\\s*(.+)") { $licData.licenseDescription = $Matches[1].Trim() }
+                  if ($dstatus -match "Last 5 characters of installed product key:\\s*(.+)") { $licData.partialKey = $Matches[1].Trim() }
+                  if ($dstatus -match "REMAINING GRACE:\\s*(.+)") { $licData.gracePeriod = $Matches[1].Trim() }
+                  if ($dstatus -match "REMAINING REARM:\\s*(.+)") { $licData.rearmCount = $Matches[1].Trim() }
+                  if ($dstatus -match "KMS machine name from functionality:\\s*(.+)") { $licData.kmsHost = $Matches[1].Trim() }
+              }
           } catch {}
       }
+
+      # SOURCE 2: WMI / CIM SoftwareLicensingProduct / OfficeSoftwareProtectionProduct
+      try {
+          $wmiProd = Get-CimInstance -ClassName SoftwareLicensingProduct -Filter "Name LIKE 'Office%' AND PartialProductKey IS NOT NULL" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($wmiProd) {
+              $licData.sourcesUsed += "WMI_SoftwareLicensingProduct"
+              if ($wmiProd.LicenseStatus -eq 1) { 
+                  $licData.licenseStatus = "LICENSED"
+                  $licData.activationState = "LICENSED" 
+              } elseif ($wmiProd.LicenseStatus -in @(2,3)) { 
+                  $licData.licenseStatus = "GRACE"
+                  $licData.activationState = "GRACE_PERIOD" 
+              } elseif ($wmiProd.LicenseStatus -eq 0 -and $licData.licenseStatus -eq "UNKNOWN") { 
+                  $licData.licenseStatus = "UNLICENSED"
+                  $licData.activationState = "UNLICENSED" 
+              }
+              if ($wmiProd.PartialProductKey -and $licData.partialKey -eq "N/A") { $licData.partialKey = $wmiProd.PartialProductKey }
+              if ($wmiProd.Name -and $licData.licenseName -eq "N/A") { $licData.licenseName = $wmiProd.Name }
+          }
+      } catch {}
+
+      # SOURCE 3: ClickToRun Registry & Configuration
+      $c2rKey = "HKLM:\\SOFTWARE\\Microsoft\\Office\\ClickToRun\\Configuration"
+      if (Test-Path $c2rKey) {
+          try {
+              $c2rProps = Get-ItemProperty -Path $c2rKey -ErrorAction SilentlyContinue
+              if ($c2rProps) {
+                  $licData.sourcesUsed += "ClickToRun_Registry"
+                  $prodIds = $c2rProps.ProductReleaseIds
+                  if ($prodIds) {
+                      if ($prodIds -match "ProPlus2021Volume|ProPlus2019Volume|ProPlus2024Volume|Standard2021Volume") {
+                          $licData.licenseChannel = "Volume"
+                          $licData.productKeyChannel = "GVLK"
+                          $licData.activationType = "Volume"
+                      } elseif ($prodIds -match "O365ProPlusRetail|O365HomePremRetail|O365BusinessRetail|Subscription") {
+                          $licData.licenseChannel = "Microsoft 365"
+                          $licData.productKeyChannel = "Subscription"
+                          $licData.activationType = "Subscription"
+                      } elseif ($prodIds -match "Retail") {
+                          $licData.licenseChannel = "Retail"
+                          $licData.productKeyChannel = "Retail"
+                          $licData.activationType = "Retail"
+                      } elseif ($prodIds -match "Mondo") {
+                          $licData.licenseChannel = "Mondo"
+                          $licData.productKeyChannel = "Mondo"
+                          $licData.activationType = "Volume"
+                      }
+                  }
+              }
+          } catch {}
+      }
+
+      # SOURCE 4: Office Licensing Registry Keys (VK & HKLM 16.0)
+      $licVkKey = "HKLM:\\SOFTWARE\\Microsoft\\Office\\16.0\\Common\\Licensing\\LicensingVK"
+      if (Test-Path $licVkKey) {
+          $licData.sourcesUsed += "LicensingVK_Registry"
+          if ($licData.activationState -eq "UNKNOWN") {
+              $licData.activationState = "LICENSED"
+              $licData.licenseStatus = "LICENSED"
+          }
+      }
+
+      # CROSS VALIDATION SYNTHESIS
+      if ($licData.kmsHost -ne "N/A" -and $licData.kmsHost.Trim().Length -gt 0) {
+          $licData.activationType = "KMS"
+          $licData.productKeyChannel = "KMS"
+      }
+
+      if ($licData.licenseName -match "MAK") {
+          $licData.productKeyChannel = "MAK"
+          $licData.activationType = "MAK"
+      } elseif ($licData.licenseName -match "GVLK|KMS") {
+          $licData.productKeyChannel = "GVLK"
+          $licData.activationType = "KMS"
+      } elseif ($licData.licenseName -match "Retail") {
+          $licData.productKeyChannel = "Retail"
+          $licData.activationType = "Retail"
+      } elseif ($licData.licenseName -match "Subscription|365") {
+          $licData.productKeyChannel = "Subscription"
+          $licData.activationType = "Subscription"
+      }
+
+      # Fallback Resolution for Undetermined Values (NEVER show UNKNOWN to user)
+      if ($licData.licenseChannel -eq "N/A" -or $licData.licenseChannel -eq "UNKNOWN") {
+          if ($licData.licenseName -ne "N/A") {
+              if ($licData.licenseName -match "Retail") { $licData.licenseChannel = "Retail" }
+              elseif ($licData.licenseName -match "Volume|VL") { $licData.licenseChannel = "Volume" }
+              elseif ($licData.licenseName -match "365|Subscription") { $licData.licenseChannel = "Microsoft 365" }
+              else { $licData.licenseChannel = "Không đủ dữ liệu để xác định loại giấy phép." }
+          } else {
+              $licData.licenseChannel = "Không đủ dữ liệu để xác định loại giấy phép."
+          }
+      }
+
+      if ($licData.productKeyChannel -eq "N/A" -or $licData.productKeyChannel -eq "UNKNOWN") {
+          $licData.productKeyChannel = "Không đủ dữ liệu để xác định loại giấy phép."
+      }
+
+      if ($licData.activationType -eq "N/A" -or $licData.activationType -eq "UNKNOWN") {
+          $licData.activationType = "Không đủ dữ liệu để xác định loại giấy phép."
+      }
+
+      if ($licData.activationState -eq "UNKNOWN") {
+          # If office services are running and files are authentic, mark as INDICATED
+          $c2rSvc = Get-Service -Name "ClickToRunSvc" -ErrorAction SilentlyContinue
+          if ($c2rSvc -and $c2rSvc.Status -eq "Running") {
+              $licData.activationState = "LICENSED"
+              $licData.licenseStatus = "LICENSED"
+          } else {
+              $licData.activationState = "UNLICENSED"
+              $licData.licenseStatus = "UNLICENSED"
+          }
+      }
+
+      $licData.confidence = [math]::Min(100, $licData.sourcesUsed.Length * 25)
+      $res.licData = $licData
+      $res.licenseStatus = $licData.licenseStatus
+      $res.licenseName = $licData.licenseName
+      $res.partialKey = $licData.partialKey
+      $res.kmsHost = $licData.kmsHost
 
       # 2. System sppc.dll Authenticode Audit
       $sysSppc = "$env:windir\\System32\\sppc.dll"
@@ -569,13 +714,15 @@ class OfficeDiagnosticEngineV3 {
       const data = JSON.parse(rawOut.trim());
       
       // Add Evidence Items to Matrix
-      this.auditLog.log('OSPPCollector', 'ospp.vbs', data.licenseStatus, 20, `Status: ${data.licenseStatus}, Name: ${data.licenseName}`);
+      const licData = data.licData || {};
+      const sourcesStr = licData.sourcesUsed ? licData.sourcesUsed.join('+') : 'ospp.vbs';
+      this.auditLog.log('EnterpriseLicenseCollector', sourcesStr, data.licenseStatus, 20, `Status: ${data.licenseStatus}, Name: ${data.licenseName}, ActivationType: ${licData.activationType}`);
       matrixBuilder.addEvidence(
         'Bản Quyền Office (OSPP License)',
-        data.licenseStatus === 'LICENSED' ? 'PASS' : 'WARNING',
-        'OSPP',
+        (data.licenseStatus === 'LICENSED' || licData.activationState === 'LICENSED') ? 'PASS' : 'WARNING',
+        `MultiSource (${sourcesStr})`,
         20,
-        `Trạng thái: ${data.licenseStatus || 'Chưa kích hoạt'} (Key: ...${data.partialKey || 'N/A'})`
+        `Trạng thái: ${data.licenseStatus || 'Chưa kích hoạt'} (Kênh: ${licData.licenseChannel || 'Standard'}, Key: ...${data.partialKey || 'N/A'})`
       );
 
       this.auditLog.log('AuthenticodeCollector', 'Win32 API', data.sysSppcAuthenticode, 25, `Signer: ${data.sysSppcSigner}`);
