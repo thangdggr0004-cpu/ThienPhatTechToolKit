@@ -1339,6 +1339,222 @@ powercfg /setactive e9a42b02-d5df-448d-aa00-03f14749eb61
     }
   });
 
+  ipcMain.handle('scan-office-deep-v2', async () => {
+    try {
+      const script = `
+        $OutputEncoding = [System.Text.Encoding]::UTF8
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+        $report = @{
+            timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+            layers = @{
+                l1_infoCollection = @{ status = "pass"; details = "System info gathered." }
+                l2_licenseDetection = @{ isLicensed = $false; channel = "Unknown"; description = ""; partialKey = ""; licenseStatusText = "Unknown"; kmsHost = ""; gracePeriodDays = 0 }
+                l3_dllIntegrity = @()
+                l4_digitalSignature = @{ isAllValid = $true; details = "All signatures valid." }
+                l5_injectionDetection = @()
+                l6_registryDetection = @()
+                l7_servicesDetection = @()
+                l8_evidenceEvaluation = @{
+                    hasTampering = $false
+                    confidenceLevel = "High"
+                    riskScore = 0
+                    verdict = "Genuine"
+                    evidences = @()
+                }
+            }
+            hasIssues = $false
+            summary = "Khởi tạo chẩn đoán..."
+        }
+
+        # Layer 1: Info Collection
+        $officePath = ""
+        $officePaths = @(
+            "$env:ProgramFiles\\Microsoft Office\\Office16",
+            "$env:SystemDrive\\Program Files (x86)\\Microsoft Office\\Office16",
+            "$env:ProgramFiles\\Microsoft Office\\root\\Office16"
+        )
+        foreach ($p in $officePaths) {
+            if (Test-Path "$p\\ospp.vbs") { $officePath = $p; break }
+        }
+        $report.layers.l1_infoCollection.details = if ($officePath) { "Phát hiện Office tại: $officePath" } else { "Không tìm thấy ospp.vbs tiêu chuẩn." }
+
+        # Layer 2: License Detection
+        if ($officePath) {
+            try {
+                $dstatus = (cscript //nologo "$officePath\\ospp.vbs" /dstatus 2>&1) | Out-String
+                if ($dstatus -match "LICENSE STATUS:\\s*---LICENSED---") {
+                    $report.layers.l2_licenseDetection.isLicensed = $true
+                    $report.layers.l2_licenseDetection.licenseStatusText = "LICENSED"
+                } elseif ($dstatus -match "LICENSE STATUS:") {
+                    $report.layers.l2_licenseDetection.licenseStatusText = "UNLICENSED/GRACE"
+                }
+                
+                if ($dstatus -match "LICENSE NAME:\\s*(.+)") { $report.layers.l2_licenseDetection.description = $Matches[1].Trim() }
+                if ($dstatus -match "LICENSE DESCRIPTION:\\s*(.+)") { $report.layers.l2_licenseDetection.channel = $Matches[1].Trim() }
+                if ($dstatus -match "Last 5 characters of installed product key:\\s*(.+)") { $report.layers.l2_licenseDetection.partialKey = $Matches[1].Trim() }
+                if ($dstatus -match "KMS machine name from functionality:\\s*(.+)") { $report.layers.l2_licenseDetection.kmsHost = $Matches[1].Trim() }
+            } catch {}
+        }
+
+        # Layer 3 & 4: DLL Integrity & Digital Signature
+        $dllTargets = @(
+            "$env:windir\\System32\\sppc.dll",
+            "$env:windir\\System32\\sppcs.dll",
+            "$env:windir\\System32\\slc.dll",
+            "$env:ProgramFiles\\Microsoft Office\\root\\vfs\\System\\sppcs.dll",
+            "$env:SystemDrive\\Program Files (x86)\\Microsoft Office\\root\\vfs\\System\\sppcs.dll"
+        )
+
+        foreach ($dll in $dllTargets) {
+            if (Test-Path $dll) {
+                $sha256 = (Get-FileHash -Path $dll -Algorithm SHA256 -ErrorAction SilentlyContinue).Hash
+                $sig = Get-AuthenticodeSignature -FilePath $dll -ErrorAction SilentlyContinue
+                $isAuthentic = ($sig.Status -eq 'Valid') -and ($sig.SignerCertificate.Subject -match "Microsoft Corporation")
+                
+                if (-not $isAuthentic -and $dll -match "System32") {
+                    $report.layers.l4_digitalSignature.isAllValid = $false
+                    $report.layers.l8_evidenceEvaluation.evidences += "File DLL hệ thống ($dll) mất chữ ký số chuẩn Microsoft"
+                    $report.layers.l8_evidenceEvaluation.riskScore += 80
+                }
+                if ($dll -match "vfs\\\\System") {
+                    $report.layers.l8_evidenceEvaluation.evidences += "Phát hiện file DLL Ohook ($dll) nằm trong thư mục Office"
+                    $report.layers.l8_evidenceEvaluation.riskScore += 90
+                }
+
+                $report.layers.l3_dllIntegrity += @{
+                    path = $dll
+                    exists = $true
+                    sha256 = $sha256
+                    authenticodeStatus = $sig.Status.ToString()
+                    signerSubject = if ($sig.SignerCertificate) { $sig.SignerCertificate.Subject } else { "N/A" }
+                    publisher = if ($sig.SignerCertificate) { $sig.SignerCertificate.Issuer } else { "N/A" }
+                    isAuthentic = $isAuthentic
+                    details = "Authenticode: $($sig.Status)"
+                }
+            }
+        }
+
+        # Layer 5: Injection Detection (Loaded Modules in Running Office Procs)
+        $procs = Get-Process -Name "sppsvc", "OfficeC2RClient", "WINWORD", "EXCEL" -ErrorAction SilentlyContinue
+        foreach ($p in $procs) {
+            try {
+                $modules = $p.Modules | Where-Object { 
+                    $_.ModuleName -match "hook|kms|crack|inject|sppc" -and $_.Company -notmatch "Microsoft"
+                }
+                foreach ($m in $modules) {
+                    $report.layers.l5_injectionDetection += @{
+                        processName = $p.ProcessName
+                        pid = $p.Id
+                        moduleName = $m.ModuleName
+                        modulePath = $m.FileName
+                        company = $m.Company
+                        isSuspicious = $true
+                    }
+                    $report.layers.l8_evidenceEvaluation.evidences += "Tiến trình $($p.ProcessName) bị tiêm DLL lạ ($($m.ModuleName))"
+                    $report.layers.l8_evidenceEvaluation.riskScore += 70
+                }
+            } catch {}
+        }
+
+        # Layer 6: Registry Hook Detection (IFEO & AppInit)
+        $ifeoKeys = @(
+            "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sppsvc.exe",
+            "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\osppsvc.exe",
+            "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sppsvc.exe"
+        )
+        foreach ($k in $ifeoKeys) {
+            if (Test-Path $k) {
+                $dbg = (Get-ItemProperty -Path $k -Name "Debugger" -ErrorAction SilentlyContinue).Debugger
+                if ($dbg) {
+                    $report.layers.l6_registryDetection += @{
+                        targetPath = $k
+                        type = "IFEO"
+                        propertyName = "Debugger"
+                        value = $dbg
+                        isSuspicious = $true
+                        description = "Phát hiện Hook IFEO chuyển hướng debugger"
+                    }
+                    $report.layers.l8_evidenceEvaluation.evidences += "Phát hiện Hook IFEO trên Registry ($k -> Debugger: $dbg)"
+                    $report.layers.l8_evidenceEvaluation.riskScore += 85
+                }
+            }
+        }
+
+        $appInitKeys = @(
+            "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Windows",
+            "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows NT\\CurrentVersion\\Windows"
+        )
+        foreach ($k in $appInitKeys) {
+            if (Test-Path $k) {
+                $dlls = (Get-ItemProperty -Path $k -Name "AppInit_DLLs" -ErrorAction SilentlyContinue).AppInit_DLLs
+                if ($dlls -and $dlls.Trim().Length -gt 0) {
+                    $report.layers.l6_registryDetection += @{
+                        targetPath = $k
+                        type = "AppInit"
+                        propertyName = "AppInit_DLLs"
+                        value = $dlls
+                        isSuspicious = $true
+                        description = "Phát hiện DLL tiêm qua AppInit_DLLs"
+                    }
+                    $report.layers.l8_evidenceEvaluation.evidences += "Phát hiện AppInit_DLLs bị ghi đè ($k -> $dlls)"
+                    $report.layers.l8_evidenceEvaluation.riskScore += 75
+                }
+            }
+        }
+
+        # Layer 7: Services Audit
+        $svcs = @("ClickToRunSvc", "sppsvc", "osppsvc")
+        foreach ($s in $svcs) {
+            $svcObj = Get-Service -Name $s -ErrorAction SilentlyContinue
+            if ($svcObj) {
+                $report.layers.l7_servicesDetection += @{
+                    name = $svcObj.Name
+                    displayName = $svcObj.DisplayName
+                    status = $svcObj.Status.ToString()
+                    startType = $svcObj.StartType.ToString()
+                }
+            }
+        }
+
+        # Layer 8: Evidence Evaluation
+        $score = $report.layers.l8_evidenceEvaluation.riskScore
+        if ($score >= 60) {
+            $report.layers.l8_evidenceEvaluation.hasTampering = $true
+            $report.layers.l8_evidenceEvaluation.verdict = "Tampered"
+            $report.layers.l8_evidenceEvaluation.confidenceLevel = "High"
+            $report.hasIssues = $true
+            $report.summary = "PHÁT HIỆN CAN THIỆP BẢN QUYỀN LẬU CHẮC CHẮN! (Risk Score: $score)"
+        } elseif ($score > 0) {
+            $report.layers.l8_evidenceEvaluation.hasTampering = $true
+            $report.layers.l8_evidenceEvaluation.verdict = "KMS_Intercepted"
+            $report.layers.l8_evidenceEvaluation.confidenceLevel = "Medium"
+            $report.hasIssues = $true
+            $report.summary = "Có dấu hiệu nghi vấn can thiệp KMS/License. Cần chẩn đoán kĩ hơn."
+        } else {
+            $report.layers.l8_evidenceEvaluation.hasTampering = $false
+            $report.layers.l8_evidenceEvaluation.verdict = "Genuine"
+            $report.layers.l8_evidenceEvaluation.confidenceLevel = "High"
+            $report.hasIssues = $false
+            $report.summary = "Hệ thống Office hoàn toàn sạch sẽ & nguyên bản của Microsoft."
+        }
+
+        return $report | ConvertTo-Json -Depth 6
+      `;
+      const out = await runPowerShellScriptElevated(script);
+      if (out && out.trim()) {
+        try {
+          return JSON.parse(out.trim());
+        } catch(e) {
+          return { hasIssues: true, summary: "Lỗi giải mã dữ liệu chẩn đoán V2.", raw: out.trim() };
+        }
+      }
+      return { hasIssues: false, summary: "Không nhận được phản hồi chẩn đoán." };
+    } catch (err) {
+      return { hasIssues: true, summary: "Lỗi thực thi chẩn đoán V2: " + err.message };
+    }
+  });
+
   // ========== BACKUP: WiFi ==========
   ipcMain.handle('list-wifi-profiles', async () => {
     try {

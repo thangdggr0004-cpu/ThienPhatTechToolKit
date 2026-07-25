@@ -36,6 +36,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   applyOfficeStandard: (options) => ipcRenderer.invoke('apply-office-standard', options),
   scanOfficeIntegrity: () => ipcRenderer.invoke('scan-office-integrity'),
   restoreOfficeIntegrity: () => ipcRenderer.invoke('restore-office-integrity'),
+  scanOfficeDeepV2: () => ipcRenderer.invoke('scan-office-deep-v2'),
   // Backup: WiFi
   listWifiProfiles: () => ipcRenderer.invoke('list-wifi-profiles'),
   exportWifi: () => ipcRenderer.invoke('export-wifi'),
