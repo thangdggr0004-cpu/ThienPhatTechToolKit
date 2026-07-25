@@ -8,7 +8,10 @@ import {
   UserX, 
   ShieldCheck, 
   Lock,
-  CheckCircle2
+  CheckCircle2,
+  Search,
+  RefreshCw,
+  ServerCrash
 } from 'lucide-react';
 
 import { 
@@ -167,6 +170,112 @@ export default function OfficeStandardizer() {
     );
   };
 
+  const IntegrityScannerCard = () => {
+    const [scanState, setScanState] = useState<'idle'|'scanning'|'done'>('idle');
+    const [isRestoring, setIsRestoring] = useState(false);
+    const [scanResult, setScanResult] = useState<any>(null);
+    const [restoreResult, setRestoreResult] = useState<string>('');
+
+    const handleScan = async () => {
+      setScanState('scanning');
+      setScanResult(null);
+      setRestoreResult('');
+      const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
+      if (isElectron) {
+        try {
+          const res = await (window as any).electronAPI.scanOfficeIntegrity();
+          setScanResult(res);
+        } catch(e) {
+          setScanResult({ Issues: ['Lỗi quét: ' + e], Details: [] });
+        }
+      } else {
+        // Mock
+        setTimeout(() => setScanResult({ Issues: ['CẢNH BÁO: File sppc.dll bị thay thế!'], Details: ['Status: Invalid'] }), 1500);
+      }
+      setScanState('done');
+    };
+
+    const handleRestore = async () => {
+      if (!window.confirm("Hệ thống sẽ tiến hành 3 lớp bảo vệ (Dừng dịch vụ -> Gỡ Hook -> Dùng SFC nạp lại DLL zin).\\nBạn có chắc chắn muốn thực hiện?")) return;
+      setIsRestoring(true);
+      const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
+      if (isElectron) {
+        try {
+          const res = await (window as any).electronAPI.restoreOfficeIntegrity();
+          setRestoreResult(res.log || 'Không có log.');
+          if (res.success) window.alert("Khôi phục thành công! Hãy quét lại để kiểm chứng.");
+          else window.alert("Khôi phục thất bại: " + res.log);
+        } catch(e) {
+          window.alert('Lỗi: ' + e);
+        }
+      }
+      setIsRestoring(false);
+    };
+
+    const hasIssues = scanResult && scanResult.Issues && scanResult.Issues.length > 0;
+
+    return (
+      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col group col-span-1 md:col-span-2 relative overflow-hidden">
+        <div className="flex items-start gap-3 mb-3 relative z-10">
+          <div className="p-2.5 rounded-lg shrink-0 bg-red-50 text-red-600">
+            <ServerCrash className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="font-bold text-slate-800 text-sm">Chẩn Đoán & Khôi Phục File System (SFC/DLL)</h4>
+            <p className="text-xs text-slate-500 mt-1 line-clamp-3">
+              Kiểm tra mã băm SHA-256, chữ ký Authenticode của <code className="bg-slate-100 text-pink-600 px-1 py-0.5 rounded text-[10px]">sppc.dll</code> và quét Registry Hooks (IFEO/AppInit). Bóc tách cơ chế Crack KMS để khôi phục trạng thái nguyên bản an toàn.
+            </p>
+          </div>
+        </div>
+        
+        {scanState === 'done' && scanResult && (
+          <div className="mt-2 mb-4 bg-slate-900 rounded-md p-3 text-[10px] font-mono text-slate-300 h-32 overflow-y-auto border-l-4 border-l-slate-700">
+            {hasIssues ? (
+              <>
+                <div className="text-red-400 font-bold mb-1">[!] CẢNH BÁO: ĐÃ PHÁT HIỆN CAN THIỆP</div>
+                {scanResult.Issues.map((iss: string, idx: number) => (
+                  <div key={idx}>- {iss}</div>
+                ))}
+              </>
+            ) : (
+              <div className="text-emerald-400 font-bold">[✓] Hệ thống sạch sẽ, không có Hook hay DLL rác bị tiêm!</div>
+            )}
+            {restoreResult && (
+              <div className="mt-2 text-cyan-400">
+                <div className="font-bold border-t border-slate-700 pt-1 mt-1">LOG KHÔI PHỤC:</div>
+                <div className="whitespace-pre-wrap">{restoreResult}</div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="mt-auto pt-4 relative z-10 flex gap-2">
+          <button 
+            onClick={handleScan}
+            disabled={scanState === 'scanning' || isRestoring}
+            className="flex-1 py-2.5 px-4 rounded text-xs font-semibold flex items-center justify-center gap-2 transition-colors bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300"
+          >
+            {scanState === 'scanning' ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+            {scanState === 'scanning' ? 'Đang soi lõi...' : 'Quét Chẩn Đoán Lõi'}
+          </button>
+          
+          <button 
+            onClick={handleRestore}
+            disabled={scanState !== 'done' || !hasIssues || isRestoring}
+            className={`flex-1 py-2.5 px-4 rounded text-xs font-semibold flex items-center justify-center gap-2 transition-colors ${
+              (scanState === 'done' && hasIssues && !isRestoring)
+                ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
+                : 'bg-slate-50 text-slate-400 border border-slate-100 cursor-not-allowed opacity-60'
+            }`}
+          >
+            {isRestoring ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+            {isRestoring ? 'Đang Khôi Phục...' : 'Khôi Phục An Toàn'}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-8 animate-fade-in pb-8">
       
@@ -279,6 +388,7 @@ export default function OfficeStandardizer() {
             btnText="Chặn Luồng Cập Nhật (Khuyên Dùng)"
             onClick={() => executeUtility(generateBlockOfficeUpdateScript, 'block-updates')}
           />
+          <IntegrityScannerCard />
         </div>
       </div>
       

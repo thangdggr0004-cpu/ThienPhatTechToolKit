@@ -32,7 +32,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   diagnoseNetwork: () => ipcRenderer.invoke('diagnose-network'),
   applyDns: (args) => ipcRenderer.invoke('apply-dns', args),
   applyPowerPlan: (args) => ipcRenderer.invoke('apply-power-plan', args),
-  applyOfficeStandard: (args) => ipcRenderer.invoke('apply-office-standard', args),
+  // Office Utilities
+  applyOfficeStandard: (options) => ipcRenderer.invoke('apply-office-standard', options),
+  scanOfficeIntegrity: () => ipcRenderer.invoke('scan-office-integrity'),
+  restoreOfficeIntegrity: () => ipcRenderer.invoke('restore-office-integrity'),
   // Backup: WiFi
   listWifiProfiles: () => ipcRenderer.invoke('list-wifi-profiles'),
   exportWifi: () => ipcRenderer.invoke('export-wifi'),
