@@ -25,6 +25,7 @@ import {
   generateBlockOfficeUpdateScript
 } from '../utils/scriptGenerator';
 import { useTaskManager } from '../context/TaskManagerContext';
+import OfficeLicenseAnalyzer from './OfficeLicenseAnalyzer';
 
 export default function OfficeStandardizer() {
   const [activeTask, setActiveTask] = useState<string | null>(null);
@@ -378,6 +379,9 @@ export default function OfficeStandardizer() {
 
       {/* SECTION 0: BỘ CHẨN ĐOÁN & PHỤC HỒI LÕI 3 LỚP (BÁM SÁT KẾ HOẠCH) */}
       <IntegrityScannerSection />
+
+      {/* V2 MULTI-EVIDENCE 10-LAYER DIAGNOSTIC ENGINE */}
+      <OfficeLicenseAnalyzer />
 
       {/* SECTION 1: CHUẨN HÓA & TỐI ƯU */}
       <div>
