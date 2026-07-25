@@ -1550,17 +1550,17 @@ powercfg /setactive e9a42b02-d5df-448d-aa00-03f14749eb61
 
         return $report | ConvertTo-Json -Depth 6
       `;
-      const out = await runPowerShellScriptElevated(script);
+      const out = await runPowerShellScript(script);
       if (out && out.trim()) {
         try {
           return JSON.parse(out.trim());
         } catch(e) {
-          return { hasIssues: true, summary: "Lỗi giải mã dữ liệu chẩn đoán V2.", raw: out.trim() };
+          return { timestamp: new Date().toLocaleString('vi-VN'), hasIssues: true, summary: "Lỗi giải mã dữ liệu chẩn đoán V2.", raw: out.trim() };
         }
       }
-      return { hasIssues: false, summary: "Không nhận được phản hồi chẩn đoán." };
+      return { timestamp: new Date().toLocaleString('vi-VN'), hasIssues: false, summary: "Không nhận được phản hồi chẩn đoán." };
     } catch (err) {
-      return { hasIssues: true, summary: "Lỗi thực thi chẩn đoán V2: " + err.message };
+      return { timestamp: new Date().toLocaleString('vi-VN'), hasIssues: true, summary: "Lỗi thực thi chẩn đoán V2: " + err.message };
     }
   });
 
