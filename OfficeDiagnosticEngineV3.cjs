@@ -196,7 +196,7 @@ class ImpactAnalyzer {
     let isSafe = true;
     let officeImpact = 'Không làm gián đoạn ứng dụng Office.';
     let windowsImpact = 'Không tác động tệp hệ thống Windows System32.';
-    let c2rImpact = 'Dịch vụ ClickToRun duy trì bình thường.';
+    let clickToRunImpact = 'Dịch vụ ClickToRun duy trì bình thường.';
     let licenseImpact = 'Bảo lưu giấy phép hợp lệ đang có.';
 
     if (surgicalPlan && surgicalPlan.requiresSfcScan) {
@@ -205,7 +205,7 @@ class ImpactAnalyzer {
     }
 
     if (surgicalPlan && surgicalPlan.requiresServiceReset) {
-      c2rImpact = 'Khởi động lại dịch vụ ClickToRunSvc.';
+      clickToRunImpact = 'Khởi động lại dịch vụ ClickToRunSvc.';
     }
 
     if (surgicalPlan && surgicalPlan.riskScore > 80) {
