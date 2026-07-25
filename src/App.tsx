@@ -17,7 +17,6 @@ const LaptopTester = lazy(() => import('./components/LaptopTester'));
 const TouchScreenTester = lazy(() => import('./components/TouchScreenTester'));
 const AdvancedActivation = lazy(() => import('./components/AdvancedActivation'));
 
-import { Monitor, RefreshCw, Terminal, Cpu, MemoryStick, Activity } from 'lucide-react';
 import AutoUpdater from './components/AutoUpdater';
 import { TaskManagerProvider } from './context/TaskManagerContext';
 import GlobalTaskBar from './components/GlobalTaskBar';

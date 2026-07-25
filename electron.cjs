@@ -2219,10 +2219,11 @@ Write-Output "OK"
       path.join(process.cwd(), 'MAS_AIO.cmd'),
       path.join(path.dirname(process.execPath), 'MAS_AIO.cmd'),
       path.join(process.cwd(), 'MAS', 'MAS_AIO.cmd'),
-      `C:\\Users\\PC\\Downloads\\MAS_Temp\\Microsoft-Activation-Scripts-master\\MAS\\All-In-One-Version-KL\\MAS_AIO.cmd`
+      path.join(process.env.TEMP || 'C:\\Windows\\Temp', 'MAS_AIO.cmd'),
+      'C:\\ProgramData\\ThienPhatToolkit\\MAS_AIO.cmd'
     ];
     for (const p of possiblePaths) {
-      if (fs.existsSync(p)) return p;
+      if (fs.existsSync(p) && fs.statSync(p).size > 10000) return p;
     }
     return null;
   }
@@ -2231,51 +2232,71 @@ Write-Output "OK"
     try {
       const localCmd = getMasCmdPath();
       const hasLocalCmd = !!localCmd;
-      const githubRawUrl = 'https://raw.githubusercontent.com/thangdggr0004-cpu/ThienPhatTechToolKit/main/MAS_AIO.cmd';
+      const masOfficialUrl = 'https://raw.githubusercontent.com/massgravel/Microsoft-Activation-Scripts/master/MAS/All-In-One-Version-KL/MAS_AIO.cmd';
 
-      // Helper for online execution from GitHub
-      const runFromGithub = (param = '') => {
-        const psCommand = `$t=Join-Path $env:TEMP 'MAS_AIO_GH.cmd'; Invoke-RestMethod -Uri '${githubRawUrl}' -OutFile $t; Start-Process cmd.exe -ArgumentList '/c ""$t"" ${param}' -Verb RunAs`;
-        exec(`powershell -Command "${psCommand}"`);
+      // Robust online downloader & runner for MAS AIO
+      const runMasOnline = async (param = '') => {
+        const script = `
+          $OutputEncoding = [System.Text.Encoding]::UTF8
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          $dest = "$env:TEMP\\MAS_AIO.cmd"
+          
+          if (-not (Test-Path $dest) -or (Get-Item $dest).Length -lt 10000) {
+              try {
+                  [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+                  Invoke-WebRequest -Uri '${masOfficialUrl}' -OutFile $dest -UseBasicParsing -ErrorAction Stop
+              } catch {
+                  # Fallback to direct PowerShell MAS loader if raw URL fails
+                  Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"iwr -useb https://get.activated.win | iex`"" -Verb RunAs
+                  return
+              }
+          }
+          
+          if (Test-Path $dest) {
+              $arg = "/k `"$dest`" ${param}"
+              Start-Process cmd.exe -ArgumentList $arg -Verb RunAs
+          }
+        `;
+        await runPowerShellScript(script);
       };
 
       if (mode === 'aio_menu') {
         if (hasLocalCmd) {
-          exec(`powershell -Command "Start-Process cmd.exe -ArgumentList '/c \"\"${localCmd}\"\"' -Verb RunAs"`);
+          exec(`powershell -Command "Start-Process cmd.exe -ArgumentList '/k \"\"${localCmd}\"\"' -Verb RunAs"`);
           return { success: true, output: `Đã mở cửa sổ MAS AIO Menu (${path.basename(localCmd)}) thành công!` };
         } else {
-          runFromGithub();
-          return { success: true, output: "Đã tải và mở MAS AIO Menu từ GitHub Repository chính thức thành công!" };
+          await runMasOnline();
+          return { success: true, output: "Đã tải từ máy chủ MAS chính thức và mở MAS AIO Menu thành công!" };
         }
       }
 
       if (mode === 'hwid') {
         if (hasLocalCmd) {
-          exec(`powershell -Command "Start-Process cmd.exe -ArgumentList '/c \"\"${localCmd}\" /HWID' -Verb RunAs"`);
+          exec(`powershell -Command "Start-Process cmd.exe -ArgumentList '/k \"\"${localCmd}\" /HWID' -Verb RunAs"`);
           return { success: true, output: "Đã khởi chạy kích hoạt Windows HWID vĩnh viễn qua MAS!" };
         } else {
-          runFromGithub('/HWID');
-          return { success: true, output: "Đã tải từ GitHub và kích hoạt Windows HWID vĩnh viễn!" };
+          await runMasOnline('/HWID');
+          return { success: true, output: "Đã nạp MAS chính thức và kích hoạt Windows HWID vĩnh viễn!" };
         }
       }
 
       if (mode === 'ohook') {
         if (hasLocalCmd) {
-          exec(`powershell -Command "Start-Process cmd.exe -ArgumentList '/c \"\"${localCmd}\" /Ohook' -Verb RunAs"`);
+          exec(`powershell -Command "Start-Process cmd.exe -ArgumentList '/k \"\"${localCmd}\" /Ohook' -Verb RunAs"`);
           return { success: true, output: "Đã khởi chạy kích hoạt Office Ohook vĩnh viễn qua MAS!" };
         } else {
-          runFromGithub('/Ohook');
-          return { success: true, output: "Đã tải từ GitHub và kích hoạt Office Ohook vĩnh viễn!" };
+          await runMasOnline('/Ohook');
+          return { success: true, output: "Đã nạp MAS chính thức và kích hoạt Office Ohook vĩnh viễn!" };
         }
       }
 
       if (mode === 'kms38') {
         if (hasLocalCmd) {
-          exec(`powershell -Command "Start-Process cmd.exe -ArgumentList '/c \"\"${localCmd}\" /KMS38' -Verb RunAs"`);
+          exec(`powershell -Command "Start-Process cmd.exe -ArgumentList '/k \"\"${localCmd}\" /KMS38' -Verb RunAs"`);
           return { success: true, output: "Đã khởi chạy kích hoạt Windows Server / Enterprise KMS38 qua MAS!" };
         } else {
-          runFromGithub('/KMS38');
-          return { success: true, output: "Đã tải từ GitHub và kích hoạt KMS38!" };
+          await runMasOnline('/KMS38');
+          return { success: true, output: "Đã nạp MAS chính thức và kích hoạt KMS38!" };
         }
       }
 
