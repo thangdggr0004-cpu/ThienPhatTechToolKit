@@ -187,7 +187,128 @@ class ConfidenceEngine {
 }
 
 // ============================================================================
-// 4. IMPACT ANALYZER & DECISION ENGINE
+// 4. LOADED MODULE ANALYZER & SURGICAL RECOVERY PLANNER
+// ============================================================================
+
+class LoadedModuleAnalyzer {
+  static analyzeModules(powerShellRunner) {
+    return new Promise(async (resolve) => {
+      const script = `
+        $OutputEncoding = [System.Text.Encoding]::UTF8
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+        $results = @()
+        $procs = Get-Process -Name "sppsvc", "OfficeC2RClient", "WINWORD", "EXCEL", "POWERPNT" -ErrorAction SilentlyContinue
+
+        foreach ($p in $procs) {
+            try {
+                foreach ($m in $p.Modules) {
+                    if ($m.ModuleName -match "hook|kms|crack|inject|sppc|ohook|vfs" -or ($m.Company -and $m.Company -notmatch "Microsoft")) {
+                        $sig = Get-AuthenticodeSignature -FilePath $m.FileName -ErrorAction SilentlyContinue
+                        $isMs = ($m.Company -match "Microsoft") -or ($sig.SignerCertificate.Subject -match "Microsoft Corporation")
+                        $results += @{
+                            processName = $p.ProcessName
+                            pid = $p.Id
+                            moduleName = $m.ModuleName
+                            modulePath = $m.FileName
+                            company = if ($m.Company) { $m.Company } else { "Unknown" }
+                            authenticodeStatus = if ($sig) { $sig.Status.ToString() } else { "Unsigned" }
+                            signerSubject = if ($sig.SignerCertificate) { $sig.SignerCertificate.Subject } else { "N/A" }
+                            isMicrosoft = [bool]$isMs
+                        }
+                    }
+                }
+            } catch {}
+        }
+        return $results | ConvertTo-Json -Depth 4
+      `;
+      try {
+        const out = await powerShellRunner(script);
+        if (out && out.trim()) {
+          const parsed = JSON.parse(out.trim());
+          resolve(Array.isArray(parsed) ? parsed : [parsed]);
+        } else {
+          resolve([]);
+        }
+      } catch (e) {
+        resolve([]);
+      }
+    });
+  }
+}
+
+class SurgicalRecoveryPlanner {
+  static generatePlan(matrix, skuInfo) {
+    const actions = [];
+    let requiresSfcScan = false;
+    let requiresServiceReset = false;
+    let touchDll = false;
+    let touchRegistry = false;
+
+    const dllFail = matrix.find(m => m.componentName.includes('sppc.dll') && m.status === 'FAIL');
+    const ohookFail = matrix.find(m => m.componentName.includes('sppcs.dll') && m.status === 'FAIL');
+    const regFail = matrix.find(m => m.componentName.includes('Registry') && m.status === 'FAIL');
+    const serviceWarn = matrix.find(m => m.componentName.includes('Service') && m.status === 'WARNING');
+
+    // Rule 1: IF ONLY REGISTRY IS HOOKED -> REPAIR REGISTRY ONLY (Do NOT touch DLL!)
+    if (regFail) {
+      touchRegistry = true;
+      actions.push({
+        type: 'REMOVE_IFEO_KEYS',
+        target: 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sppsvc.exe',
+        description: 'Xóa bẫy Registry IFEO Debugger chuyển hướng sppsvc.exe'
+      });
+    }
+
+    // Rule 2: IF OHOOK DLL EXISTS -> SURGICAL REMOVE OHOOK DLL ONLY
+    if (ohookFail) {
+      touchDll = true;
+      actions.push({
+        type: 'REMOVE_OHOOK_DLL',
+        target: 'vfs\\System\\sppcs.dll',
+        description: 'Gỡ bỏ tệp sppcs.dll OHook giả mạo trong thư mục Office VFS'
+      });
+    }
+
+    // Rule 3: IF SYSTEM32 DLL IS TAMPERED -> RUN SURGICAL SFC REPAIR ON SPPC.DLL
+    if (dllFail) {
+      touchDll = true;
+      requiresSfcScan = true;
+      actions.push({
+        type: 'SFC_REPAIR_SPPC_DLL',
+        target: 'System32\\sppc.dll',
+        description: 'Phục hồi tệp System32\\sppc.dll chuẩn từ bộ đệm bảo vệ WinSXS'
+      });
+    }
+
+    // Rule 4: IF SERVICE DISABLED -> RESTART SERVICE ONLY
+    if (serviceWarn) {
+      requiresServiceReset = true;
+      actions.push({
+        type: 'RESET_OFFICE_SERVICES',
+        target: 'ClickToRunSvc',
+        description: 'Bật và khởi động lại dịch vụ ClickToRunSvc'
+      });
+    }
+
+    const summary = actions.length > 0 
+      ? `Kế hoạch vi phẫu gồm ${actions.length} bước: ${actions.map(a => a.description).join('; ')}.`
+      : 'Hệ thống hoàn toàn nguyên bản. Không cần thực hiện thao tác khôi phục.';
+
+    return {
+      targetActions: actions,
+      requiresSfcScan,
+      requiresServiceReset,
+      touchDll,
+      touchRegistry,
+      summary,
+      stepCount: actions.length
+    };
+  }
+}
+
+// ============================================================================
+// 5. IMPACT ANALYZER & DECISION ENGINE
 // ============================================================================
 
 class ImpactAnalyzer {
@@ -491,7 +612,8 @@ class OfficeDiagnosticEngineV3 {
 
     const matrix = matrixBuilder.getMatrix();
     const confidenceResult = ConfidenceEngine.calculate(matrix);
-    const impactResult = ImpactAnalyzer.analyze({ requiresSfcScan: false, requiresServiceReset: false, riskScore: 0 });
+    const surgicalPlan = SurgicalRecoveryPlanner.generatePlan(matrix, skuInfo);
+    const impactResult = ImpactAnalyzer.analyze(surgicalPlan);
     const decisionResult = DecisionEngine.evaluate(matrix, confidenceResult, impactResult);
 
     return {
@@ -499,6 +621,7 @@ class OfficeDiagnosticEngineV3 {
       skuInfo,
       matrix,
       confidenceResult,
+      surgicalPlan,
       impactResult,
       decisionResult,
       auditLogs: this.auditLog.getLogs()
@@ -512,6 +635,8 @@ module.exports = {
   CompatibilityLayer,
   EvidenceMatrixBuilder,
   ConfidenceEngine,
+  LoadedModuleAnalyzer,
+  SurgicalRecoveryPlanner,
   ImpactAnalyzer,
   DecisionEngine,
   RollbackManager,
