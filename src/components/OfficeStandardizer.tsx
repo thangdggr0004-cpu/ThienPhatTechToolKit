@@ -25,7 +25,6 @@ import {
   generateBlockOfficeUpdateScript
 } from '../utils/scriptGenerator';
 import { useTaskManager } from '../context/TaskManagerContext';
-import OfficeLicenseAnalyzer from './OfficeLicenseAnalyzer';
 
 export default function OfficeStandardizer() {
   const [activeTask, setActiveTask] = useState<string | null>(null);
@@ -171,195 +170,7 @@ export default function OfficeStandardizer() {
     );
   };
 
-  const IntegrityScannerSection = () => {
-    const [scanState, setScanState] = useState<'idle'|'scanning'|'done'>('idle');
-    const [isRestoring, setIsRestoring] = useState(false);
-    const [scanResult, setScanResult] = useState<any>(null);
-    const [restoreLog, setRestoreLog] = useState<string>('');
 
-    const handleScan = async () => {
-      setScanState('scanning');
-      setScanResult(null);
-      setRestoreLog('');
-      const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
-      if (isElectron) {
-        try {
-          const res = await (window as any).electronAPI.scanOfficeIntegrity();
-          setScanResult(res);
-        } catch(e: any) {
-          setScanResult({ HasIssues: true, Summary: 'Lỗi khi gọi API quét: ' + e.message, Files: [], RegistryHooks: [], InjectedModules: [] });
-        }
-      } else {
-        setTimeout(() => {
-          setScanResult({
-            HasIssues: true,
-            Summary: "PHÁT HIỆN DẤU HIỆU CAN THIỆP BẢN QUYỀN OFFICE! Cần tiến hành khôi phục an toàn 3 lớp.",
-            Files: [
-              { Path: "C:\\Windows\\System32\\sppc.dll", SHA256: "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855", Status: "Unknown", Signer: "Unsigned/Tampered", IsAuthentic: false }
-            ],
-            RegistryHooks: [
-              { Target: "HKLM:\\SOFTWARE\\...\\sppsvc.exe", Type: "IFEO Debugger Hook", Value: "KMSAuto.exe" }
-            ],
-            InjectedModules: []
-          });
-        }, 1200);
-      }
-      setScanState('done');
-    };
-
-    const handleRestore = async () => {
-      if (!window.confirm("HỆ THỐNG SẼ THỰC HIỆN KHÔI PHỤC AN TOÀN 3 LỚP:\n\n1. Sao lưu sppc.dll & Dừng toàn bộ tiến trình Office.\n2. Triệt hạ các Hook IFEO & AppInit_DLLs độc hại.\n3. Nạp lại DLL gốc chuẩn Microsoft từ kho WinSXS bằng SFC.\n\nBạn có muốn tiến hành không?")) return;
-      
-      setIsRestoring(true);
-      const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
-      if (isElectron) {
-        try {
-          const res = await (window as any).electronAPI.restoreOfficeIntegrity();
-          setRestoreLog(res.log || 'Không có log.');
-          if (res.success) {
-            window.alert("Đã khôi phục an toàn thành công! Vui lòng bấm Quét lại để kiểm chứng.");
-          } else {
-            window.alert("Khôi phục thất bại: " + res.log);
-          }
-        } catch(e: any) {
-          window.alert('Lỗi khôi phục: ' + e.message);
-        }
-      } else {
-        setTimeout(() => {
-          setRestoreLog("[1/3] Đang sao lưu Registry & Dừng tiến trình Office...\n[2/3] Đã xóa bỏ Hook IFEO trong Registry.\n[3/3] System File Checker: sfc /scanfile=sppc.dll -> Successful!\n[✓] Hoàn tất khôi phục an toàn.");
-          alert("Demo: Khôi phục mô phỏng thành công!");
-        }, 1500);
-      }
-      setIsRestoring(false);
-    };
-
-    const hasIssues = scanResult && scanResult.HasIssues;
-
-    return (
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl text-white space-y-6 relative overflow-hidden">
-        {/* Decorative background gradient */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4 relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30">
-              <ServerCrash className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                HỆ THỐNG CHẨN ĐOÁN & PHỤC HỒI LÕI BẢN QUYỀN OFFICE
-                <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">3 Lớp Bảo Vệ</span>
-              </h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Bóc tách các cơ chế bẻ khóa (Hook IFEO, DLL Injection, sppc.dll bị sửa đổi) và tự động nạp lại DLL zin chuẩn Microsoft từ kho WinSXS.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* 4 Status Indicator Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 relative z-10">
-          <div className="bg-slate-800/80 border border-slate-700/60 p-3.5 rounded-lg flex items-center gap-3">
-            <ShieldCheck className={`w-5 h-5 ${scanResult ? (scanResult.Files?.every((f:any)=>f.IsAuthentic) ? 'text-emerald-400' : 'text-rose-400') : 'text-slate-500'}`} />
-            <div>
-              <div className="text-[10px] text-slate-400 uppercase font-mono">Chữ Ký Authenticode</div>
-              <div className="text-xs font-bold text-slate-200">
-                {!scanResult ? 'Chưa kiểm tra' : (scanResult.Files?.every((f:any)=>f.IsAuthentic) ? 'Chuẩn Microsoft ✓' : 'Bị Sửa Đổi / Giả Mạo ⚠️')}
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-slate-800/80 border border-slate-700/60 p-3.5 rounded-lg flex items-center gap-3">
-            <Lock className={`w-5 h-5 ${scanResult ? (scanResult.RegistryHooks?.length === 0 ? 'text-emerald-400' : 'text-amber-400') : 'text-slate-500'}`} />
-            <div>
-              <div className="text-[10px] text-slate-400 uppercase font-mono">Registry Hooks (IFEO)</div>
-              <div className="text-xs font-bold text-slate-200">
-                {!scanResult ? 'Chưa kiểm tra' : (scanResult.RegistryHooks?.length === 0 ? 'Sạch Sẽ ✓' : `Phát Hiện ${scanResult.RegistryHooks.length} Hook ⚠️`)}
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-slate-800/80 border border-slate-700/60 p-3.5 rounded-lg flex items-center gap-3">
-            <AlertTriangle className={`w-5 h-5 ${scanResult ? (scanResult.InjectedModules?.length === 0 ? 'text-emerald-400' : 'text-rose-400') : 'text-slate-500'}`} />
-            <div>
-              <div className="text-[10px] text-slate-400 uppercase font-mono">AppInit_DLLs Injection</div>
-              <div className="text-xs font-bold text-slate-200">
-                {!scanResult ? 'Chưa kiểm tra' : (scanResult.InjectedModules?.length === 0 ? 'An Toàn ✓' : `Có ${scanResult.InjectedModules.length} Tiến Trình Bị Tiêm ⚠️`)}
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-slate-800/80 border border-slate-700/60 p-3.5 rounded-lg flex items-center gap-3">
-            <RefreshCw className="w-5 h-5 text-cyan-400" />
-            <div>
-              <div className="text-[10px] text-slate-400 uppercase font-mono">Phục Hồi WinSXS (SFC)</div>
-              <div className="text-xs font-bold text-cyan-300">
-                Sẵn Sàng 3 Lớp
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Diagnostic Terminal Display */}
-        {scanResult && (
-          <div className="bg-slate-950 rounded-xl p-4 font-mono text-[11px] leading-relaxed text-slate-300 border border-slate-800 max-h-60 overflow-y-auto space-y-2 relative z-10 shadow-inner">
-            <div className="text-emerald-400 font-bold flex items-center gap-2">
-              <span>[SCAN REPORT - {scanResult.Timestamp || 'NOW'}]</span>
-              <span>{scanResult.Summary}</span>
-            </div>
-            
-            {scanResult.Files?.map((f: any, i: number) => (
-              <div key={i} className="text-slate-400 pl-2">
-                📂 <span className="text-slate-200">{f.Path}</span> 
-                {f.SHA256 && <span className="text-slate-500 text-[10px] block pl-5">SHA256: {f.SHA256}</span>}
-                <span className={`block pl-5 ${f.IsAuthentic ? 'text-emerald-400' : 'text-rose-400 font-bold'}`}>
-                  Chữ ký: {f.Signer} [{f.Status}]
-                </span>
-              </div>
-            ))}
-
-            {scanResult.RegistryHooks?.map((h: any, i: number) => (
-              <div key={i} className="text-amber-400 pl-2">
-                ⚠️ [HOOK] {h.Type} -&gt; {h.Target} (Value: {h.Value})
-              </div>
-            ))}
-
-            {restoreLog && (
-              <div className="mt-3 pt-3 border-t border-slate-800 text-cyan-300 whitespace-pre-wrap">
-                {restoreLog}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Action Button Bar */}
-        <div className="flex flex-col sm:flex-row gap-3 pt-2 relative z-10">
-          <button 
-            onClick={handleScan}
-            disabled={scanState === 'scanning' || isRestoring}
-            className="flex-1 py-3 px-5 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20 active:scale-98 disabled:opacity-50 cursor-pointer"
-          >
-            {scanState === 'scanning' ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-            {scanState === 'scanning' ? 'ĐANG QUÉT & SOI HỆ THỐNG...' : 'QUÉT CHẨN ĐOÁN LÕI (FULL DIAGNOSTICS)'}
-          </button>
-          
-          <button 
-            onClick={handleRestore}
-            disabled={isRestoring || (!hasIssues && scanState !== 'done')}
-            className={`flex-1 py-3 px-5 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-lg active:scale-98 cursor-pointer ${
-              (hasIssues || scanState === 'done') && !isRestoring
-                ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/20 animate-pulse'
-                : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
-            }`}
-          >
-            {isRestoring ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-            {isRestoring ? 'ĐANG THỰC HIỆN KHÔI PHỤC 3 LỚP...' : 'KHÔI PHỤC AN TOÀN BẢN QUYỀN (3 LỚP)'}
-          </button>
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className="space-y-8 animate-fade-in pb-8">
@@ -376,12 +187,6 @@ export default function OfficeStandardizer() {
           </p>
         </div>
       </div>
-
-      {/* SECTION 0: BỘ CHẨN ĐOÁN & PHỤC HỒI LÕI 3 LỚP (BÁM SÁT KẾ HOẠCH) */}
-      <IntegrityScannerSection />
-
-      {/* V2 MULTI-EVIDENCE 10-LAYER DIAGNOSTIC ENGINE */}
-      <OfficeLicenseAnalyzer />
 
       {/* SECTION 1: CHUẨN HÓA & TỐI ƯU */}
       <div>

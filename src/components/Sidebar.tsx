@@ -27,7 +27,6 @@ const systemItems: MenuItem[] = [
   { id: 'hardware',         name: 'Cấu Hình Chi Tiết', description: 'CPU, RAM, Ổ cứng',          icon: Cpu,       iconClass: 'icon-pastel-sky'     },
   { id: 'cleaner',          name: 'Dọn Dẹp Rác',      description: 'Giải phóng bộ nhớ đệm',     icon: Trash2,    iconClass: 'icon-pastel-rose'    },
   { id: 'windows-settings', name: 'Thiết Lập Windows', description: 'Tối ưu & Tùy biến',        icon: Settings,  iconClass: 'icon-pastel-slate'   },
-  { id: 'app-settings',     name: 'Cấu Hình Tool',     description: 'Giao diện & Tự động hóa',   icon: Sliders,   iconClass: 'icon-pastel-violet'  },
 ];
 
 const baseUtilityItems: MenuItem[] = [
