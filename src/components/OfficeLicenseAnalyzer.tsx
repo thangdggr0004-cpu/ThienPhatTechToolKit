@@ -240,17 +240,17 @@ export default function OfficeLicenseAnalyzer() {
             {activeLayerTab === 8 && (
               <div className="space-y-3">
                 <div className="font-bold text-blue-400 flex items-center gap-2">
-                  <Activity className="w-4 h-4" /> KẾT LUẬN CUỐI CÙNG: {report.summary}
+                  <Activity className="w-4 h-4" /> KẾT LUẬN CUỐI CÙNG: {report?.summary}
                 </div>
                 <div className="text-slate-400">
-                  Mức độ tin cậy: <span className="text-amber-300 font-bold">{evalState?.confidenceLevel}</span> | Risk Score: <span className="text-rose-400 font-bold">{evalState?.riskScore}</span>
+                  Mức độ tin cậy: <span className="text-amber-300 font-bold">{evalState?.confidenceLevel || 'InsufficientData'}</span> | Risk Score: <span className="text-rose-400 font-bold">{evalState?.riskScore || 0}</span>
                 </div>
                 <div className="border-t border-slate-800 pt-2">
-                  <div className="font-bold text-slate-200 mb-1">CÁC BẰNG CHỨNG THU THẬP ĐƯỢC ({evalState?.evidences.length || 0}):</div>
-                  {evalState?.evidences.length === 0 ? (
+                  <div className="font-bold text-slate-200 mb-1">CÁC BẰNG CHỨNG THU THẬP ĐƯỢC ({evalState?.evidences?.length || 0}):</div>
+                  {!evalState?.evidences || evalState.evidences.length === 0 ? (
                     <div className="text-emerald-400">✓ Không tìm thấy bất kỳ bằng chứng can thiệp lậu nào.</div>
                   ) : (
-                    evalState?.evidences.map((ev, i) => (
+                    evalState.evidences.map((ev, i) => (
                       <div key={i} className="text-rose-400 pl-3">🔴 {ev}</div>
                     ))
                   )}
@@ -261,25 +261,29 @@ export default function OfficeLicenseAnalyzer() {
             {activeLayerTab === 3 && (
               <div className="space-y-2">
                 <div className="font-bold text-blue-400">DANH SÁCH FILE DLL HỆ THỐNG &amp; CHỮ KÝ AUTHENTICODE:</div>
-                {report.layers.l3_dllIntegrity.map((f, i) => (
-                  <div key={i} className="p-2 bg-slate-900 rounded border border-slate-800 flex flex-col gap-1">
-                    <div className="flex justify-between items-center">
-                      <span className="font-bold text-slate-200">{f.path}</span>
-                      <span className={`px-2 py-0.5 rounded text-[10px] ${f.isAuthentic ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
-                        {f.isAuthentic ? 'Authentic Microsoft ✓' : 'Tampered / Unsigned ⚠️'}
-                      </span>
+                {report?.layers?.l3_dllIntegrity ? (
+                  report.layers.l3_dllIntegrity.map((f, i) => (
+                    <div key={i} className="p-2 bg-slate-900 rounded border border-slate-800 flex flex-col gap-1">
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold text-slate-200">{f.path}</span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] ${f.isAuthentic ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+                          {f.isAuthentic ? 'Authentic Microsoft ✓' : 'Tampered / Unsigned ⚠️'}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-400">Authenticode Status: {f.authenticodeStatus} | Signer: {f.signerSubject}</div>
+                      {f.sha256 && <div className="text-[10px] text-slate-500">SHA256: {f.sha256}</div>}
                     </div>
-                    <div className="text-[11px] text-slate-400">Authenticode Status: {f.authenticodeStatus} | Signer: {f.signerSubject}</div>
-                    {f.sha256 && <div className="text-[10px] text-slate-500">SHA256: {f.sha256}</div>}
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="text-slate-400">Không có dữ liệu Layer 3.</div>
+                )}
               </div>
             )}
 
             {activeLayerTab === 6 && (
               <div className="space-y-2">
                 <div className="font-bold text-blue-400">REGISTRY HOOKS &amp; INTERCEPTIONS (IFEO / APPINIT):</div>
-                {report.layers.l6_registryDetection.length === 0 ? (
+                {!report?.layers?.l6_registryDetection || report.layers.l6_registryDetection.length === 0 ? (
                   <div className="text-emerald-400">✓ Không có Registry Hook nào bẫy sppsvc.exe / osppsvc.exe.</div>
                 ) : (
                   report.layers.l6_registryDetection.map((r, i) => (
@@ -296,7 +300,7 @@ export default function OfficeLicenseAnalyzer() {
             {activeLayerTab === 5 && (
               <div className="space-y-2">
                 <div className="font-bold text-blue-400">PROCESS INJECTION &amp; UNTRUSTED MODULES:</div>
-                {report.layers.l5_injectionDetection.length === 0 ? (
+                {!report?.layers?.l5_injectionDetection || report.layers.l5_injectionDetection.length === 0 ? (
                   <div className="text-emerald-400">✓ Các tiến trình Office &amp; sppsvc đang chạy sạch sẽ, không có DLL tiêm ngầm.</div>
                 ) : (
                   report.layers.l5_injectionDetection.map((m, i) => (
@@ -310,7 +314,7 @@ export default function OfficeLicenseAnalyzer() {
               </div>
             )}
 
-            {activeLayerTab === 2 && (
+            {activeLayerTab === 2 && report?.layers?.l2_licenseDetection && (
               <div className="space-y-2">
                 <div className="font-bold text-blue-400">TRẠNG THÁI CẤP PHÉP (LICENSING STATE):</div>
                 <div>Kênh cấp phép: <span className="text-slate-200">{report.layers.l2_licenseDetection.channel}</span></div>
