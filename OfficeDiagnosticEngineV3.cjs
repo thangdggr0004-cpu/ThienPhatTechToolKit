@@ -758,6 +758,12 @@ class OfficeDiagnosticEngineV3 {
       matrixBuilder.addEvidence('Hệ Thống Phân Tích Bằng Chứng', 'WARNING', 'Engine', 10, `Lỗi đọc dữ liệu: ${e.message}`);
     }
 
+    const matrix = matrixBuilder.getMatrix();
+    const confidenceResult = ConfidenceEngine.calculate(matrix);
+    const surgicalPlan = SurgicalRecoveryPlanner.generatePlan(matrix, skuInfo);
+    const impactResult = ImpactAnalyzer.analyze(surgicalPlan);
+    const decisionResult = DecisionEngine.evaluate(matrix, confidenceResult, impactResult);
+
     let provenance = null;
     try {
       provenance = ActivationProvenanceAnalyzer.analyzeProvenance(this.lastLicData || {}, matrix, skuInfo);
