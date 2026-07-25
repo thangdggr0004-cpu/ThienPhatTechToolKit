@@ -423,31 +423,45 @@ ${(report.matrix || []).map((m: any) => `| ${m.componentName} | **${m.status}** 
         </div>
       )}
 
-      {/* TẦNG 2: THÔNG TIN KÍCH HOẠT & GIẢI THÍCH KHUYẾN NGHỊ */}
+      {/* TẦNG 2: EVIDENCE-BASED ACTIVATION ASSESSMENT & MANDATORY DISCLAIMER */}
       {report && report.provenance && (
         <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-              <Zap className="w-3.5 h-3.5 text-blue-600" /> THÔNG TIN KÍCH HOẠT &amp; NGUỒN GỐC
+              <Zap className="w-3.5 h-3.5 text-blue-600" /> EVIDENCE-BASED ACTIVATION ASSESSMENT
             </div>
             <span className="text-[10px] font-bold font-mono text-blue-700 flex items-center">
-              Độ tin cậy nguồn kích hoạt: {report.provenance.confidence}%
+              Độ tin cậy đánh giá: {report.provenance.confidence}%
               {renderTooltipIcon('ActivationConfidence')}
             </span>
           </div>
 
-          {/* 4-LEVEL ENTERPRISE PROVENANCE CARD */}
+          {/* 4-LEVEL ENTERPRISE EVIDENCE-BASED ASSESSMENT CARD */}
           <div className="p-3 bg-slate-900 text-white rounded-lg space-y-2 border border-slate-800 font-mono">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-1.5 text-xs">
-              <span className="text-slate-400 font-bold uppercase text-[10px]">Mức Xác Minh Nguồn Gốc (Activation Provenance Level):</span>
+              <span className="text-slate-400 font-bold uppercase text-[10px]">Mức Đánh Giá Bằng Chứng (Evidence Assessment Level):</span>
               <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-950 text-blue-300 border border-blue-800">
-                {report.provenance.provenanceLevelText || 'CẦN XÁC MINH THÊM NGUỒN KÍCH HOẠT (LEVEL 3)'}
+                {report.provenance.provenanceLevelText || 'NGUỒN KÍCH HOẠT CẦN XÁC MINH THÊM (LEVEL 3)'}
               </span>
+            </div>
+
+            {/* EVIDENCE TRACE CHAIN */}
+            <div className="bg-slate-950 p-2 rounded border border-slate-800/80 text-[10px] text-slate-300 flex flex-wrap items-center gap-1.5 font-mono">
+              <span className="text-slate-400 font-bold">Evidence Trace:</span>
+              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-blue-300">Collectors ({report.matrix?.length || 8})</span>
+              <span>➔</span>
+              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-emerald-300">Evidence Matrix</span>
+              <span>➔</span>
+              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-amber-300">Weight ({systemConfidence}%)</span>
+              <span>➔</span>
+              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-purple-300">Assessment</span>
+              <span>➔</span>
+              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-teal-300">Recommendation</span>
             </div>
 
             <div className="text-[11px] text-slate-300 space-y-1 font-sans">
               <p>
-                Engine ghi nhận trạng thái: <strong className="text-white">{report.provenance.activationStatus}</strong> ({report.provenance.activationMethod}). Hệ thống không phát hiện các hook bẻ lái hoặc file bị sửa đổi. Tuy nhiên, nếu cần chứng minh quyền sử dụng hợp lệ trước các đợt kiểm tra bản quyền, người dùng nên lưu giữ các chứng từ cấp phép sau:
+                Engine ghi nhận trạng thái: <strong className="text-white">{report.provenance.activationStatus}</strong> ({report.provenance.activationMethod}). Hệ thống không phát hiện các hook bẻ lái hoặc file bị sửa đổi. Nếu cần chứng minh quyền sử dụng hợp lệ, người dùng nên lưu giữ các chứng từ cấp phép sau:
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-1 text-[10px] text-slate-300 pt-1 border-t border-slate-800/60 font-mono">
                 <div>• Hóa đơn mua máy hoặc giấy phép.</div>
@@ -457,6 +471,11 @@ ${(report.matrix || []).map((m: any) => `| ${m.componentName} | **${m.status}** 
                 <div>• Thông tin Hợp đồng Volume (VLSC / M365).</div>
                 <div>• Tài khoản Microsoft Digital License.</div>
               </div>
+            </div>
+
+            {/* MANDATORY DISCLAIMER BLOCK */}
+            <div className="p-2 bg-amber-950/40 border border-amber-800/50 rounded text-[10px] text-amber-200/90 leading-relaxed font-sans mt-1">
+              <strong>Miễn trừ trách nhiệm pháp lý (Disclaimer):</strong> Đánh giá này chỉ phản ánh những bằng chứng Engine đọc được từ hệ thống tại thời điểm kiểm tra. Đánh giá này <strong>KHÔNG</strong> xác nhận tính hợp pháp của giấy phép. Việc xác minh quyền sử dụng có thể cần các tài liệu ngoài hệ thống.
             </div>
           </div>
 

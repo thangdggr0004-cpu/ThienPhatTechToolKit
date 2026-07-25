@@ -902,27 +902,28 @@ class ActivationProvenanceAnalyzer {
       confidence = 90;
     }
 
-    // 4-LEVEL ENTERPRISE PROVENANCE ASSESSMENT ENGINE
+    // 4-LEVEL ENTERPRISE EVIDENCE-BASED ACTIVATION ASSESSMENT ENGINE
     let provenanceLevel = 'LEVEL_3_SOURCE_REQUIRES_VERIFICATION';
-    let provenanceLevelText = 'CẦN XÁC MINH THÊM NGUỒN KÍCH HOẠT';
+    let provenanceLevelText = 'NGUỒN KÍCH HOẠT CẦN XÁC MINH THÊM';
 
     const hasTampering = matrix.some(m => m.status === 'FAIL');
-    const hasWarnings = matrix.some(m => m.status === 'WARNING');
 
     if (activationMethod === 'Retail Key' || activationMethod === 'Subscription' || activationMethod === 'Digital License') {
       provenanceLevel = 'LEVEL_1_VERIFIED';
       provenanceLevelText = 'ĐÃ XÁC MINH (VERIFIED)';
     } else if (activationMethod === 'Volume MAK' && !hasTampering) {
-      provenanceLevel = 'LEVEL_2_LIKELY_LEGITIMATE';
-      provenanceLevelText = 'RẤT CÓ KHẢ NĂNG HỢP LỆ (LIKELY LEGITIMATE)';
+      provenanceLevel = 'LEVEL_2_LIKELY_CONSISTENT';
+      provenanceLevelText = 'RẤT CÓ KHẢ NĂNG ĐỒNG NHẤT (LIKELY CONSISTENT)';
     } else if (isKmsClient && !hasTampering) {
       provenanceLevel = 'LEVEL_3_SOURCE_REQUIRES_VERIFICATION';
-      provenanceLevelText = 'CẦN XÁC MINH THÊM NGUỒN KÍCH HOẠT (SOURCE REQUIRES VERIFICATION)';
+      provenanceLevelText = 'NGUỒN KÍCH HOẠT CẦN XÁC MINH THÊM (SOURCE REQUIRES VERIFICATION)';
       recommendation = 'Nếu cần chứng minh quyền sử dụng hợp lệ, người dùng nên lưu giữ hoặc cung cấp tài liệu cấp phép phù hợp.';
     } else if (activationStatus === 'UNLICENSED' || hasTampering || confidence < 50) {
       provenanceLevel = 'LEVEL_4_INSUFFICIENT_EVIDENCE';
       provenanceLevelText = 'KHÔNG ĐỦ BẰNG CHỨNG (INSUFFICIENT EVIDENCE)';
     }
+
+    const disclaimerText = 'Đánh giá này chỉ phản ánh những bằng chứng Engine đọc được từ hệ thống tại thời điểm kiểm tra. Đánh giá này KHÔNG xác nhận tính hợp pháp của giấy phép. Việc xác minh quyền sử dụng có thể cần các tài liệu ngoài hệ thống.';
 
     const documentationGuidance = [
       'Hóa đơn mua máy hoặc Hóa đơn mua giấy phép Office.',
@@ -943,6 +944,7 @@ class ActivationProvenanceAnalyzer {
       kmsHostInfo,
       provenanceLevel,
       provenanceLevelText,
+      disclaimerText,
       documentationGuidance
     };
   }
