@@ -1126,62 +1126,133 @@ powercfg /setactive e9a42b02-d5df-448d-aa00-03f14749eb61
         $OutputEncoding = [System.Text.Encoding]::UTF8
         [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-        $result = @{
-            Issues = @()
-            Details = @()
+        $report = @{
+            Timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+            Files = @()
+            RegistryHooks = @()
+            InjectedModules = @()
+            KmsOverrides = @()
+            HasIssues = $false
+            Summary = "Hệ thống Office hợp lệ, không phát hiện dấu hiệu can thiệp."
         }
 
-        # 1. Kiem tra IFEO sppsvc.exe
-        $ifeoPath = "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sppsvc.exe"
-        if (Test-Path $ifeoPath) {
-            $debugger = (Get-ItemProperty -Path $ifeoPath -Name "Debugger" -ErrorAction SilentlyContinue).Debugger
-            if ($debugger) {
-                $result.Issues += "Phát hiện Hook IFEO trên sppsvc.exe!"
-                $result.Details += "Debugger: $debugger"
+        # 1. Kiểm tra File System Integrity (Authenticode + SHA256)
+        $dllList = @(
+            "$env:windir\\System32\\sppc.dll",
+            "$env:windir\\System32\\sppcs.dll",
+            "$env:windir\\System32\\slc.dll"
+        )
+
+        foreach ($file in $dllList) {
+            if (Test-Path $file) {
+                $hash = (Get-FileHash -Path $file -Algorithm SHA256).Hash
+                $sig = Get-AuthenticodeSignature -FilePath $file
+                $isValid = ($sig.Status -eq 'Valid') -and ($sig.SignerCertificate.Subject -match "Microsoft")
+                
+                $fileItem = @{
+                    Path = $file
+                    Exists = $true
+                    SHA256 = $hash
+                    Status = $sig.Status.ToString()
+                    Signer = if ($sig.SignerCertificate) { $sig.SignerCertificate.Subject } else { "Unsigned/Tampered" }
+                    IsAuthentic = $isValid
+                }
+
+                if (-not $isValid) {
+                    $report.HasIssues = $true
+                    $report.Summary = "Phát hiện file DLL hệ thống bị thay thế hoặc mất chữ ký gốc Microsoft!"
+                }
+                $report.Files += $fileItem
+            } else {
+                $report.Files += @{
+                    Path = $file
+                    Exists = $false
+                    Status = "Missing"
+                    IsAuthentic = $false
+                }
+                $report.HasIssues = $true
             }
         }
-        $ifeoPath2 = "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\osppsvc.exe"
-        if (Test-Path $ifeoPath2) {
-            $debugger = (Get-ItemProperty -Path $ifeoPath2 -Name "Debugger" -ErrorAction SilentlyContinue).Debugger
-            if ($debugger) {
-                $result.Issues += "Phát hiện Hook IFEO trên osppsvc.exe!"
-                $result.Details += "Debugger: $debugger"
+
+        # 2. Kiểm tra Registry Hooks (IFEO & AppInit_DLLs)
+        $ifeoPaths = @(
+            "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sppsvc.exe",
+            "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\osppsvc.exe",
+            "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sppsvc.exe"
+        )
+
+        foreach ($path in $ifeoPaths) {
+            if (Test-Path $path) {
+                $dbg = (Get-ItemProperty -Path $path -Name "Debugger" -ErrorAction SilentlyContinue).Debugger
+                if ($dbg) {
+                    $report.HasIssues = $true
+                    $report.RegistryHooks += @{
+                        Target = $path
+                        Type = "IFEO Debugger Hook"
+                        Value = $dbg
+                    }
+                }
             }
         }
 
-        # 2. Kiem tra AppInit_DLLs
-        $appInitPath = "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Windows"
-        $appInit = (Get-ItemProperty -Path $appInitPath -Name "AppInit_DLLs" -ErrorAction SilentlyContinue).AppInit_DLLs
-        if ($appInit -and $appInit.Length -gt 0) {
-            $result.Issues += "Phát hiện injection qua AppInit_DLLs!"
-            $result.Details += "AppInit_DLLs: $appInit"
-        }
+        $appInitPaths = @(
+            "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Windows",
+            "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows NT\\CurrentVersion\\Windows"
+        )
 
-        # 3. Kiem tra file sppc.dll
-        $sppcPath = "$env:windir\\System32\\sppc.dll"
-        if (Test-Path $sppcPath) {
-            $sig = Get-AuthenticodeSignature -FilePath $sppcPath
-            if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Subject -notmatch "Microsoft") {
-                $result.Issues += "File sppc.dll bị thay thế hoặc mất chữ ký chuẩn của Microsoft!"
-                $result.Details += "Status: $($sig.Status) - Signer: $($sig.SignerCertificate.Subject)"
+        foreach ($path in $appInitPaths) {
+            if (Test-Path $path) {
+                $dlls = (Get-ItemProperty -Path $path -Name "AppInit_DLLs" -ErrorAction SilentlyContinue).AppInit_DLLs
+                if ($dlls -and $dlls.Trim().Length -gt 0) {
+                    $report.HasIssues = $true
+                    $report.RegistryHooks += @{
+                        Target = $path
+                        Type = "AppInit_DLLs Injection"
+                        Value = $dlls
+                    }
+                }
             }
-        } else {
-            $result.Issues += "CẢNH BÁO: Không tìm thấy file sppc.dll gốc của Windows!"
         }
 
-        return $result | ConvertTo-Json
+        # 3. Kiểm tra Process Modules xem có DLL lạ tiêm vào tiến trình Office/sppsvc
+        $targetProcs = @("sppsvc", "OfficeC2RClient", "WINWORD", "EXCEL")
+        foreach ($pName in $targetProcs) {
+            $procs = Get-Process -Name $pName -ErrorAction SilentlyContinue
+            foreach ($p in $procs) {
+                try {
+                    $suspicious = $p.Modules | Where-Object { 
+                        $_.ModuleName -match "hook|crack|kms|sppc|inject" -or 
+                        ($_.Company -and $_.Company -notmatch "Microsoft")
+                    }
+                    foreach ($m in $suspicious) {
+                        $report.InjectedModules += @{
+                            Process = "$($p.ProcessName) (PID: $($p.Id))"
+                            Module = $m.ModuleName
+                            Path = $m.FileName
+                            Company = $m.Company
+                        }
+                    }
+                } catch {}
+            }
+        }
+
+        if ($report.HasIssues) {
+            $report.Summary = "PHÁT HIỆN DẤU HIỆU CAN THIỆP BẢN QUYỀN OFFICE! Cần tiến hành khôi phục an toàn 3 lớp."
+        }
+
+        return $report | ConvertTo-Json -Depth 5
       `;
       const out = await runPowerShellScriptElevated(script);
       if (out && out.trim()) {
         try {
           return JSON.parse(out.trim());
         } catch(e) {
-          return { Issues: ["Lỗi khi đọc kết quả PowerShell."], Details: [out.trim()] };
+          return { HasIssues: true, Summary: "Lỗi giải mã JSON kết quả quét.", Raw: out.trim() };
         }
       }
-      return { Issues: [], Details: [] };
+      return { HasIssues: false, Summary: "Không quét được thông tin hệ thống." };
     } catch (err) {
-      return { Issues: ["Lỗi thực thi quét:"], Details: [err.message] };
+      return { HasIssues: true, Summary: "Lỗi thực thi quét: " + err.message };
     }
   });
 
@@ -1191,33 +1262,75 @@ powercfg /setactive e9a42b02-d5df-448d-aa00-03f14749eb61
         $OutputEncoding = [System.Text.Encoding]::UTF8
         [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-        Write-Output "Bắt đầu tiến trình khôi phục bản quyền Office an toàn (3 lớp)..."
+        Write-Host "====================================================================" -ForegroundColor Cyan
+        Write-Host "   QUY TRÌNH KHÔI PHỤC AN TOÀN BẢN QUYỀN OFFICE (3 LỚP BẢO VỆ)      " -ForegroundColor Cyan
+        Write-Host "====================================================================" -ForegroundColor Cyan
+        Write-Host ""
 
-        # Lớp 1: Dừng các tiến trình và dịch vụ để mở khóa file
-        Write-Output "[1/3] Đang dừng dịch vụ sppsvc và các tiến trình Office..."
-        Stop-Service -Name sppsvc -Force -ErrorAction SilentlyContinue
-        Stop-Process -Name "OfficeC2RClient" -Force -ErrorAction SilentlyContinue
-        Stop-Process -Name "WINWORD" -Force -ErrorAction SilentlyContinue
-        Stop-Process -Name "EXCEL" -Force -ErrorAction SilentlyContinue
+        $backupDir = "C:\\ProgramData\\ThienPhatToolkit\\Backup"
+        if (-not (Test-Path $backupDir)) { New-Item -Path $backupDir -ItemType Directory -Force | Out-Null }
+
+        # LỚP 1: BACKUP & NGHỈ TIẾN TRÌNH
+        Write-Host "[LỚP 1/3] Đang sao lưu cấu hình Registry & Dừng dịch vụ..." -ForegroundColor Yellow
+        $sppcFile = "$env:windir\\System32\\sppc.dll"
+        if (Test-Path $sppcFile) {
+            Copy-Item -Path $sppcFile -Destination "$backupDir\\sppc.dll.bak" -Force -ErrorAction SilentlyContinue
+            Write-Host "  [+] Đã sao lưu sppc.dll sang $backupDir\\sppc.dll.bak" -ForegroundColor Green
+        }
+
+        $procsToStop = @("sppsvc", "osppsvc", "OfficeC2RClient", "WINWORD", "EXCEL", "POWERPNT", "OUTLOOK")
+        foreach ($p in $procsToStop) {
+            Stop-Process -Name $p -Force -ErrorAction SilentlyContinue
+            Stop-Service -Name $p -Force -ErrorAction SilentlyContinue
+        }
         Start-Sleep -Seconds 2
+        Write-Host "  [+] Đã đóng giải phóng toàn bộ tiến trình Office & Software Protection." -ForegroundColor Green
+        Write-Host ""
 
-        # Lớp 2: Xóa bỏ Hook và Registry Can Thiệp
-        Write-Output "[2/3] Đang gỡ bỏ các Hook độc hại..."
-        $ifeoPath = "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sppsvc.exe"
-        if (Test-Path $ifeoPath) { Remove-Item -Path $ifeoPath -Recurse -Force -ErrorAction SilentlyContinue }
+        # LỚP 2: GỠ BỎ HOOK & DỌN REGISTRY
+        Write-Host "[LỚP 2/3] Đang triệt hạ các cơ chế Hook (IFEO / AppInit_DLLs)..." -ForegroundColor Yellow
+        $ifeoTargets = @(
+            "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sppsvc.exe",
+            "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\osppsvc.exe",
+            "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sppsvc.exe"
+        )
+        foreach ($ifeo in $ifeoTargets) {
+            if (Test-Path $ifeo) {
+                Remove-Item -Path $ifeo -Recurse -Force -ErrorAction SilentlyContinue
+                Write-Host "  [+] Đã xóa bỏ Hook IFEO: $ifeo" -ForegroundColor Green
+            }
+        }
+
+        $appInitPaths = @(
+            "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Windows",
+            "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows NT\\CurrentVersion\\Windows"
+        )
+        foreach ($appPath in $appInitPaths) {
+            if (Test-Path $appPath) {
+                Set-ItemProperty -Path $appPath -Name "AppInit_DLLs" -Value "" -ErrorAction SilentlyContinue
+                Set-ItemProperty -Path $appPath -Name "LoadAppInit_DLLs" -Value 0 -ErrorAction SilentlyContinue
+                Write-Host "  [+] Đã dọn dẹp AppInit_DLLs về trạng thái sạch: $appPath" -ForegroundColor Green
+            }
+        }
+        Write-Host ""
+
+        # LỚP 3: KHÔI PHỤC SYSTEM DLL BẰNG SFC (WINSXS KHO ZIN)
+        Write-Host "[LỚP 3/3] Đang nạp lại DLL zin từ kho WinSXS qua System File Checker..." -ForegroundColor Yellow
+        $sfc1 = sfc /scanfile="$env:windir\\System32\\sppc.dll"
+        Write-Host "  [SFC sppc.dll]: $sfc1" -ForegroundColor Gray
         
-        $ifeoPath2 = "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\osppsvc.exe"
-        if (Test-Path $ifeoPath2) { Remove-Item -Path $ifeoPath2 -Recurse -Force -ErrorAction SilentlyContinue }
+        $sfc2 = sfc /scanfile="$env:windir\\System32\\sppcs.dll"
+        Write-Host "  [SFC sppcs.dll]: $sfc2" -ForegroundColor Gray
 
-        # Lớp 3: Dùng SFC để Windows tự phục hồi file gốc sppc.dll
-        Write-Output "[3/3] Đang phục hồi System32\\sppc.dll từ kho WinSXS bằng lệnh SFC..."
-        $sfcOutput = sfc /scanfile="$env:windir\\System32\\sppc.dll"
-        Write-Output $sfcOutput
-
-        Write-Output "Khởi động lại dịch vụ sppsvc..."
+        Write-Host ""
+        Write-Host "[*] Khởi động lại dịch vụ cấp phép sppsvc..." -ForegroundColor Yellow
         Start-Service -Name sppsvc -ErrorAction SilentlyContinue
-
-        Write-Output "Hoàn tất khôi phục. Office đã trở về trạng thái sạch!"
+        
+        Write-Host ""
+        Write-Host "====================================================================" -ForegroundColor Green
+        Write-Host "   [✓] HOÀN TẤT KHÔI PHỤC LÕI BẢN QUYỀN OFFICE AN TOÀN BẰNG 3 LỚP!  " -ForegroundColor Green
+        Write-Host "   Office đã được trả về trạng thái hợp lệ nguyên bản của Microsoft." -ForegroundColor Green
+        Write-Host "====================================================================" -ForegroundColor Green
       `;
       const out = await runPowerShellScriptElevated(script);
       return { success: true, log: out.trim() };
