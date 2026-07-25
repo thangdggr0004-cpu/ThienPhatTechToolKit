@@ -809,7 +809,7 @@ class ActivationProvenanceAnalyzer {
       port: 1688,
       dnsResult: 'N/A',
       reachability: 'UNKNOWN',
-      hostType: 'Host Not Configured'
+      hostType: 'KMS Host = No Data'
     };
 
     // 1. RULE FOR KMS CLIENT (GVLK)
@@ -842,16 +842,16 @@ class ActivationProvenanceAnalyzer {
           } else {
             kmsHostInfo.hostType = 'Unknown Host';
             activationSource = `KMS Host: ${kmsHost}`;
-            recommendation = 'KMS Host đã được xác định.';
+            recommendation = 'KMS Host đã được ghi nhận.';
           }
 
           evidenceUsed.push(`ActivationType: KMS`, `License Name: ${licName}`, `KMS Host: ${kmsHost}`, `KMS Port: 1688`, `Host Type: ${kmsHostInfo.hostType}`);
         } else {
-          kmsHostInfo.host = 'Chưa xác định';
-          kmsHostInfo.hostType = 'Host Not Configured';
-          activationSource = 'KMS (Host chưa xác định)';
-          recommendation = 'KMS Host chưa được cấu hình. Nên kiểm tra KMS Host để xác định nguồn kích hoạt.';
-          evidenceUsed.push(`ActivationType: KMS`, `License Name: ${licName}`, `Status: LICENSED`, `Reasoning: Phát hiện cấu hình KMS Client nhưng chưa lấy được tên KMS Host.`);
+          kmsHostInfo.host = 'Không đọc được dữ liệu';
+          kmsHostInfo.hostType = 'KMS Host = No Data';
+          activationSource = 'Không xác định được KMS Host';
+          recommendation = 'Không xác định được KMS Host từ dữ liệu hiện có. Nếu cần xác minh nguồn kích hoạt, hãy kiểm tra cấu hình KMS bằng các công cụ quản trị Office.';
+          evidenceUsed.push(`ActivationType: KMS`, `License Name: ${licName}`, `Status: LICENSED`, `Reasoning: KMS Host = No Data (Engine không thu thập được dữ liệu tên Host từ hệ thống).`);
         }
       }
       // 2. RULE FOR VOLUME MAK
