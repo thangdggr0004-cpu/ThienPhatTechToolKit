@@ -204,6 +204,40 @@ export default function OfficeLicenseAnalyzer() {
         </div>
       )}
 
+      {/* Activation Provenance Block */}
+      {report && report.provenance && (
+        <div className="bg-blue-50/70 p-4.5 rounded-xl border border-blue-200 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-bold text-blue-900 uppercase tracking-wider flex items-center gap-2">
+              <Zap className="w-4 h-4 text-blue-600" /> NGUỒN GỐC KÍCH HOẠT (ACTIVATION PROVENANCE ANALYZER)
+            </div>
+            <span className="px-2.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-300">
+              Độ tin cậy: {report.provenance.confidence}%
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs pt-1">
+            <div className="bg-white p-2.5 rounded-lg border border-blue-100">
+              <span className="text-slate-400 block text-[10px] uppercase font-bold">Phương Thức (Activation Method)</span>
+              <span className="font-bold text-slate-800 text-sm mt-0.5 block">{report.provenance.activationMethod}</span>
+            </div>
+            <div className="bg-white p-2.5 rounded-lg border border-blue-100">
+              <span className="text-slate-400 block text-[10px] uppercase font-bold">Nguồn Cấp (Activation Source)</span>
+              <span className="font-bold text-slate-800 text-sm mt-0.5 block">{report.provenance.activationSource}</span>
+            </div>
+            <div className="bg-white p-2.5 rounded-lg border border-blue-100">
+              <span className="text-slate-400 block text-[10px] uppercase font-bold">Khuyên Dùng (Recommendation)</span>
+              <span className="font-bold text-blue-700 text-xs mt-0.5 block">{report.provenance.recommendation}</span>
+            </div>
+          </div>
+          {report.provenance.evidenceUsed && report.provenance.evidenceUsed.length > 0 && (
+            <div className="text-[11px] text-slate-600 border-t border-blue-100 pt-2 flex items-center gap-1.5">
+              <span className="font-bold text-blue-900">Bằng chứng đối soát:</span>
+              <span>{report.provenance.evidenceUsed.join(' • ')}</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Action Control Buttons Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
         <button

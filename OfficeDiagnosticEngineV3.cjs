@@ -712,6 +712,7 @@ class OfficeDiagnosticEngineV3 {
     try {
       const rawOut = await this.powerShellRunner(script);
       const data = JSON.parse(rawOut.trim());
+      this.lastLicData = data.licData || {};
       
       // Add Evidence Items to Matrix
       const licData = data.licData || {};
@@ -757,21 +758,115 @@ class OfficeDiagnosticEngineV3 {
       matrixBuilder.addEvidence('Hệ Thống Phân Tích Bằng Chứng', 'WARNING', 'Engine', 10, `Lỗi đọc dữ liệu: ${e.message}`);
     }
 
-    const matrix = matrixBuilder.getMatrix();
-    const confidenceResult = ConfidenceEngine.calculate(matrix);
-    const surgicalPlan = SurgicalRecoveryPlanner.generatePlan(matrix, skuInfo);
-    const impactResult = ImpactAnalyzer.analyze(surgicalPlan);
-    const decisionResult = DecisionEngine.evaluate(matrix, confidenceResult, impactResult);
+    let provenance = null;
+    try {
+      provenance = ActivationProvenanceAnalyzer.analyzeProvenance(this.lastLicData || {}, matrix, skuInfo);
+    } catch (e) {}
 
     return {
       timestamp: new Date().toLocaleString('vi-VN'),
       skuInfo,
+      provenance,
       matrix,
       confidenceResult,
       surgicalPlan,
       impactResult,
       decisionResult,
       auditLogs: this.auditLog.getLogs()
+    };
+  }
+}
+
+// ============================================================================
+// ACTIVATION PROVENANCE ANALYZER
+// ============================================================================
+
+class ActivationProvenanceAnalyzer {
+  static analyzeProvenance(licData, matrix, skuInfo) {
+    const evidenceUsed = [];
+    let activationStatus = licData?.activationState || 'UNKNOWN';
+    let activationMethod = 'Không đủ bằng chứng để xác định phương thức kích hoạt.';
+    let activationSource = 'Chưa xác định';
+    let confidence = licData?.confidence || 50;
+    let recommendation = 'Theo dõi & Kiểm tra định kỳ';
+
+    if (activationStatus === 'LICENSED') {
+      // Check KMS Host
+      if (licData.kmsHost && licData.kmsHost !== 'N/A' && licData.kmsHost.trim().length > 0) {
+        activationMethod = 'KMS Client (GVLK)';
+        evidenceUsed.push(`Phát hiện máy chủ KMS: ${licData.kmsHost}`);
+        
+        if (licData.kmsHost.includes('msguides.com') || licData.kmsHost.includes('kms') || licData.kmsHost.match(/\d+\.\d+\.\d+\.\d+/)) {
+          activationSource = 'External / Unknown KMS Host';
+          recommendation = 'Further Investigation';
+          confidence = 78;
+        } else {
+          activationSource = 'Internal Corporate KMS Server';
+          recommendation = 'Kích hoạt hợp lệ qua máy chủ doanh nghiệp';
+          confidence = 95;
+        }
+      } 
+      // Check License Name for MAK
+      else if (licData.licenseName && licData.licenseName.includes('MAK')) {
+        activationMethod = 'Volume MAK';
+        activationSource = 'Microsoft Multiple Activation Key';
+        evidenceUsed.push(`License Name chứa mã MAK: ${licData.licenseName}`);
+        recommendation = 'Giấy phép Volume MAK chính hãng';
+        confidence = 95;
+      }
+      // Check Subscription / Microsoft 365
+      else if (licData.licenseChannel === 'Microsoft 365' || (licData.licenseName && licData.licenseName.match(/Subscription|365/i))) {
+        activationMethod = 'Subscription';
+        activationSource = 'Microsoft 365 Cloud';
+        evidenceUsed.push(`Xác nhận kênh Microsoft 365 Account Subscription`);
+        recommendation = 'Đăng ký tài khoản Microsoft 365 Cloud chính hãng';
+        confidence = 99;
+      }
+      // Check Retail Key
+      else if (licData.licenseChannel === 'Retail' || (licData.licenseName && licData.licenseName.includes('Retail'))) {
+        activationMethod = 'Retail Key';
+        activationSource = 'Microsoft Genuine Retail';
+        evidenceUsed.push(`Khóa Retail hợp lệ (Partial Key: ...${licData.partialKey || 'N/A'})`);
+        recommendation = 'Bản quyền Retail chính hãng của Microsoft';
+        confidence = 99;
+      }
+      // Check Digital License
+      else if (licData.sourcesUsed && licData.sourcesUsed.includes('LicensingVK_Registry')) {
+        activationMethod = 'Digital License';
+        activationSource = 'Windows Digital Entitlement';
+        evidenceUsed.push('Tìm thấy chứng chỉ Digital LicensingVK trong Registry HKLM');
+        recommendation = 'Bản quyền số Digital License chính hãng';
+        confidence = 90;
+      }
+      // Fallback
+      else {
+        activationMethod = 'Không đủ bằng chứng để xác định phương thức kích hoạt.';
+        activationSource = 'Local Licensing Cache';
+        evidenceUsed.push('Office hiển thị LICENSED nhưng chưa đủ dữ liệu đối soát chìa khóa bản quyền.');
+        recommendation = 'Giữ nguyên trạng thái vận hành, theo dõi thêm.';
+        confidence = 60;
+      }
+    } else if (activationStatus === 'UNLICENSED') {
+      activationMethod = 'Chưa Kích Hoạt';
+      activationSource = 'None';
+      evidenceUsed.push('Hệ thống chưa tìm thấy chứng chỉ bản quyền hợp lệ.');
+      recommendation = 'Cần nạp khóa bản quyền chính hãng để sử dụng đầy đủ tính năng.';
+      confidence = 100;
+    } else if (activationStatus === 'GRACE_PERIOD') {
+      activationMethod = 'Thời Gian Gia Hạn (Grace Period)';
+      activationSource = 'Trial / Grace License';
+      evidenceUsed.push(`Đang trong thời gian gia hạn dùng thử (Grace: ${licData.gracePeriod || 'N/A'})`);
+      recommendation = 'Kích hoạt bản quyền trước khi hết thời gian gia hạn.';
+      confidence = 90;
+    }
+
+    return {
+      activationStatus,
+      activationMethod,
+      activationSource,
+      evidenceUsed,
+      confidence,
+      recommendation
     };
   }
 }
@@ -1068,6 +1163,7 @@ module.exports = {
   TransactionRecoveryManager,
   OfficeHealthCheck,
   SafetyGuard,
+  ActivationProvenanceAnalyzer,
   SurgicalRecoveryExecutor,
   CONFIDENCE_LEVELS,
   DECISION_ACTIONS,
