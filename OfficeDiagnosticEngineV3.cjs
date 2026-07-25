@@ -471,6 +471,12 @@ const {
   COLLECTOR_PRIORITIES 
 } = require('./EnterpriseCollectorFramework.cjs');
 
+const LicenseCollector = require('./src/collectors/LicenseCollector.cjs');
+const AuthenticodeCollector = require('./src/collectors/AuthenticodeCollector.cjs');
+const OhookCollector = require('./src/collectors/OhookCollector.cjs');
+const RegistryCollector = require('./src/collectors/RegistryCollector.cjs');
+const ServicesCollector = require('./src/collectors/ServicesCollector.cjs');
+
 class OfficeDiagnosticEngineV3 {
   constructor(powerShellRunner) {
     this.powerShellRunner = powerShellRunner;
@@ -478,6 +484,13 @@ class OfficeDiagnosticEngineV3 {
     this.collectorRegistry = new CollectorRegistry();
     this.collectorHealthMonitor = new CollectorHealthMonitor();
     this.collectorPipeline = new CollectorPipeline(this.collectorRegistry, this.collectorHealthMonitor);
+
+    // Register Phase 2 Collectors
+    this.collectorRegistry.register(new LicenseCollector());
+    this.collectorRegistry.register(new AuthenticodeCollector());
+    this.collectorRegistry.register(new OhookCollector());
+    this.collectorRegistry.register(new RegistryCollector());
+    this.collectorRegistry.register(new ServicesCollector());
   }
 
   async runFullDiagnostics() {
@@ -726,45 +739,8 @@ class OfficeDiagnosticEngineV3 {
       const data = JSON.parse(rawOut.trim());
       this.lastLicData = data.licData || {};
       
-      // Add Evidence Items to Matrix
-      const licData = data.licData || {};
-      const sourcesStr = licData.sourcesUsed ? licData.sourcesUsed.join('+') : 'ospp.vbs';
-      this.auditLog.log('EnterpriseLicenseCollector', sourcesStr, data.licenseStatus, 20, `Status: ${data.licenseStatus}, Name: ${data.licenseName}, ActivationType: ${licData.activationType}`);
-      matrixBuilder.addEvidence(
-        'Bản Quyền Office (OSPP License)',
-        (data.licenseStatus === 'LICENSED' || licData.activationState === 'LICENSED') ? 'PASS' : 'WARNING',
-        `MultiSource (${sourcesStr})`,
-        20,
-        `Trạng thái: ${data.licenseStatus || 'Chưa kích hoạt'} (Kênh: ${licData.licenseChannel || 'Standard'}, Key: ...${data.partialKey || 'N/A'})`
-      );
-
-      this.auditLog.log('AuthenticodeCollector', 'Win32 API', data.sysSppcAuthenticode, 25, `Signer: ${data.sysSppcSigner}`);
-      const isAuthenticSppc = data.sysSppcAuthenticode === 'Valid' && data.sysSppcSigner && data.sysSppcSigner.includes('Microsoft Corporation');
-      matrixBuilder.addEvidence(
-        'Chữ Ký Số DLL Hệ Thống (sppc.dll)',
-        isAuthenticSppc ? 'PASS' : 'FAIL',
-        'Authenticode',
-        25,
-        `Chữ ký: ${data.sysSppcAuthenticode} (${data.sysSppcSigner || 'Unsigned'})`
-      );
-
-      this.auditLog.log('OhookCollector', 'Filesystem', data.ohookDllFound, 25, `Ohook DLL Found: ${data.ohookDllFound}`);
-      matrixBuilder.addEvidence(
-        'Kiểm Tra Tệp Thư Mục Office (sppcs.dll)',
-        data.ohookDllFound ? 'FAIL' : 'PASS',
-        'FileIntegrity',
-        25,
-        data.ohookDllFound ? 'Phát hiện tệp sppcs.dll lạ trong thư mục Office' : 'Sạch sẽ, không có tệp lạ'
-      );
-
-      this.auditLog.log('RegistryCollector', 'HKLM Registry', data.ifeoHooks, 20, `Hooks: ${data.ifeoHooks ? data.ifeoHooks.length : 0}`);
-      matrixBuilder.addEvidence(
-        'Registry Hooks (IFEO Debugger)',
-        (!data.ifeoHooks || data.ifeoHooks.length === 0) ? 'PASS' : 'FAIL',
-        'Registry',
-        20,
-        (!data.ifeoHooks || data.ifeoHooks.length === 0) ? 'Không có Hook bẫy tiến trình' : `Phát hiện ${data.ifeoHooks.length} Hook bẫy Registry`
-      );
+      // Step 2: Execute registered Phase 2 Framework Collectors through CollectorPipeline
+      await this.collectorPipeline.executePipeline({ rawData: data }, matrixBuilder, this.auditLog);
 
     } catch (e) {
       matrixBuilder.addEvidence('Hệ Thống Phân Tích Bằng Chứng', 'WARNING', 'Engine', 10, `Lỗi đọc dữ liệu: ${e.message}`);
