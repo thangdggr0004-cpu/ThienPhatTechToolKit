@@ -828,3 +828,32 @@ echo ====================================================================
 pause`;
 }
 
+// Office Quick Repair Script (PowerShell / CMD)
+export function generateOfficeQuickRepairScript(): string {
+  return `# PowerShell script to run Microsoft Office Click-to-Run Quick Repair
+$OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+$c2rPath = "$env:CommonProgramFiles\\microsoft shared\\ClickToRun\\OfficeClickToRun.exe"
+$c2rPathx86 = "${process.env['CommonProgramFiles(x86)'] || 'C:\\Program Files (x86)\\Common Files'}\\microsoft shared\\ClickToRun\\OfficeClickToRun.exe"
+
+Write-Host "====================================================================" -ForegroundColor Cyan
+Write-Host "      KÍCH HOẠT QUỐC GIA MICROSOFT OFFICE QUICK REPAIR              " -ForegroundColor Cyan
+Write-Host "====================================================================" -ForegroundColor Cyan
+Write-Host ""
+
+if (Test-Path $c2rPath) {
+    Write-Host "[*] Đang khởi chạy tiến trình Quick Repair của Microsoft Office (x64)..." -ForegroundColor Yellow
+    Start-Process -FilePath $c2rPath -ArgumentList "scenario=Repair platform=x64 culture=en-us RepairType=QuickRepair DisplayLevel=True"
+    Write-Host "[+] Đã kích hoạt cửa sổ Quick Repair chính hãng Microsoft thành công!" -ForegroundColor Green
+} elseif (Test-Path $c2rPathx86) {
+    Write-Host "[*] Đang khởi chạy tiến trình Quick Repair của Microsoft Office (x86)..." -ForegroundColor Yellow
+    Start-Process -FilePath $c2rPathx86 -ArgumentList "scenario=Repair platform=x86 culture=en-us RepairType=QuickRepair DisplayLevel=True"
+    Write-Host "[+] Đã kích hoạt cửa sổ Quick Repair chính hãng Microsoft thành công!" -ForegroundColor Green
+} else {
+    Write-Host "[!] Không tìm thấy trình OfficeClickToRun.exe trực tiếp. Đang mở Control Panel AppWiz..." -ForegroundColor Yellow
+    & control appwiz.cpl
+}
+`;
+}
+

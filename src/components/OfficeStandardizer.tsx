@@ -21,6 +21,7 @@ import {
   generateOfficeHistoryCleanerScript,
   generateFixWordCrashScript,
   generateClearOfficeCredentialsScript,
+  generateOfficeQuickRepairScript,
   generateRetailToVolumeScript,
   generateBlockOfficeUpdateScript
 } from '../utils/scriptGenerator';
@@ -238,24 +239,33 @@ export default function OfficeStandardizer() {
         <h3 className="text-sm font-bold text-slate-800 mb-4 uppercase tracking-wider flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-rose-500" /> Sửa Lỗi Chuyên Sâu
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <UtilityCard
             id="fix-crash"
             title="Sửa Lỗi Treo/Crash Word & Excel"
-            description="Đóng băng toàn bộ Office, gỡ bỏ các Add-in rác (Foxit, Acrobat...) và xóa bộ đệm cấu hình Normal.dotm bị lỗi. Trị dứt điểm bệnh cứ mở file là bị treo, văng ứng dụng."
+            description="Đóng băng toàn bộ Office, gỡ bỏ Add-in rác và xóa bộ đệm cấu hình Normal.dotm bị lỗi."
             icon={AlertTriangle}
             colorClass="bg-rose-50 text-rose-600"
             btnText="Xử lý Treo/Crash"
-            onClick={() => executeUtility(generateFixWordCrashScript, 'fix-crash')}
+            onClick={() => executeUtility(generateFixWordCrashScript, 'fix-crash', 'Sửa Lỗi Treo Word')}
+          />
+          <UtilityCard
+            id="quick-repair"
+            title="Office Quick Repair (Microsoft Native)"
+            description="Mở trực tiếp trình sửa chữa Click-to-Run của Microsoft để khôi phục toàn bộ file hệ thống Office bị hỏng."
+            icon={RefreshCw}
+            colorClass="bg-blue-50 text-blue-600"
+            btnText="Chạy Quick Repair 1-Click"
+            onClick={() => executeUtility(generateOfficeQuickRepairScript, 'quick-repair', 'Quick Repair Office')}
           />
           <UtilityCard
             id="clear-creds"
             title="Sửa Lỗi Kẹt Tài Khoản (Account Error)"
-            description="Xóa sạch thông tin đăng nhập trong Credential Manager và các khóa Identity của Office. Cực kỳ hiệu quả khi máy bị lỗi không thể xác minh đăng nhập hoặc lỗi chấm than vàng."
+            description="Xóa sạch thông tin đăng nhập trong Credential Manager và các khóa Identity của Office."
             icon={UserX}
             colorClass="bg-amber-50 text-amber-600"
             btnText="Xóa Phiên Đăng Nhập Cũ"
-            onClick={() => executeUtility(generateClearOfficeCredentialsScript, 'clear-creds')}
+            onClick={() => executeUtility(generateClearOfficeCredentialsScript, 'clear-creds', 'Xóa Kẹt Tài Khoản Office')}
           />
         </div>
       </div>
