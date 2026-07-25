@@ -19,7 +19,7 @@ import {
   Info
 } from 'lucide-react';
 
-// Tooltip dictionary for technical terms
+// Technical Tooltip Dictionary
 const TOOLTIPS: Record<string, string> = {
   KMS: 'Key Management Service - Máy chủ quản lý bản quyền nội bộ hoặc công khai của Microsoft.',
   GVLK: 'Generic Volume License Key - Khóa mặc định dùng để kích hoạt qua máy chủ KMS.',
@@ -29,7 +29,9 @@ const TOOLTIPS: Record<string, string> = {
   Mondo: 'Phiên bản Office nội bộ thử nghiệm của Microsoft chứa đầy đủ tính năng Enterprise.',
   ClickToRun: 'Công nghệ đóng gói và cài đặt Office trực tuyến hiện đại (C2R) của Microsoft.',
   IFEO: 'Image File Execution Options - Khóa Registry dùng để can thiệp hoặc bẫy tiến trình Windows.',
-  Authenticode: 'Công nghệ xác thực Chữ ký số mã nguồn chính hãng do Microsoft cấp.'
+  Authenticode: 'Công nghệ xác thực Chữ ký số mã nguồn chính hãng do Microsoft cấp.',
+  SystemConfidence: 'System Diagnostic Confidence (Level 1) - Mức độ tin cậy của kết luận về tính toàn vẹn của hệ thống Office dựa trên tất cả bằng chứng thu thập.',
+  ActivationConfidence: 'Activation Provenance Confidence (Level 2) - Mức độ tin cậy khi xác định phương thức và nguồn gốc kích hoạt Office.'
 };
 
 export default function OfficeLicenseAnalyzer() {
@@ -92,7 +94,7 @@ export default function OfficeLicenseAnalyzer() {
             targetActions: []
           },
           impactResult: { riskLevel: 'LOW', officeImpact: 'Không làm gián đoạn ứng dụng Office.', windowsImpact: 'Không tác động tệp hệ thống Windows System32.', clickToRunImpact: 'Dịch vụ ClickToRun duy trì bình thường.', licenseImpact: 'Bảo lưu giấy phép hợp lệ đang có.', isSafeToProceed: true },
-          decisionResult: { actionAllowed: 'ALLOW_RESTORE', reason: 'Không phát hiện dấu hiệu can thiệp tệp/Registry cần khôi phục (100% Confidence). Chi tiết phương thức kích hoạt xem tại Activation Provenance.', recommendedNextStep: 'Không cần can thiệp khôi phục.' },
+          decisionResult: { actionAllowed: 'ALLOW_RESTORE', reason: 'Không phát hiện dấu hiệu can thiệp tệp/Registry cần khôi phục (100% System Confidence). Chi tiết phương thức kích hoạt xem tại Activation Provenance.', recommendedNextStep: 'Không cần can thiệp khôi phục.' },
           auditLogs: [
             { collectorName: 'CompatibilityLayer', dataSource: 'Registry/Filesystem', details: 'SKU: Office 2021 ProPlusRetail, Build: 16.0.17328', timestamp: new Date().toISOString() },
             { collectorName: 'EnterpriseLicenseCollector', dataSource: 'ospp.vbs+WMI', details: 'Status: LICENSED, Name: Office19ProPlus2019VL_KMS_Client_AE, ActivationType: KMS', timestamp: new Date().toISOString() },
@@ -147,7 +149,8 @@ export default function OfficeLicenseAnalyzer() {
   };
 
   const decision = report?.decisionResult?.actionAllowed || 'NONE';
-  const confidencePct = report?.confidenceResult?.confidencePercentage || 0;
+  const systemConfidence = report?.confidenceResult?.confidencePercentage || 0;
+  const activationConfidence = report?.provenance?.confidence || 0;
   const targetActionsCount = report?.surgicalPlan?.targetActions?.length || 0;
 
   // Audit Logs Filter & Copy/Export Functions
@@ -194,7 +197,7 @@ export default function OfficeLicenseAnalyzer() {
         onMouseLeave={() => setActiveTooltip(null)}
       />
       {activeTooltip === term && (
-        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-56 p-2 bg-slate-900 text-white text-[11px] font-normal rounded-lg shadow-xl z-50 pointer-events-none whitespace-normal leading-tight">
+        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-60 p-2 bg-slate-900 text-white text-[11px] font-normal rounded-lg shadow-xl z-50 pointer-events-none whitespace-normal leading-tight">
           <strong className="text-blue-400 block mb-0.5">{term}:</strong>
           {TOOLTIPS[term]}
         </span>
@@ -206,7 +209,7 @@ export default function OfficeLicenseAnalyzer() {
     <div className="bg-slate-50/50 border border-slate-200 rounded-xl p-5 shadow-xs text-slate-800 space-y-5 font-sans">
       
       {/* --------------------------------------------------------------------- */}
-      {/* HEADER & ONE-LINE QUICK SUMMARY BANNER                                 */}
+      {/* HEADER & ONE-LINE QUICK SUMMARY BAR                                   */}
       {/* --------------------------------------------------------------------- */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100 pb-3">
@@ -228,29 +231,36 @@ export default function OfficeLicenseAnalyzer() {
           </span>
         </div>
 
-        {/* 1-LINE QUICK SUMMARY BANNER */}
+        {/* 1-LINE SUMMARY BAR: Integrity, License, Activation, Activation Confidence, Recovery */}
         {report && (
           <div className="bg-slate-900 text-slate-200 px-3.5 py-2 rounded-lg text-xs font-mono flex flex-wrap items-center justify-between gap-2 shadow-inner">
-            <div className="flex flex-wrap items-center gap-4">
-              <span>Office: <strong className="text-emerald-400">{report.provenance?.activationStatus || 'N/A'}</strong></span>
+            <div className="flex flex-wrap items-center gap-3">
+              <span>Integrity: <strong className="text-emerald-400">{systemConfidence}%</strong></span>
+              <span className="text-slate-600">|</span>
+              <span>License: <strong className="text-emerald-400">{report.provenance?.activationStatus || 'N/A'}</strong></span>
               <span className="text-slate-600">|</span>
               <span>Activation: <strong className="text-blue-300">{report.provenance?.activationMethod || 'N/A'}</strong> {renderTooltipIcon('KMS')}</span>
               <span className="text-slate-600">|</span>
-              <span>Recovery: <strong className={targetActionsCount > 0 ? 'text-amber-400' : 'text-emerald-400'}>{targetActionsCount > 0 ? 'Kế hoạch Vi phẫu' : 'Không cần khôi phục'}</strong></span>
+              <span>Activation Confidence: <strong className="text-blue-400">{activationConfidence}%</strong></span>
             </div>
-            <div>Confidence: <strong className="text-emerald-400">{confidencePct}%</strong></div>
+            <div>
+              Recovery: <strong className={targetActionsCount > 0 ? 'text-amber-400' : 'text-emerald-400'}>{targetActionsCount > 0 ? 'Kế hoạch Vi phẫu' : 'Not Required'}</strong>
+            </div>
           </div>
         )}
       </div>
 
       {/* --------------------------------------------------------------------- */}
-      {/* TẦNG 1: SYSTEM SUMMARY CARDS (CARD PROPS GRID)                        */}
+      {/* LEVEL 1: SYSTEM DIAGNOSTIC SUMMARY CARDS                              */}
       {/* --------------------------------------------------------------------- */}
       {report && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
           {/* Card 1: Office SKU */}
           <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between space-y-2">
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phiên Bản Office (SKU)</div>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phiên Bản Office (SKU)</span>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">LEVEL 1</span>
+            </div>
             <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
               {report.skuInfo?.skuName || 'Office'}
               {renderTooltipIcon('ClickToRun')}
@@ -260,12 +270,18 @@ export default function OfficeLicenseAnalyzer() {
             </div>
           </div>
 
-          {/* Card 2: Độ tin cậy phân tích */}
+          {/* Card 2: ĐỘ TIN CẬY CHẨN ĐOÁN HỆ THỐNG (System Diagnostic Confidence) */}
           <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between space-y-2">
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Độ tin cậy phân tích</div>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center">
+                ĐỘ TIN CẬY CHẨN ĐOÁN HỆ THỐNG
+                {renderTooltipIcon('SystemConfidence')}
+              </span>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 bg-slate-900 text-white rounded">LEVEL 1</span>
+            </div>
             <div className="flex items-center gap-3">
-              <div className={`text-xl font-black font-mono ${confidencePct >= 95 ? 'text-emerald-600' : confidencePct >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
-                {confidencePct}%
+              <div className={`text-xl font-black font-mono ${systemConfidence >= 95 ? 'text-emerald-600' : systemConfidence >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
+                {systemConfidence}%
               </div>
               <div className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-700">
                 {report.confidenceResult?.level?.label || 'Đã xác nhận'}
@@ -273,25 +289,33 @@ export default function OfficeLicenseAnalyzer() {
             </div>
             <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden border border-slate-200">
               <div 
-                className={`h-full transition-all duration-500 ${confidencePct >= 95 ? 'bg-emerald-500' : confidencePct >= 60 ? 'bg-amber-500' : 'bg-red-500'}`}
-                style={{ width: `${confidencePct}%` }}
+                className={`h-full transition-all duration-500 ${systemConfidence >= 95 ? 'bg-emerald-500' : systemConfidence >= 60 ? 'bg-amber-500' : 'bg-red-500'}`}
+                style={{ width: `${systemConfidence}%` }}
               />
             </div>
           </div>
 
           {/* Card 3: Kết luận hệ thống */}
           <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between space-y-1.5">
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Kết luận hệ thống</div>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Kết luận hệ thống</span>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">LEVEL 1</span>
+            </div>
             <div className="text-xs font-semibold text-slate-800 leading-snug">
               {report.decisionResult?.reason}
             </div>
+            {systemConfidence === 100 && activationConfidence < 100 && (
+              <div className="text-[10px] text-slate-500 bg-slate-50 p-1.5 rounded border border-slate-200 leading-tight">
+                ℹ️ <strong>System Diagnostic Confidence:</strong> 100% (Toàn vẹn tệp/Registry). <strong>Activation Confidence:</strong> {activationConfidence}% (Phương thức kích hoạt). Hai chỉ số này đánh giá hai khía cạnh độc lập.
+              </div>
+            )}
             <div className="text-[11px] text-blue-700 font-semibold">👉 {report.decisionResult?.recommendedNextStep}</div>
           </div>
         </div>
       )}
 
       {/* --------------------------------------------------------------------- */}
-      {/* TẦNG 2: ACTIVATION PROVENANCE (PROPERTY GRID NEUTRAL STYLE)           */}
+      {/* LEVEL 2: ACTIVATION PROVENANCE (ACTIVATION PROVENANCE CONFIDENCE)     */}
       {/* --------------------------------------------------------------------- */}
       {report && report.provenance && (
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
@@ -299,9 +323,13 @@ export default function OfficeLicenseAnalyzer() {
             <div className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
               <Zap className="w-4 h-4 text-blue-600" /> THÔNG TIN NGUỒN GỐC KÍCH HOẠT (ACTIVATION PROVENANCE)
             </div>
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-slate-100 text-slate-700 border border-slate-200">
-              Độ tin cậy: {report.provenance.confidence}%
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] font-bold px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded">LEVEL 2</span>
+              <span className="px-2.5 py-0.5 rounded text-[10px] font-bold font-mono bg-blue-50 text-blue-800 border border-blue-200 flex items-center">
+                Activation Confidence: {report.provenance.confidence}%
+                {renderTooltipIcon('ActivationConfidence')}
+              </span>
+            </div>
           </div>
 
           {/* PROPERTY GRID 5 FIELDS */}
@@ -325,7 +353,10 @@ export default function OfficeLicenseAnalyzer() {
             </div>
 
             <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-              <span className="text-[10px] font-bold text-slate-400 block uppercase">Độ tin cậy</span>
+              <span className="text-[10px] font-bold text-slate-400 block uppercase flex items-center">
+                ĐỘ TIN CẬY
+                {renderTooltipIcon('ActivationConfidence')}
+              </span>
               <span className="font-bold text-blue-700 text-xs mt-1 block">{report.provenance.confidence}%</span>
             </div>
           </div>
@@ -399,7 +430,7 @@ export default function OfficeLicenseAnalyzer() {
       )}
 
       {/* --------------------------------------------------------------------- */}
-      {/* TẦNG 3: DETAILED DIAGNOSTICS & AUDIT TOOLS TABS                       */}
+      {/* LEVEL 3: DETAILED DIAGNOSTICS & AUDIT TOOLS TABS                       */}
       {/* --------------------------------------------------------------------- */}
       {report && (
         <div className="space-y-3">
@@ -439,7 +470,7 @@ export default function OfficeLicenseAnalyzer() {
               <div className="space-y-3">
                 <div className="font-bold text-slate-900 text-xs flex items-center justify-between border-b border-slate-100 pb-2">
                   <span className="flex items-center gap-2"><FileCheck2 className="w-4 h-4 text-blue-600" /> MA TRẬN CHẨN ĐOÁN ĐA BẰNG CHỨNG:</span>
-                  <span className="text-[11px] text-slate-400 font-normal">Trọng số độ tin cậy toán học</span>
+                  <span className="text-[11px] text-slate-400 font-normal">Trọng số System Diagnostic Confidence</span>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
@@ -518,7 +549,7 @@ export default function OfficeLicenseAnalyzer() {
               </div>
             )}
 
-            {/* Tab 3: Audit Logs with Filters & Copy/Export Tools */}
+            {/* Tab 3: Audit Logs */}
             {activeTab === 'audit' && (
               <div className="space-y-3">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-100 pb-2">
@@ -526,7 +557,6 @@ export default function OfficeLicenseAnalyzer() {
                     <Activity className="w-4 h-4 text-blue-600" /> NHẬT KÝ KIỂM TOÁN TỈ MỈ (EVIDENCE AUDIT LOGS):
                   </div>
                   
-                  {/* LOG TOOLS: FILTER & COPY & EXPORT */}
                   <div className="flex items-center gap-2 text-xs">
                     <div className="flex items-center gap-1 bg-slate-100 px-2 py-1 rounded border border-slate-200">
                       <Filter className="w-3 h-3 text-slate-500" />
@@ -587,12 +617,12 @@ export default function OfficeLicenseAnalyzer() {
                 <div className="grid grid-cols-2 gap-3 text-xs font-mono">
                   <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
                     <div className="font-bold text-slate-700 mb-1">TRƯỚC KHÔI PHỤC (BEFORE)</div>
-                    <div>Confidence: <span className="font-bold text-slate-900">{restoreResult.postRestoreReport.before.confidence}%</span></div>
+                    <div>System Confidence: <span className="font-bold text-slate-900">{restoreResult.postRestoreReport.before.confidence}%</span></div>
                     <div>Decision: <span className="font-bold text-slate-900">{restoreResult.postRestoreReport.before.decision}</span></div>
                   </div>
                   <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-200">
                     <div className="font-bold text-emerald-800 mb-1">SAU KHÔI PHỤC (AFTER)</div>
-                    <div>Confidence: <span className="font-bold text-emerald-700">{restoreResult.postRestoreReport.after.confidence}%</span></div>
+                    <div>System Confidence: <span className="font-bold text-emerald-700">{restoreResult.postRestoreReport.after.confidence}%</span></div>
                     <div>Decision: <span className="font-bold text-emerald-700">{restoreResult.postRestoreReport.after.decision}</span></div>
                   </div>
                 </div>
