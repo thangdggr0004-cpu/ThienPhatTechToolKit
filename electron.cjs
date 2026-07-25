@@ -2232,6 +2232,7 @@ Write-Output "OK"
     try {
       const localCmd = getMasCmdPath();
       const hasLocalCmd = !!localCmd;
+      const masUserRepoUrl = 'https://raw.githubusercontent.com/thangdggr0004-cpu/ThienPhatTechToolKit/main/MAS_AIO.cmd';
       const masOfficialUrl = 'https://raw.githubusercontent.com/massgravel/Microsoft-Activation-Scripts/master/MAS/All-In-One-Version-KL/MAS_AIO.cmd';
 
       // Robust online downloader & runner for MAS AIO
@@ -2244,11 +2245,15 @@ Write-Output "OK"
           if (-not (Test-Path $dest) -or (Get-Item $dest).Length -lt 10000) {
               try {
                   [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-                  Invoke-WebRequest -Uri '${masOfficialUrl}' -OutFile $dest -UseBasicParsing -ErrorAction Stop
+                  Invoke-WebRequest -Uri '${masUserRepoUrl}' -OutFile $dest -UseBasicParsing -ErrorAction Stop
               } catch {
-                  # Fallback to direct PowerShell MAS loader if raw URL fails
-                  Start-Process powershell.exe -ArgumentList '-NoProfile -ExecutionPolicy Bypass -Command "iwr -useb https://get.activated.win | iex"' -Verb RunAs
-                  return
+                  try {
+                      Invoke-WebRequest -Uri '${masOfficialUrl}' -OutFile $dest -UseBasicParsing -ErrorAction Stop
+                  } catch {
+                      # Fallback to direct PowerShell MAS loader if raw URLs fail
+                      Start-Process powershell.exe -ArgumentList '-NoProfile -ExecutionPolicy Bypass -Command "iwr -useb https://get.activated.win | iex"' -Verb RunAs
+                      return
+                  }
               }
           }
           
