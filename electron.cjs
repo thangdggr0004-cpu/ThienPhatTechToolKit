@@ -1550,7 +1550,12 @@ powercfg /setactive e9a42b02-d5df-448d-aa00-03f14749eb61
             $report.layers.l8_evidenceEvaluation.verdict = "Genuine"
             $report.layers.l8_evidenceEvaluation.confidenceLevel = "High"
             $report.hasIssues = $false
-            $report.summary = "Hệ thống Office hoàn toàn sạch sẽ & nguyên bản của Microsoft."
+            $licText = $report.layers.l2_licenseDetection.licenseStatusText
+            if ($licText -and ($licText -match "LICENSED" -and $licText -notmatch "UNLICENSED")) {
+                $report.summary = "Hệ thống Office hoàn toàn sạch sẽ & nguyên bản của Microsoft (Đã kích hoạt bản quyền hợp lệ)."
+            } else {
+                $report.summary = "Hệ thống Office hoàn toàn sạch sẽ & nguyên bản của Microsoft (Trạng thái: CHƯA KÍCH HOẠT BẢN QUYỀN / UNLICENSED)."
+            }
         }
 
         return $report | ConvertTo-Json -Depth 6

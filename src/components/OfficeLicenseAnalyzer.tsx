@@ -239,11 +239,15 @@ export default function OfficeLicenseAnalyzer() {
           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 font-mono text-xs text-slate-700 min-h-[160px]">
             {activeLayerTab === 8 && (
               <div className="space-y-3">
-                <div className="font-bold text-blue-700 flex items-center gap-2 text-sm">
-                  <Activity className="w-4 h-4 text-blue-600" /> KẾT LUẬN CUỐI CÙNG: {report?.summary}
+                <div className="font-bold text-blue-700 flex items-center gap-2 text-sm leading-relaxed">
+                  <Activity className="w-4 h-4 text-blue-600 shrink-0" /> KẾT LUẬN CUỐI CÙNG: {report?.summary}
                 </div>
-                <div className="text-slate-600 text-xs">
-                  Mức độ tin cậy: <span className="text-amber-700 font-bold">{evalState?.confidenceLevel || 'InsufficientData'}</span> | Risk Score: <span className="text-red-600 font-bold">{evalState?.riskScore || 0}</span>
+                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600">
+                  <div>Mức độ tin cậy: <span className="text-amber-700 font-bold">{evalState?.confidenceLevel || 'InsufficientData'}</span></div>
+                  <div>|</div>
+                  <div>Risk Score: <span className="text-red-600 font-bold">{evalState?.riskScore || 0}</span></div>
+                  <div>|</div>
+                  <div>Trạng thái bản quyền: <span className={`font-bold ${report?.layers?.l2_licenseDetection?.licenseStatusText?.includes('LICENSED') && !report?.layers?.l2_licenseDetection?.licenseStatusText?.includes('UNLICENSED') ? 'text-emerald-700' : 'text-amber-700'}`}>{report?.layers?.l2_licenseDetection?.licenseStatusText || 'N/A'}</span></div>
                 </div>
                 <div className="border-t border-slate-200 pt-2">
                   <div className="font-bold text-slate-800 mb-1">CÁC BẰNG CHỨNG THU THẬP ĐƯỢC ({evalState?.evidences?.length || 0}):</div>
