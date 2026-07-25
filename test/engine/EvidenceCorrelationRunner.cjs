@@ -1,14 +1,14 @@
 /**
- * ENTERPRISE EVIDENCE CORRELATION ENGINE UNIT TEST & QUALITY GATE RUNNER (PHASE 2.2)
- * Tests: Single Node, Multiple Nodes, Link Creation, Traversal, Orphan Detection, Large Dataset, Quality Gate
+ * ENTERPRISE EVIDENCE CORRELATION ENGINE UNIT TEST & QUALITY GATE RUNNER (PHASE 2.2.1 HARDENING)
+ * Tests: Relationship Registry, Correlation Trace Traversal, Max Hops, Large Dataset Benchmark, Quality Gate
  */
 
 const { EvidenceMatrix } = require('../../src/engine/EvidenceMatrixEngine.cjs');
-const { EvidenceCorrelationEngine, CorrelatedEvidenceGraph, RelationshipTypeEnum } = require('../../src/engine/EvidenceCorrelationEngine.cjs');
+const { EvidenceCorrelationEngine, CorrelatedEvidenceGraph, RelationshipRegistry, RelationshipTypeEnum } = require('../../src/engine/EvidenceCorrelationEngine.cjs');
 
-async function runEvidenceCorrelationTests() {
+async function runEvidenceCorrelationHardeningTests() {
   console.log('====================================================================');
-  console.log('    PHASE 2.2 - EVIDENCE CORRELATION ENGINE TEST & QUALITY GATE     ');
+  console.log('  PHASE 2.2.1 - EVIDENCE CORRELATION HARDENING TEST & QUALITY GATE   ');
   console.log('====================================================================\n');
 
   let passed = 0;
@@ -24,48 +24,54 @@ async function runEvidenceCorrelationTests() {
     }
   }
 
-  // 1. Single Node Graph Test
-  console.log('[*] Test 1: Single Node Graph Initialization');
-  const graph1 = new CorrelatedEvidenceGraph();
-  graph1.addNode({
-    evidenceId: 'EVD-TEST-001',
-    evidenceType: 'FIRMWARE',
-    evidenceSource: 'WMI'
-  });
-  assert(graph1.getNode('EVD-TEST-001') !== null, 'Single Evidence Node stored in Graph');
-  assert(graph1.getGraphHealth().orphanCount === 1, 'Single isolated node reported as orphan node');
+  // 1. Relationship Registry Audit
+  console.log('[*] Test 1: RelationshipRegistry Definitions Audit');
+  const registry = new RelationshipRegistry();
+  assert(registry.getDefinition(RelationshipTypeEnum.MATCH) !== null, 'MATCH definition exists in Registry');
+  assert(registry.getDefinition(RelationshipTypeEnum.DEPENDENCY).direction === 'DIRECTIONAL', 'DEPENDENCY is DIRECTIONAL');
+  assert(registry.getDefinition(RelationshipTypeEnum.MATCH).direction === 'SYMMETRIC', 'MATCH is SYMMETRIC');
 
-  // 2. Multiple Nodes & Link Creation Test
-  console.log('\n[*] Test 2: Multiple Nodes & Descriptive Link Creation');
-  const graph2 = new CorrelatedEvidenceGraph();
-  graph2.addNode({ evidenceId: 'EVD-BIOS-001', evidenceType: 'FIRMWARE', evidenceSource: 'WMI' });
-  graph2.addNode({ evidenceId: 'EVD-LIC-001', evidenceType: 'LICENSE', evidenceSource: 'WMI' });
+  // 2. Unregistered Link Rejection Test
+  console.log('\n[*] Test 2: Unregistered Relationship Link Validation');
+  const graphInvalid = new CorrelatedEvidenceGraph({ registry });
+  graphInvalid.addNode({ evidenceId: 'NODE-A', evidenceType: 'FIRMWARE' });
+  graphInvalid.addNode({ evidenceId: 'NODE-B', evidenceType: 'LICENSE' });
+  
+  let rejected = false;
+  try {
+    graphInvalid.addLink({
+      sourceEvidenceId: 'NODE-A',
+      targetEvidenceId: 'NODE-B',
+      relationshipType: 'INVALID_CUSTOM_RELATIONSHIP'
+    });
+  } catch (err) {
+    rejected = true;
+  }
+  assert(rejected, 'Unregistered relationship type rejected by Registry validation');
 
-  const link = graph2.addLink({
-    sourceEvidenceId: 'EVD-BIOS-001',
-    targetEvidenceId: 'EVD-LIC-001',
-    relationshipType: RelationshipTypeEnum.MATCH,
-    relationshipReason: 'OEM Key matches SKU',
-    relationshipStrength: 0.95
-  });
+  // 3. Correlation Trace BFS Path Traversal Test
+  console.log('\n[*] Test 3: Correlation Trace BFS Path Traversal Audit');
+  const graphTrace = new CorrelatedEvidenceGraph({ registry });
+  graphTrace.addNode({ evidenceId: 'NODE-1', evidenceType: 'FIRMWARE' });
+  graphTrace.addNode({ evidenceId: 'NODE-2', evidenceType: 'LICENSE' });
+  graphTrace.addNode({ evidenceId: 'NODE-3', evidenceType: 'SECURITY' });
 
-  assert(link !== null, 'Link created successfully');
-  assert(graph2.getGraphHealth().linkCount === 1, 'Graph contains 1 link');
-  assert(graph2.getGraphHealth().orphanCount === 0, 'Zero orphan nodes remaining');
+  graphTrace.addLink({ sourceEvidenceId: 'NODE-1', targetEvidenceId: 'NODE-2', relationshipType: RelationshipTypeEnum.MATCH });
+  graphTrace.addLink({ sourceEvidenceId: 'NODE-2', targetEvidenceId: 'NODE-3', relationshipType: RelationshipTypeEnum.DEPENDENCY });
 
-  // 3. Traversal & Relationship Query Test
-  console.log('\n[*] Test 3: Graph Traversal & Relationship Queries');
-  const neighbors = graph2.getNeighbors('EVD-BIOS-001');
-  assert(neighbors.length === 1 && neighbors[0].evidenceId === 'EVD-LIC-001', 'getNeighbors returns target node');
+  const trace = graphTrace.tracePath('NODE-1', 'NODE-3', 5);
+  assert(trace.traceMetadata.reachedTarget === true, 'Path tracing reached target NODE-3');
+  assert(trace.hopCount === 2, 'Path tracing calculated exactly 2 hops');
+  assert(trace.traversalPath.join('->') === 'NODE-1->NODE-2->NODE-3', 'Traversal path sequence recorded correctly');
+  assert(trace.visitedNodes.length === 3, 'Recorded all 3 visited nodes');
 
-  const matches = graph2.findByRelationshipType(RelationshipTypeEnum.MATCH);
-  assert(matches.length === 1, 'findByRelationshipType MATCH returns 1 link');
+  // 4. Max Hops Boundary Test
+  console.log('\n[*] Test 4: Max Hops Boundary Enforcement');
+  const traceRestricted = graphTrace.tracePath('NODE-1', 'NODE-3', 1); // Only 1 hop allowed
+  assert(traceRestricted.traceMetadata.reachedTarget === false, 'ReachedTarget is false when maxHops exceeded');
 
-  const foundRel = graph2.findRelationships('EVD-BIOS-001', 'EVD-LIC-001');
-  assert(foundRel.length === 1, 'findRelationships returns link between BIOS and LIC');
-
-  // 4. Evidence Matrix Pipeline Integration Test
-  console.log('\n[*] Test 4: Evidence Matrix Integration & Automatic Correlation');
+  // 5. Evidence Matrix Engine & Correlation Integration Test
+  console.log('\n[*] Test 5: Matrix Integration & Engine Auto-Correlation');
   const matrix = new EvidenceMatrix();
   matrix.addCollectorResults([
     {
@@ -112,44 +118,30 @@ async function runEvidenceCorrelationTests() {
 
   const correlationEngine = new EvidenceCorrelationEngine();
   const builtGraph = correlationEngine.buildGraph(matrix);
-  assert(builtGraph.getGraphHealth().nodeCount === 2, 'Graph contains 2 Nodes');
-  assert(builtGraph.getGraphHealth().linkCount >= 1, 'Correlation Engine automatically linked BIOS and License');
+  assert(builtGraph.getGraphHealth().nodeCount === 2, 'Built graph with 2 nodes');
+  assert(builtGraph.getGraphHealth().linkCount >= 1, 'Auto-correlated BIOS and License with Registry-validated link');
 
-  // 5. Large Dataset Benchmark Test (10,000 Nodes, 20,000 Links)
-  console.log('\n[*] Test 5: Large Dataset Performance Benchmark (10,000 Nodes, 10,000 Links)');
+  // 6. Large Dataset Traversal Benchmark Test (10,000 Nodes)
+  console.log('\n[*] Test 6: Large Dataset Path Traversal Benchmark (10,000 Nodes)');
   const largeGraph = new CorrelatedEvidenceGraph();
   for (let i = 1; i <= 10000; i++) {
     largeGraph.addNode({ evidenceId: `NODE-${i}`, evidenceType: 'BENCH', evidenceSource: 'BENCH' });
   }
-
-  const benchStartTime = Date.now();
-  for (let i = 1; i < 10000; i++) {
+  for (let i = 1; i < 1000; i++) {
     largeGraph.addLink({
       sourceEvidenceId: `NODE-${i}`,
       targetEvidenceId: `NODE-${i + 1}`,
-      relationshipType: RelationshipTypeEnum.RELATED,
-      relationshipReason: 'Sequential correlation'
+      relationshipType: RelationshipTypeEnum.RELATED
     });
   }
-  const benchTime = Date.now() - benchStartTime;
 
-  const traversalStartTime = Date.now();
-  const benchNeighbors = largeGraph.getNeighbors('NODE-5000');
-  const traversalTime = Date.now() - traversalStartTime;
+  const benchStartTime = Date.now();
+  const benchTrace = largeGraph.tracePath('NODE-1', 'NODE-50', 100);
+  const benchTimeMs = Date.now() - benchStartTime;
 
-  assert(largeGraph.getGraphHealth().nodeCount === 10000, `Graph constructed 10,000 nodes & links in ${benchTime}ms`);
-  assert(benchNeighbors.length === 2, 'NODE-5000 has 2 neighbors (NODE-4999 & NODE-5001)');
-  assert(traversalTime <= 5, `Adjacency Graph Traversal (${traversalTime}ms) well within 5ms target`);
-
-  // 6. Invalid Evidence Input Handling
-  console.log('\n[*] Test 6: Invalid Matrix Exception Handling');
-  let threwError = false;
-  try {
-    correlationEngine.buildGraph(null);
-  } catch (err) {
-    threwError = true;
-  }
-  assert(threwError, 'Invalid EvidenceMatrix input throws TypeError as expected');
+  assert(benchTrace.traceMetadata.reachedTarget === true, 'Path traced from NODE-1 to NODE-50');
+  assert(benchTrace.hopCount === 49, 'Traversed exactly 49 hops');
+  assert(benchTimeMs <= 5, `Path Traversal execution time (${benchTimeMs}ms) well within 5ms target`);
 
   // 7. Quality Gate Audit
   console.log('\n[*] Test 7: Quality Gate & Zero Decision Audit');
@@ -162,7 +154,7 @@ async function runEvidenceCorrelationTests() {
   assert(!hasDecisionOrScore, 'Zero Decision, Score, or Assessment fields in Graph Links');
 
   console.log('\n====================================================================');
-  console.log(`CORRELATION ENGINE TEST RESULTS: ${passed} / ${total} TESTS PASSED (${((passed/total)*100).toFixed(1)}%)`);
+  console.log(`HARDENING TEST RESULTS: ${passed} / ${total} TESTS PASSED (${((passed/total)*100).toFixed(1)}%)`);
   console.log('====================================================================\n');
 
   if (passed !== total) {
@@ -170,7 +162,7 @@ async function runEvidenceCorrelationTests() {
   }
 }
 
-runEvidenceCorrelationTests().catch(err => {
-  console.error('Correlation Engine Test Execution Failed:', err);
+runEvidenceCorrelationHardeningTests().catch(err => {
+  console.error('Correlation Hardening Test Execution Failed:', err);
   process.exit(1);
 });

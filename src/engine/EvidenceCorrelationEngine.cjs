@@ -1,23 +1,128 @@
 /**
- * ENTERPRISE EVIDENCE CORRELATION ENGINE V1.0 (PHASE 2.2)
- * Category: DIAGNOSTIC ENGINE | Module 2
- * Description: Reads EvidenceMatrix and builds a Correlated Evidence Graph with Nodes, Links, and Descriptive Relationship Types.
+ * ENTERPRISE EVIDENCE CORRELATION ENGINE V1.1 (PHASE 2.2.1 HARDENING)
+ * Category: DIAGNOSTIC ENGINE | Module 2 Hardened
+ * Description: Production-ready Evidence Correlation Engine with Relationship Registry and Correlation Trace Path Traversal.
  * STRICTLY NO DECISION, NO CONFIDENCE, NO ASSESSMENT, NO RECOMMENDATION, NO EXPLANATION.
- * READ-ONLY INTERACTION WITH EVIDENCE MATRIX.
  */
 
 const RelationshipTypeEnum = Object.freeze({
   MATCH: 'MATCH',                           // Technical parity between evidence items
   PARTIAL_MATCH: 'PARTIAL_MATCH',           // Partial key or sub-component match
-  RELATED: 'RELATED',                       // Domain/functional relationship (e.g., SPP service to Token Store)
-  CONFLICT: 'CONFLICT',                     // Discrepancy between evidence items (e.g., KMS host set while OEM key in BIOS)
-  DEPENDENCY: 'DEPENDENCY',                 // Functional dependency (e.g., Authenticode trust depends on DLL file)
+  RELATED: 'RELATED',                       // Domain/functional relationship
+  CONFLICT: 'CONFLICT',                     // Discrepancy between evidence items
+  DEPENDENCY: 'DEPENDENCY',                 // Functional dependency
   MISSING_REFERENCE: 'MISSING_REFERENCE'    // Reference configured but target component absent
 });
 
+class RelationshipRegistry {
+  constructor() {
+    this.registryVersion = '1.0.0';
+    this.definitions = new Map();
+    this._initializeDefaultDefinitions();
+  }
+
+  _initializeDefaultDefinitions() {
+    const defaultDefs = [
+      {
+        relationshipId: RelationshipTypeEnum.MATCH,
+        version: '1.0.0',
+        description: 'Technical parity between two evidence items',
+        allowedSourceTypes: ['FIRMWARE', 'LICENSE', 'SECURITY', 'REGISTRY', 'SERVICE', 'ENVIRONMENT', '*'],
+        allowedTargetTypes: ['FIRMWARE', 'LICENSE', 'SECURITY', 'REGISTRY', 'SERVICE', 'ENVIRONMENT', '*'],
+        direction: 'SYMMETRIC',
+        metadataSchema: { required: [], optional: ['biosChannel', 'licChannel'] }
+      },
+      {
+        relationshipId: RelationshipTypeEnum.PARTIAL_MATCH,
+        version: '1.0.0',
+        description: 'Partial key or component match between evidence items',
+        allowedSourceTypes: ['*'],
+        allowedTargetTypes: ['*'],
+        direction: 'SYMMETRIC',
+        metadataSchema: { required: [], optional: ['matchedKeyFragment'] }
+      },
+      {
+        relationshipId: RelationshipTypeEnum.RELATED,
+        version: '1.0.0',
+        description: 'Functional domain relationship between evidence items',
+        allowedSourceTypes: ['*'],
+        allowedTargetTypes: ['*'],
+        direction: 'DIRECTIONAL',
+        metadataSchema: { required: [], optional: ['tokenStorePath'] }
+      },
+      {
+        relationshipId: RelationshipTypeEnum.CONFLICT,
+        version: '1.0.0',
+        description: 'Discrepancy between evidence items',
+        allowedSourceTypes: ['*'],
+        allowedTargetTypes: ['*'],
+        direction: 'SYMMETRIC',
+        metadataSchema: { required: [], optional: ['conflictReason'] }
+      },
+      {
+        relationshipId: RelationshipTypeEnum.DEPENDENCY,
+        version: '1.0.0',
+        description: 'Functional dependency of one evidence item on another',
+        allowedSourceTypes: ['*'],
+        allowedTargetTypes: ['*'],
+        direction: 'DIRECTIONAL',
+        metadataSchema: { required: [], optional: ['signatureStatus', 'serviceName'] }
+      },
+      {
+        relationshipId: RelationshipTypeEnum.MISSING_REFERENCE,
+        version: '1.0.0',
+        description: 'Reference configured but target component absent',
+        allowedSourceTypes: ['*'],
+        allowedTargetTypes: ['*'],
+        direction: 'DIRECTIONAL',
+        metadataSchema: { required: [], optional: ['missingTarget'] }
+      }
+    ];
+
+    defaultDefs.forEach(def => this.registerDefinition(def));
+  }
+
+  registerDefinition(def) {
+    if (!def || !def.relationshipId) {
+      throw new TypeError('Invalid Relationship Definition.');
+    }
+    const validated = Object.freeze({
+      relationshipId: def.relationshipId,
+      version: def.version || '1.0.0',
+      description: def.description || 'Standard Relationship',
+      allowedSourceTypes: Array.isArray(def.allowedSourceTypes) ? [...def.allowedSourceTypes] : ['*'],
+      allowedTargetTypes: Array.isArray(def.allowedTargetTypes) ? [...def.allowedTargetTypes] : ['*'],
+      direction: def.direction === 'SYMMETRIC' ? 'SYMMETRIC' : 'DIRECTIONAL',
+      metadataSchema: Object.freeze(def.metadataSchema || { required: [], optional: [] })
+    });
+    this.definitions.set(def.relationshipId, validated);
+  }
+
+  getDefinition(relationshipId) {
+    return this.definitions.get(relationshipId) || null;
+  }
+
+  validateLink(sourceNode, targetNode, relationshipType) {
+    const def = this.getDefinition(relationshipType);
+    if (!def) return { valid: false, reason: `Unregistered RelationshipType [${relationshipType}]` };
+
+    const srcType = sourceNode.evidenceType || 'GENERIC';
+    const tgtType = targetNode.evidenceType || 'GENERIC';
+
+    const srcAllowed = def.allowedSourceTypes.includes('*') || def.allowedSourceTypes.includes(srcType);
+    const tgtAllowed = def.allowedTargetTypes.includes('*') || def.allowedTargetTypes.includes(tgtType);
+
+    if (!srcAllowed || !tgtAllowed) {
+      return { valid: false, reason: `Type mismatch for relationship ${relationshipType}` };
+    }
+
+    return { valid: true, definition: def };
+  }
+}
+
 class CorrelatedEvidenceGraph {
   constructor(options = {}) {
-    this.graphVersion = '1.0.0';
+    this.graphVersion = '1.1.0';
     this.nodes = new Map();              // Map<evidenceId, { evidenceId, evidenceItem }>()
     this.links = [];                     // Array<EvidenceLink>
     
@@ -25,6 +130,7 @@ class CorrelatedEvidenceGraph {
     this.adjacencyMap = new Map();       // Map<evidenceId, EvidenceLink[]>()
     this.typeIndex = new Map();          // Map<relationshipType, EvidenceLink[]>()
 
+    this.registry = options.registry || new RelationshipRegistry();
     this.createdTime = new Date().toISOString();
   }
 
@@ -37,18 +143,25 @@ class CorrelatedEvidenceGraph {
         evidenceId: id,
         evidenceType: evidenceItem.evidenceType,
         evidenceSource: evidenceItem.evidenceSource,
-        evidenceItem: Object.freeze(evidenceItem) // Read-only reference
+        evidenceItem: Object.freeze(evidenceItem)
       }));
       this.adjacencyMap.set(id, []);
     }
   }
 
   /**
-   * Creates a descriptive directional link between two Evidence Nodes
+   * Creates a descriptive directional/symmetric link between two Evidence Nodes with Registry Validation
    */
   addLink({ sourceEvidenceId, targetEvidenceId, relationshipType, relationshipReason, relationshipStrength = 1.0, relationshipMetadata = {} }) {
-    if (!this.nodes.has(sourceEvidenceId) || !this.nodes.has(targetEvidenceId)) {
-      return null;
+    const srcNode = this.nodes.get(sourceEvidenceId);
+    const tgtNode = this.nodes.get(targetEvidenceId);
+
+    if (!srcNode || !tgtNode) return null;
+
+    // Registry Validation
+    const validation = this.registry.validateLink(srcNode, tgtNode, relationshipType);
+    if (!validation.valid) {
+      throw new Error(`Link validation failed: ${validation.reason}`);
     }
 
     const linkId = `LINK-${sourceEvidenceId}->${targetEvidenceId}-${relationshipType}`;
@@ -67,13 +180,14 @@ class CorrelatedEvidenceGraph {
       relationshipReason: relationshipReason || 'Technical correlation established',
       relationshipStrength: Math.min(Math.max(relationshipStrength, 0.0), 1.0),
       relationshipMetadata: Object.freeze({ ...relationshipMetadata }),
+      direction: validation.definition.direction,
       timestamp: new Date().toISOString()
     });
 
     this.links.push(link);
     this.adjacencyMap.get(sourceEvidenceId).push(link);
 
-    // Also index target for bidirectional neighbor lookup
+    // If Symmetric or for bidirectional traversal lookup, index target node
     if (!this.adjacencyMap.has(targetEvidenceId)) {
       this.adjacencyMap.set(targetEvidenceId, []);
     }
@@ -122,6 +236,84 @@ class CorrelatedEvidenceGraph {
   }
 
   /**
+   * Traces graph path between startEvidenceId and targetEvidenceId (BFS Traversal Trace)
+   * STRICTLY NO INFERENCE / NO DECISION - Path recording only!
+   */
+  tracePath(startEvidenceId, targetEvidenceId, maxHops = 5) {
+    const startTime = Date.now();
+
+    if (!this.nodes.has(startEvidenceId) || !this.nodes.has(targetEvidenceId)) {
+      return {
+        traversalPath: [],
+        hopCount: 0,
+        visitedNodes: [],
+        linksTraversed: [],
+        traceMetadata: { reachedTarget: false, reason: 'Start or target node missing', executionTimeMs: Date.now() - startTime }
+      };
+    }
+
+    if (startEvidenceId === targetEvidenceId) {
+      return {
+        traversalPath: [startEvidenceId],
+        hopCount: 0,
+        visitedNodes: [this.getNode(startEvidenceId)],
+        linksTraversed: [],
+        traceMetadata: { reachedTarget: true, reason: 'Start equals target', executionTimeMs: Date.now() - startTime }
+      };
+    }
+
+    // BFS Traversal
+    const queue = [{ node: startEvidenceId, path: [startEvidenceId], links: [] }];
+    const visited = new Set([startEvidenceId]);
+
+    while (queue.length > 0) {
+      const { node, path, links } = queue.shift();
+
+      if (path.length - 1 >= maxHops) continue;
+
+      const neighborLinks = this.getLinks(node);
+      for (const link of neighborLinks) {
+        const nextNode = link.sourceEvidenceId === node ? link.targetEvidenceId : link.sourceEvidenceId;
+
+        if (nextNode === targetEvidenceId) {
+          const finalPath = [...path, nextNode];
+          const finalLinks = [...links, link];
+          const visitedNodes = finalPath.map(id => this.getNode(id));
+
+          return {
+            traversalPath: finalPath,
+            hopCount: finalLinks.length,
+            visitedNodes,
+            linksTraversed: finalLinks,
+            traceMetadata: {
+              reachedTarget: true,
+              maxHops,
+              executionTimeMs: Date.now() - startTime
+            }
+          };
+        }
+
+        if (!visited.has(nextNode)) {
+          visited.add(nextNode);
+          queue.push({
+            node: nextNode,
+            path: [...path, nextNode],
+            links: [...links, link]
+          });
+        }
+      }
+    }
+
+    return {
+      traversalPath: [],
+      hopCount: 0,
+      visitedNodes: Array.from(visited).map(id => this.getNode(id)),
+      linksTraversed: [],
+      traceMetadata: { reachedTarget: false, maxHops, reason: 'No path found within maxHops', executionTimeMs: Date.now() - startTime }
+    };
+  }
+
+  /**
    * Enterprise Graph Health & Topology Report
    */
   getGraphHealth() {
@@ -148,6 +340,7 @@ class CorrelatedEvidenceGraph {
       orphanCount: orphanEvidence.length,
       orphanEvidence,
       relationshipTypesCount,
+      registryVersion: this.registry.registryVersion,
       indexStats: {
         adjacencyMapSize: this.adjacencyMap.size,
         typeIndexSize: this.typeIndex.size
@@ -161,12 +354,13 @@ class CorrelatedEvidenceGraph {
 }
 
 class EvidenceCorrelationEngine {
-  constructor() {
-    this.engineVersion = '1.0.0';
+  constructor(options = {}) {
+    this.engineVersion = '1.1.0';
+    this.registry = options.registry || new RelationshipRegistry();
   }
 
   /**
-   * Reads EvidenceMatrix and builds a CorrelatedEvidenceGraph
+   * Reads EvidenceMatrix and builds a CorrelatedEvidenceGraph using RelationshipRegistry
    * @param {EvidenceMatrix} evidenceMatrix - Phase 2.1 EvidenceMatrix instance
    */
   buildGraph(evidenceMatrix) {
@@ -174,7 +368,7 @@ class EvidenceCorrelationEngine {
       throw new TypeError('Invalid EvidenceMatrix instance provided to Correlation Engine.');
     }
 
-    const graph = new CorrelatedEvidenceGraph();
+    const graph = new CorrelatedEvidenceGraph({ registry: this.registry });
     const allEvidence = evidenceMatrix.getAllEvidence();
 
     // Step 1: Add all EvidenceItems as Graph Nodes
@@ -182,7 +376,7 @@ class EvidenceCorrelationEngine {
       graph.addNode(item);
     }
 
-    // Step 2: Establish Technical Correlations (Descriptive Only - NO INFERENCE / NO DECISION)
+    // Step 2: Establish Technical Correlations using Registry Definitions (Descriptive Only - NO DECISION)
     const biosItems = evidenceMatrix.getEvidenceByCategory('FIRMWARE');
     const licenseItems = evidenceMatrix.getEvidenceByCategory('LICENSE');
     const authItems = evidenceMatrix.getEvidenceByCategory('SECURITY');
@@ -244,4 +438,4 @@ class EvidenceCorrelationEngine {
   }
 }
 
-module.exports = { EvidenceCorrelationEngine, CorrelatedEvidenceGraph, RelationshipTypeEnum };
+module.exports = { EvidenceCorrelationEngine, CorrelatedEvidenceGraph, RelationshipRegistry, RelationshipTypeEnum };
