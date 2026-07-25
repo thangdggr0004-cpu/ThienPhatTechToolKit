@@ -144,7 +144,7 @@ export default function OfficeLicenseAnalyzer() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-blue-50 text-blue-600 rounded-xl border border-blue-100">
+          <div className="p-3 bg-blue-50 text-blue-600 rounded-xl border border-blue-100 shadow-2xs">
             <Layers className="w-6 h-6" />
           </div>
           <div>
@@ -156,44 +156,44 @@ export default function OfficeLicenseAnalyzer() {
             </p>
           </div>
         </div>
-        <div>
+        <div className="flex flex-col items-start md:items-end gap-1">
           {getVerdictBadge()}
+          <span className="text-[11px] font-mono text-slate-400 mt-1">
+            {report ? `Cập nhật: ${report.timestamp}` : 'Chưa chạy chẩn đoán'}
+          </span>
         </div>
       </div>
 
-      {/* Action Scan & Recovery Buttons */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-200">
-        <div className="text-xs text-slate-500">
-          Trạng thái chẩn đoán: <span className="font-mono font-semibold text-slate-700">{report ? `Hoàn tất lúc ${report.timestamp}` : 'Chưa quét'}</span>
-        </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <button
-            onClick={handleRunScanV2}
-            disabled={isScanning || isRestoring}
-            className="flex-1 sm:flex-none py-2.5 px-4 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2 shadow-sm transition-all active:scale-98 cursor-pointer disabled:opacity-50"
-          >
-            {isScanning ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-            {isScanning ? 'ĐANG PHÂN TÍCH...' : 'CHẨN ĐOÁN V2'}
-          </button>
+      {/* Action Control Buttons Grid - Strictly Bounded */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+        <button
+          onClick={handleRunScanV2}
+          disabled={isScanning || isRestoring}
+          className="w-full py-3 px-4 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.99] cursor-pointer disabled:opacity-50"
+        >
+          {isScanning ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+          {isScanning ? 'ĐANG PHÂN TÍCH 10 TẦNG...' : 'CHẨN ĐOÁN BẢN QUYỀN V2'}
+        </button>
 
-          <button
-            onClick={handleRestoreV2}
-            disabled={isScanning || isRestoring || (verdict !== 'Tampered' && verdict !== 'KMS_Intercepted')}
-            className={`flex-1 sm:flex-none py-2.5 px-4 rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-98 cursor-pointer ${
-              (verdict === 'Tampered' || verdict === 'KMS_Intercepted') && !isRestoring
-                ? 'bg-red-600 hover:bg-red-700 text-white shadow-red-200'
-                : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
-            }`}
-          >
-            {isRestoring ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-            {isRestoring ? 'ĐANG PHỤC HỒI V2...' : 'PHỤC HỒI AN TOÀN V2 (3 LỚP)'}
-          </button>
-        </div>
+        <button
+          onClick={handleRestoreV2}
+          disabled={isScanning || isRestoring || (verdict !== 'Tampered' && verdict !== 'KMS_Intercepted')}
+          className={`w-full py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.99] cursor-pointer ${
+            (verdict === 'Tampered' || verdict === 'KMS_Intercepted') && !isRestoring
+              ? 'bg-red-600 hover:bg-red-700 text-white shadow-red-200 animate-pulse'
+              : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+          }`}
+        >
+          {isRestoring ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+          {isRestoring ? 'ĐANG PHỤC HỒI HỆ THỐNG...' : 'PHỤC HỒI AN TOÀN V2 (3 LỚP)'}
+        </button>
       </div>
 
       {restoreLog && (
-        <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 text-[11px] font-mono text-emerald-400 whitespace-pre-wrap shadow-inner">
-          <div className="font-bold text-emerald-300 mb-1 border-b border-slate-700 pb-1">NHẬT KÝ QUY TRÌNH PHỤC HỒI AN TOÀN V2 &amp; TỰ ĐỘNG NGHIỆM THU:</div>
+        <div className="bg-slate-900 p-3.5 rounded-xl border border-slate-800 text-[11px] font-mono text-emerald-400 whitespace-pre-wrap shadow-inner">
+          <div className="font-bold text-emerald-300 mb-1.5 border-b border-slate-700 pb-1.5 flex items-center gap-2">
+            <Activity className="w-3.5 h-3.5 text-emerald-400" /> NHẬT KÝ QUY TRÌNH PHỤC HỒI AN TOÀN V2 &amp; TỰ ĐỘNG NGHIỆM THU:
+          </div>
           {restoreLog}
         </div>
       )}
