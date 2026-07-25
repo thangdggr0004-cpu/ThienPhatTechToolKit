@@ -902,13 +902,48 @@ class ActivationProvenanceAnalyzer {
       confidence = 90;
     }
 
+    // 4-LEVEL ENTERPRISE PROVENANCE ASSESSMENT ENGINE
+    let provenanceLevel = 'LEVEL_3_SOURCE_REQUIRES_VERIFICATION';
+    let provenanceLevelText = 'CẦN XÁC MINH THÊM NGUỒN KÍCH HOẠT';
+
+    const hasTampering = matrix.some(m => m.status === 'FAIL');
+    const hasWarnings = matrix.some(m => m.status === 'WARNING');
+
+    if (activationMethod === 'Retail Key' || activationMethod === 'Subscription' || activationMethod === 'Digital License') {
+      provenanceLevel = 'LEVEL_1_VERIFIED';
+      provenanceLevelText = 'ĐÃ XÁC MINH (VERIFIED)';
+    } else if (activationMethod === 'Volume MAK' && !hasTampering) {
+      provenanceLevel = 'LEVEL_2_LIKELY_LEGITIMATE';
+      provenanceLevelText = 'RẤT CÓ KHẢ NĂNG HỢP LỆ (LIKELY LEGITIMATE)';
+    } else if (isKmsClient && !hasTampering) {
+      provenanceLevel = 'LEVEL_3_SOURCE_REQUIRES_VERIFICATION';
+      provenanceLevelText = 'CẦN XÁC MINH THÊM NGUỒN KÍCH HOẠT (SOURCE REQUIRES VERIFICATION)';
+      recommendation = 'Nếu cần chứng minh quyền sử dụng hợp lệ, người dùng nên lưu giữ hoặc cung cấp tài liệu cấp phép phù hợp.';
+    } else if (activationStatus === 'UNLICENSED' || hasTampering || confidence < 50) {
+      provenanceLevel = 'LEVEL_4_INSUFFICIENT_EVIDENCE';
+      provenanceLevelText = 'KHÔNG ĐỦ BẰNG CHỨNG (INSUFFICIENT EVIDENCE)';
+    }
+
+    const documentationGuidance = [
+      'Hóa đơn mua máy hoặc Hóa đơn mua giấy phép Office.',
+      'COA (Certificate of Authenticity) hoặc Thẻ chứa Product Key.',
+      'Product Key được Microsoft hoặc đại lý ủy quyền cấp hợp lệ.',
+      'Email xác nhận mua hàng trực tuyến từ Microsoft Store.',
+      'Thông tin Hợp đồng giấy phép Volume (VLSC / M365 Admin Center) của tổ chức.',
+      'Tài khoản Microsoft (MSA / Work Account) gắn với Digital License.'
+    ];
+
     return {
       activationStatus,
       activationMethod,
       activationSource,
       evidenceUsed,
       confidence,
-      recommendation
+      recommendation,
+      kmsHostInfo,
+      provenanceLevel,
+      provenanceLevelText,
+      documentationGuidance
     };
   }
 }

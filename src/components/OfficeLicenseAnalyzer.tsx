@@ -436,6 +436,30 @@ ${(report.matrix || []).map((m: any) => `| ${m.componentName} | **${m.status}** 
             </span>
           </div>
 
+          {/* 4-LEVEL ENTERPRISE PROVENANCE CARD */}
+          <div className="p-3 bg-slate-900 text-white rounded-lg space-y-2 border border-slate-800 font-mono">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-1.5 text-xs">
+              <span className="text-slate-400 font-bold uppercase text-[10px]">Mức Xác Minh Nguồn Gốc (Activation Provenance Level):</span>
+              <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-950 text-blue-300 border border-blue-800">
+                {report.provenance.provenanceLevelText || 'CẦN XÁC MINH THÊM NGUỒN KÍCH HOẠT (LEVEL 3)'}
+              </span>
+            </div>
+
+            <div className="text-[11px] text-slate-300 space-y-1 font-sans">
+              <p>
+                Engine ghi nhận trạng thái: <strong className="text-white">{report.provenance.activationStatus}</strong> ({report.provenance.activationMethod}). Hệ thống không phát hiện các hook bẻ lái hoặc file bị sửa đổi. Tuy nhiên, nếu cần chứng minh quyền sử dụng hợp lệ trước các đợt kiểm tra bản quyền, người dùng nên lưu giữ các chứng từ cấp phép sau:
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-1 text-[10px] text-slate-300 pt-1 border-t border-slate-800/60 font-mono">
+                <div>• Hóa đơn mua máy hoặc giấy phép.</div>
+                <div>• COA (Certificate of Authenticity).</div>
+                <div>• Product Key chính hãng.</div>
+                <div>• Email xác nhận từ Microsoft Store.</div>
+                <div>• Thông tin Hợp đồng Volume (VLSC / M365).</div>
+                <div>• Tài khoản Microsoft Digital License.</div>
+              </div>
+            </div>
+          </div>
+
           {/* PROPERTY GRID 4 FIELDS COMPACT */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-xs font-mono">
             <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
