@@ -478,63 +478,63 @@ export default function LicenseManager() {
 
 
   return (
-    <div className="p-1">
+    <div className="p-1 w-full">
       <header className="mb-6">
         <h1 className="text-xl font-bold text-slate-800">Kiểm tra & Xử lý Bản quyền Windows / Office</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Quy trình quét 8 bước chuyên sâu: thời hạn, kênh cấp phép, KMS host, tệp tin/DLL, tác vụ ngầm, file hosts và Event Logs.
+          Quy trình quét chuyên sâu: thời hạn, kênh cấp phép, KMS host, tệp tin/DLL, tác vụ ngầm, file hosts và Event Logs.
         </p>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="flex border-b border-slate-200">
-            <button
-              onClick={() => { setActiveTab('windows'); setActiveStep(1); }}
-              className={`px-4 py-2 text-sm font-semibold transition-colors ${activeTab === 'windows' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
-            >
-              Bản quyền Windows
-            </button>
-            <button
-              onClick={() => { setActiveTab('office'); setActiveStep(1); }}
-              className={`px-4 py-2 text-sm font-semibold transition-colors ${activeTab === 'office' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
-            >
-              Bản quyền MS Office
-            </button>
-          </div>
+      <div className="w-full space-y-6">
+        <div className="flex border-b border-slate-200">
+          <button
+            onClick={() => { setActiveTab('windows'); setActiveStep(1); }}
+            className={`px-4 py-2 text-sm font-semibold transition-colors ${activeTab === 'windows' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
+          >
+            Bản quyền Windows
+          </button>
+          <button
+            onClick={() => { setActiveTab('office'); setActiveStep(1); }}
+            className={`px-4 py-2 text-sm font-semibold transition-colors ${activeTab === 'office' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
+          >
+            Bản quyền MS Office
+          </button>
+        </div>
 
-          <div className="space-y-6">
-            {activeTab === 'office' ? (
+        <div className="space-y-6 w-full">
+          {activeTab === 'office' ? (
+            <div className="w-full">
               <OfficeLicenseAnalyzer />
-            ) : (
-              <>
-                <MainResultCard />
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <MainResultCard />
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <button onClick={handleStartScan} disabled={isLoading || isResetting || isRestoringOem} className="w-full bg-blue-600 text-white font-bold py-3 px-3 rounded-lg hover:bg-blue-700 transition-colors shadow-sm disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center text-xs">
-                    {isLoading ? <Loader className="animate-spin mr-2 h-4 w-4" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
-                    {isLoading ? 'Đang Quét...' : 'Quét Bản Quyền Windows (8 Bước)'}
-                  </button>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <button onClick={handleStartScan} disabled={isLoading || isResetting || isRestoringOem} className="w-full bg-blue-600 text-white font-bold py-3 px-3 rounded-lg hover:bg-blue-700 transition-colors shadow-sm disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center text-xs">
+                  {isLoading ? <Loader className="animate-spin mr-2 h-4 w-4" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
+                  {isLoading ? 'Đang Quét...' : 'Quét Bản Quyền Windows (8 Bước)'}
+                </button>
 
-                  <button onClick={handleRestoreOemBiosKey} disabled={isLoading || isResetting || isRestoringOem} className="w-full bg-emerald-600 text-white font-bold py-3 px-3 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm disabled:bg-emerald-400 disabled:cursor-not-allowed flex items-center justify-center text-xs">
-                    {isRestoringOem ? <Loader className="animate-spin mr-2 h-4 w-4" /> : <KeyRound className="mr-2 h-4 w-4" />}
-                    {isRestoringOem ? 'Đang Khôi Phục...' : 'Khôi Phục Key Gốc từ BIOS'}
-                  </button>
+                <button onClick={handleRestoreOemBiosKey} disabled={isLoading || isResetting || isRestoringOem} className="w-full bg-emerald-600 text-white font-bold py-3 px-3 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm disabled:bg-emerald-400 disabled:cursor-not-allowed flex items-center justify-center text-xs">
+                  {isRestoringOem ? <Loader className="animate-spin mr-2 h-4 w-4" /> : <KeyRound className="mr-2 h-4 w-4" />}
+                  {isRestoringOem ? 'Đang Khôi Phục...' : 'Khôi Phục Key Gốc từ BIOS'}
+                </button>
 
-                  <button onClick={handleResetActivation} disabled={isLoading || isResetting || isRestoringOem} className="w-full bg-slate-800 text-white font-bold py-3 px-3 rounded-lg hover:bg-slate-900 transition-colors shadow-sm disabled:bg-slate-500 disabled:cursor-not-allowed flex items-center justify-center text-xs">
-                    {isResetting ? <Loader className="animate-spin mr-2 h-4 w-4" /> : <ShieldX className="mr-2 h-4 w-4" />}
-                    {isResetting ? 'Đang Đặt Lại...' : 'Đặt Lại Bản Quyền Windows Gốc'}
-                  </button>
-                </div>
-                
-                {currentScanResult && <div className="grid grid-cols-3 gap-4 text-center">
-                    <div className="bg-emerald-100/60 p-3 rounded-lg"><span className="font-bold text-emerald-700 text-xl">{cleanCount}</span><p className="text-xs text-emerald-600">SẠCH</p></div>
-                    <div className="bg-amber-100/60 p-3 rounded-lg"><span className="font-bold text-amber-700 text-xl">{warningCount}</span><p className="text-xs text-amber-600">CẢNH BÁO</p></div>
-                    <div className="bg-red-100/60 p-3 rounded-lg"><span className="font-bold text-red-700 text-xl">{dangerCount}</span><p className="text-xs text-red-600">NGUY HIỂM</p></div>
-                </div>}
-              </>
-            )}
-          </div>
+                <button onClick={handleResetActivation} disabled={isLoading || isResetting || isRestoringOem} className="w-full bg-slate-800 text-white font-bold py-3 px-3 rounded-lg hover:bg-slate-900 transition-colors shadow-sm disabled:bg-slate-500 disabled:cursor-not-allowed flex items-center justify-center text-xs">
+                  {isResetting ? <Loader className="animate-spin mr-2 h-4 w-4" /> : <ShieldX className="mr-2 h-4 w-4" />}
+                  {isResetting ? 'Đang Đặt Lại...' : 'Đặt Lại Bản Quyền Windows Gốc'}
+                </button>
+              </div>
+              
+              {currentScanResult && <div className="grid grid-cols-3 gap-4 text-center">
+                  <div className="bg-emerald-100/60 p-3 rounded-lg"><span className="font-bold text-emerald-700 text-xl">{cleanCount}</span><p className="text-xs text-emerald-600">SẠCH</p></div>
+                  <div className="bg-amber-100/60 p-3 rounded-lg"><span className="font-bold text-amber-700 text-xl">{warningCount}</span><p className="text-xs text-amber-600">CẢNH BÁO</p></div>
+                  <div className="bg-red-100/60 p-3 rounded-lg"><span className="font-bold text-red-700 text-xl">{dangerCount}</span><p className="text-xs text-red-600">NGUY HIỂM</p></div>
+              </div>}
+            </div>
+          )}
         </div>
       </div>
 
