@@ -1,5 +1,5 @@
 /**
- * WIN EVENT COLLECTOR V1.1 (PURE EVIDENCE COLLECTOR)
+ * WIN EVENT COLLECTOR V1.2 (ENTERPRISE DATA MODEL)
  * Category: ENVIRONMENT | Priority: MEDIUM (3)
  * Description: Supporting Evidence Collector reading Microsoft-Windows-Security-SPP Event Log IDs (12288, 12289, 1003, 16384). No decision or confidence logic.
  */
@@ -13,7 +13,7 @@ class WinEventCollector extends BaseCollector {
     super({
       collectorId: 'WinEventCollector',
       collectorName: 'Windows Security-SPP Event Log Collector',
-      version: '1.1.0',
+      version: '1.2.0',
       category: COLLECTOR_CATEGORIES.ENVIRONMENT,
       priority: COLLECTOR_PRIORITIES.MEDIUM,
       timeoutMs: 5000
@@ -21,45 +21,58 @@ class WinEventCollector extends BaseCollector {
 
     this.metadata = {
       collectorName: 'Windows Security-SPP Event Log Collector',
-      collectorVersion: '1.1.0',
+      collectorVersion: '1.2.0',
       author: 'Enterprise Windows Diagnostic Engineering',
       description: 'Gathers supporting event log entries for Security-SPP (Event IDs 12288, 12289, 1003, 16384)',
       category: COLLECTOR_CATEGORIES.ENVIRONMENT,
       priority: COLLECTOR_PRIORITIES.MEDIUM,
-      executionMode: 'READ_ONLY',
       readOnly: true,
+      executionMode: 'READ_ONLY',
       dependencies: [],
-      capability: { powershell: true, wmi: false, winVerifyTrust: false },
-      supportedWindowsVersions: ['Windows 10', 'Windows 11', 'Windows Server 2016+']
+      supportedWindowsVersions: ['Windows 10', 'Windows 11', 'Windows Server 2016+'],
+      capability: { powershell: true, wmi: false, winVerifyTrust: false }
     };
   }
 
   async collect(context = {}) {
+    const collectedTime = new Date().toISOString();
     const rawData = context.rawData || {};
     const sysData = rawData.System || {};
     const eventLogs = sysData.KMSEvents || sysData.SPPEvents || [];
 
-    const eventCount = eventLogs.length;
+    const provider = 'Microsoft-Windows-Security-SPP';
+    const machineName = sysData.MachineName || process.env.COMPUTERNAME || 'LOCAL_HOST';
+
+    const events = eventLogs.map(e => ({
+      provider,
+      eventId: e.EventID || e.eventId || 12288,
+      level: e.Level || 'Information',
+      time: e.TimeCreated || e.timeCreated || collectedTime,
+      message: e.Message || e.message || 'Security-SPP Event Log Entry',
+      machineName
+    }));
 
     const rawEvidence = {
-      eventLogProvider: 'Microsoft-Windows-Security-SPP',
+      provider,
       queriedEventIds: [12288, 12289, 1003, 16384],
-      totalEventsFound: eventCount,
-      events: eventLogs.map(e => ({
-        eventId: e.EventID || e.eventId || 0,
-        timeCreated: e.TimeCreated || e.timeCreated || new Date().toISOString(),
-        message: e.Message || e.message || 'SPP Event Log Entry'
-      }))
+      totalEventsFound: events.length,
+      events,
+      machineName
     };
 
     const evidenceItems = [
       {
-        componentName: 'Nhật Ký Sự Kiện Hệ Thống (Event Log - Security-SPP)',
-        status: 'PASS',
-        dataSource: 'Windows Event Log (Microsoft-Windows-Security-SPP)',
-        details: eventCount > 0
-          ? `Thu thập ${eventCount} bản ghi sự kiện SPP gần nhất (IDs 12288/12289/1003/16384).`
-          : 'Không phát hiện bản ghi sự kiện SPP mới trong nhật ký Application.'
+        evidenceId: 'EVD-WIN-EVT-001',
+        evidenceName: 'Security-SPP Application Event Log Entries',
+        evidenceType: 'ENVIRONMENT',
+        evidenceSource: `Windows Event Log (${provider})`,
+        evidenceValue: rawEvidence,
+        evidenceFormat: 'ARRAY',
+        evidenceStatus: 'RECORDED',
+        collectedTime,
+        collectorVersion: this.version,
+        rawValue: events,
+        normalizedValue: `TotalEvents: ${events.length} | Provider: ${provider} | Machine: ${machineName}`
       }
     ];
 

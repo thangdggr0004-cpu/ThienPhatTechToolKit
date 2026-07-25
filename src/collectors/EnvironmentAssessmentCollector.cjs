@@ -1,7 +1,7 @@
 /**
- * ENVIRONMENT ASSESSMENT COLLECTOR V1.1 (PURE EVIDENCE COLLECTOR)
+ * ENVIRONMENT ASSESSMENT COLLECTOR V1.2 (ENTERPRISE DATA MODEL)
  * Category: ENVIRONMENT | Priority: LOW (4)
- * Description: Gathers environment technical artifacts (Hosts redirects, Scheduled Tasks, Non-standard Services, File entries) without judgmental terms or scoring.
+ * Description: Gathers environment technical artifacts (Hosts redirects, Scheduled Tasks, Custom Services, Non-standard Files, Environment Notes) without judgements or scoring.
  * STRICTLY NO USE OF TERMS: Crack, Pirated, Illegal, Hack, Bypass, Activator.
  */
 
@@ -14,7 +14,7 @@ class EnvironmentAssessmentCollector extends BaseCollector {
     super({
       collectorId: 'EnvironmentAssessmentCollector',
       collectorName: 'Windows Environment Artifacts Collector',
-      version: '1.1.0',
+      version: '1.2.0',
       category: COLLECTOR_CATEGORIES.ENVIRONMENT,
       priority: COLLECTOR_PRIORITIES.LOW,
       timeoutMs: 5000
@@ -22,50 +22,68 @@ class EnvironmentAssessmentCollector extends BaseCollector {
 
     this.metadata = {
       collectorName: 'Windows Environment Artifacts Collector',
-      collectorVersion: '1.1.0',
+      collectorVersion: '1.2.0',
       author: 'Enterprise Windows Diagnostic Engineering',
-      description: 'Gathers environment artifacts (Hosts file redirects, scheduled tasks, non-standard services, binary entries)',
+      description: 'Gathers environment artifacts (Hosts file redirects, scheduled tasks, custom services, non-standard files, environment notes)',
       category: COLLECTOR_CATEGORIES.ENVIRONMENT,
       priority: COLLECTOR_PRIORITIES.LOW,
-      executionMode: 'READ_ONLY',
       readOnly: true,
+      executionMode: 'READ_ONLY',
       dependencies: [],
-      capability: { powershell: true, wmi: false, winVerifyTrust: false },
-      supportedWindowsVersions: ['Windows 10', 'Windows 11', 'Windows Server 2016+']
+      supportedWindowsVersions: ['Windows 10', 'Windows 11', 'Windows Server 2016+'],
+      capability: { powershell: true, wmi: false, winVerifyTrust: false }
     };
   }
 
   async collect(context = {}) {
+    const collectedTime = new Date().toISOString();
     const rawData = context.rawData || {};
     const sysData = rawData.System || {};
 
-    const nonStandardFiles = sysData.NonStandardFiles || sysData.PiratedFiles || [];
+    const hostsRedirects = sysData.HostsRedirects || [];
     const scheduledTasks = sysData.ScheduledTasks || sysData.SuspiciousTasks || [];
     const customServices = sysData.CustomServices || sysData.SuspiciousServices || [];
-    const hostsRedirects = sysData.HostsRedirects || [];
+    const nonStandardFiles = sysData.NonStandardFiles || sysData.PiratedFiles || [];
+    const environmentNotes = sysData.EnvironmentNotes || 'Standard system environment query performed';
 
-    const totalArtifacts = nonStandardFiles.length + scheduledTasks.length + customServices.length + hostsRedirects.length;
+    const totalArtifacts = hostsRedirects.length + scheduledTasks.length + customServices.length + nonStandardFiles.length;
     const hasArtifacts = totalArtifacts > 0;
 
     const rawEvidence = {
-      hostsRedirectsCount: hostsRedirects.length,
-      hostsRedirectsList: hostsRedirects,
-      scheduledTasksCount: scheduledTasks.length,
-      scheduledTasksList: scheduledTasks,
-      customServicesCount: customServices.length,
-      customServicesList: customServices,
-      nonStandardFilesCount: nonStandardFiles.length,
-      nonStandardFilesList: nonStandardFiles
+      hostsRedirects,
+      scheduledTasks,
+      customServices,
+      nonStandardFiles,
+      environmentNotes,
+      totalArtifacts
     };
 
     const evidenceItems = [
       {
-        componentName: 'Thu Thập Môi Trường & Dấu Vết Cấu Hình (Environment Artifacts)',
-        status: hasArtifacts ? 'WARNING' : 'PASS',
-        dataSource: 'System Environment Query (Hosts / Tasks / Services / File System)',
-        details: hasArtifacts
-          ? `Ghi nhận ${totalArtifacts} đặc điểm cấu hình môi trường (Hosts: ${hostsRedirects.length}, Tasks: ${scheduledTasks.length}, Services: ${customServices.length}, Files: ${nonStandardFiles.length})`
-          : 'Cấu hình môi trường hệ thống tiêu chuẩn, không có điều hướng Hosts hoặc tác vụ tùy chỉnh liên quan đến KMS/Licensing.'
+        evidenceId: 'EVD-WIN-ENV-001',
+        evidenceName: 'Hosts File Domain Redirect Entries',
+        evidenceType: 'ENVIRONMENT',
+        evidenceSource: 'FileSystem (%SystemRoot%\\System32\\drivers\\etc\\hosts)',
+        evidenceValue: { hostsRedirects, count: hostsRedirects.length },
+        evidenceFormat: 'ARRAY',
+        evidenceStatus: hostsRedirects.length > 0 ? 'DATA_PRESENT' : 'NOT_CONFIGURED',
+        collectedTime,
+        collectorVersion: this.version,
+        rawValue: hostsRedirects,
+        normalizedValue: `HostsRedirectsCount: ${hostsRedirects.length}`
+      },
+      {
+        evidenceId: 'EVD-WIN-ENV-002',
+        evidenceName: 'System Scheduled Tasks & Custom Services Inspection',
+        evidenceType: 'ENVIRONMENT',
+        evidenceSource: 'Task Scheduler & Service Control Manager',
+        evidenceValue: { scheduledTasks, customServices, nonStandardFiles, environmentNotes },
+        evidenceFormat: 'OBJECT',
+        evidenceStatus: (scheduledTasks.length > 0 || customServices.length > 0 || nonStandardFiles.length > 0) ? 'DATA_PRESENT' : 'NOT_CONFIGURED',
+        collectedTime,
+        collectorVersion: this.version,
+        rawValue: { scheduledTasks, customServices, nonStandardFiles },
+        normalizedValue: `Tasks: ${scheduledTasks.length} | CustomServices: ${customServices.length} | NonStandardFiles: ${nonStandardFiles.length}`
       }
     ];
 

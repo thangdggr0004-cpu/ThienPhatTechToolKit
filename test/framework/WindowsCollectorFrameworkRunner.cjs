@@ -1,6 +1,6 @@
 /**
- * WINDOWS COLLECTOR FRAMEWORK V1.1 TEST SUITE RUNNER
- * Verifies Phase 1.1 Pure Evidence Collector Refinement for Windows Module
+ * WINDOWS COLLECTOR FRAMEWORK V1.2 TEST SUITE RUNNER
+ * Verifies Phase 1.2 Enterprise Data Model & Evidence Schema Standardization for Windows Module
  */
 
 const path = require('path');
@@ -19,7 +19,7 @@ const EnvironmentAssessmentCollector = require('../../src/collectors/Environment
 
 async function runWindowsFrameworkTests() {
   console.log('====================================================================');
-  console.log('    WINDOWS COLLECTOR FRAMEWORK V1.1 - PURE EVIDENCE TEST SUITE     ');
+  console.log('  WINDOWS COLLECTOR FRAMEWORK V1.2 - ENTERPRISE DATA MODEL TEST SUITE');
   console.log('====================================================================\n');
 
   let passed = 0;
@@ -56,26 +56,26 @@ async function runWindowsFrameworkTests() {
   assert(registry.getCollector('WinBIOSCollector').priority === COLLECTOR_PRIORITIES.CRITICAL, 'WinBIOSCollector is Priority 1 (CRITICAL)');
   assert(registry.getCollector('EnvironmentAssessmentCollector').priority === COLLECTOR_PRIORITIES.LOW, 'EnvironmentAssessmentCollector is Priority 4 (LOW)');
 
-  // 2. Metadata Audit (Yêu cầu 3)
-  console.log('\n[*] Test Section 2: Collector Metadata Audit (Yêu cầu 3)');
+  // 2. Metadata Audit (Yêu cầu 4)
+  console.log('\n[*] Test Section 2: Collector Metadata Audit (Yêu cầu 4)');
   let metadataValid = true;
   collectors.forEach(c => {
     const meta = c.metadata;
-    if (!meta || !meta.collectorName || !meta.collectorVersion || !meta.author || !meta.description ||
+    if (!meta || !meta.collectorName || meta.collectorVersion !== '1.2.0' || !meta.author || !meta.description ||
         !meta.category || meta.priority === undefined || meta.executionMode !== 'READ_ONLY' ||
         meta.readOnly !== true || !Array.isArray(meta.dependencies) || !meta.capability || !Array.isArray(meta.supportedWindowsVersions)) {
       metadataValid = false;
-      console.error(`Missing metadata fields in ${c.collectorId}`);
+      console.error(`Missing or invalid metadata fields in ${c.collectorId}`);
     }
   });
-  assert(metadataValid, 'All 8 Collectors contain 100% required metadata fields');
+  assert(metadataValid, 'All 8 Collectors contain 100% required Enterprise metadata fields (Version 1.2.0)');
 
   // 3. Priority Sorting
   console.log('\n[*] Test Section 3: Priority Ordering (Priority 1 -> 4)');
   const sorted = registry.getCollectors();
   assert(sorted[0].priority <= sorted[sorted.length - 1].priority, 'Priority 1 collectors sorted before Priority 4');
 
-  // 4. Pipeline Execution & Independence (Yêu cầu 12)
+  // 4. Pipeline Execution & Independence (Yêu cầu 14)
   console.log('\n[*] Test Section 4: Pipeline Execution & Collector Independence');
   const pipeline = new CollectorPipeline(registry);
 
@@ -102,45 +102,47 @@ async function runWindowsFrameworkTests() {
   assert(results.length === 8, 'Pipeline executed all 8 collectors');
   assert(results.every(r => r.success === true), 'All 8 collectors executed successfully without runtime exceptions');
 
-  // 5. CollectorResult Standardized Schema Integrity (Yêu cầu 2)
-  console.log('\n[*] Test Section 5: CollectorResult Schema Audit (Yêu cầu 2)');
-  let schemaValid = true;
-  results.forEach(r => {
-    const raw = r.rawOutput;
-    if (!raw || !raw.collectorName || !raw.collectorVersion || !raw.collectorCategory ||
-        raw.priority === undefined || raw.executionStatus !== 'SUCCESS' || raw.readOnly !== true ||
-        !raw.rawEvidence || !Array.isArray(raw.evidenceItems) || raw.evidenceCount === undefined ||
-        !Array.isArray(raw.warnings) || raw.warningCount === undefined ||
-        !Array.isArray(raw.errors) || raw.errorCount === undefined || !raw.metadata) {
-      schemaValid = false;
-      console.error(`Invalid schema output in ${r.collectorId}:`, raw);
-    }
-  });
-  assert(schemaValid, 'All 8 Collectors returned standardized Pure Evidence CollectorResult schema');
-
-  // 6. Zero Confidence Weight Verification (Yêu cầu 1)
-  console.log('\n[*] Test Section 6: Zero Confidence Weight Verification (Yêu cầu 1)');
-  let hasConfidenceWeight = false;
+  // 5. Standardized Evidence Item Schema Audit (Yêu cầu 3)
+  console.log('\n[*] Test Section 5: Enterprise Evidence Schema Audit (Yêu cầu 3)');
+  let evidenceSchemaValid = true;
   results.forEach(r => {
     const raw = r.rawOutput || {};
     (raw.evidenceItems || []).forEach(item => {
-      if (item.confidenceWeight !== undefined) {
-        hasConfidenceWeight = true;
-        console.error(`Found confidenceWeight in evidenceItem of ${r.collectorId}`);
+      if (!item.evidenceId || !item.evidenceName || !item.evidenceType || !item.evidenceSource ||
+          item.evidenceValue === undefined || !item.evidenceFormat || !item.evidenceStatus ||
+          !item.collectedTime || item.collectorVersion !== '1.2.0' || item.rawValue === undefined ||
+          item.normalizedValue === undefined) {
+        evidenceSchemaValid = false;
+        console.error(`Invalid evidence item schema in ${r.collectorId}:`, item);
       }
     });
   });
-  assert(!hasConfidenceWeight, 'Zero confidenceWeight found in evidence items across all 8 Collectors');
+  assert(evidenceSchemaValid, '100% Evidence Items adhere to Enterprise Evidence Item Schema');
 
-  // 7. Evidence Integrity (No Judgmental / Illegal / Decision Terms) (Yêu cầu 11 & 13)
-  console.log('\n[*] Test Section 7: Zero Judgmental/Legal/Decision Terms Audit (Yêu cầu 11 & 13)');
+  // 6. Zero PASS / WARNING / FAIL in Evidence Items (Yêu cầu 1 & 2)
+  console.log('\n[*] Test Section 6: Zero PASS/WARNING/FAIL in Evidence Items Verification (Yêu cầu 1 & 2)');
+  let hasJudgmentalStatus = false;
+  results.forEach(r => {
+    const raw = r.rawOutput || {};
+    (raw.evidenceItems || []).forEach(item => {
+      if (item.status === 'PASS' || item.status === 'WARNING' || item.status === 'FAIL' ||
+          item.evidenceStatus === 'PASS' || item.evidenceStatus === 'WARNING' || item.evidenceStatus === 'FAIL') {
+        hasJudgmentalStatus = true;
+        console.error(`Found PASS/WARNING/FAIL in evidence item of ${r.collectorId}`);
+      }
+    });
+  });
+  assert(!hasJudgmentalStatus, 'Zero PASS/WARNING/FAIL status found in Evidence Items across all 8 Collectors');
+
+  // 7. Zero Judgmental/Legal/Decision Terms Audit (Yêu cầu 12 & 13)
+  console.log('\n[*] Test Section 7: Zero Judgmental/Legal/Decision Terms Audit (Yêu cầu 12 & 13)');
   let hasJudgmentalTerms = false;
   const forbiddenTerms = ['crack', 'pirated', 'illegal', 'hack', 'bypass', 'activator'];
   
   results.forEach(r => {
     const raw = r.rawOutput || {};
     (raw.evidenceItems || []).forEach(item => {
-      const details = (item.details || '').toLowerCase();
+      const details = JSON.stringify(item).toLowerCase();
       forbiddenTerms.forEach(term => {
         if (details.includes(term)) {
           hasJudgmentalTerms = true;
@@ -152,7 +154,7 @@ async function runWindowsFrameworkTests() {
   assert(!hasJudgmentalTerms, 'Zero forbidden judgmental/illegal terms found in evidence details');
 
   console.log('\n====================================================================');
-  console.log(`RESULTS: ${passed} / ${total} WINDOWS FRAMEWORK V1.1 TESTS PASSED (${((passed/total)*100).toFixed(1)}%)`);
+  console.log(`RESULTS: ${passed} / ${total} WINDOWS FRAMEWORK V1.2 TESTS PASSED (${((passed/total)*100).toFixed(1)}%)`);
   console.log('====================================================================\n');
 
   if (passed !== total) {

@@ -1,5 +1,5 @@
 /**
- * WIN SERVICE COLLECTOR V1.1 (PURE EVIDENCE COLLECTOR)
+ * WIN SERVICE COLLECTOR V1.2 (ENTERPRISE DATA MODEL)
  * Category: SERVICE | Priority: HIGH (2)
  * Description: Reads Service Control Manager statuses for sppsvc, ClipSVC, and LicenseManager without starting, stopping, restarting, or repairing.
  */
@@ -13,7 +13,7 @@ class WinServiceCollector extends BaseCollector {
     super({
       collectorId: 'WinServiceCollector',
       collectorName: 'Windows Licensing Services Collector',
-      version: '1.1.0',
+      version: '1.2.0',
       category: COLLECTOR_CATEGORIES.SERVICE,
       priority: COLLECTOR_PRIORITIES.HIGH,
       timeoutMs: 5000
@@ -21,20 +21,21 @@ class WinServiceCollector extends BaseCollector {
 
     this.metadata = {
       collectorName: 'Windows Licensing Services Collector',
-      collectorVersion: '1.1.0',
+      collectorVersion: '1.2.0',
       author: 'Enterprise Windows Diagnostic Engineering',
       description: 'Gathers Service Control Manager status evidence for licensing services (sppsvc, ClipSVC, LicenseManager) in READ_ONLY mode',
       category: COLLECTOR_CATEGORIES.SERVICE,
       priority: COLLECTOR_PRIORITIES.HIGH,
-      executionMode: 'READ_ONLY',
       readOnly: true,
+      executionMode: 'READ_ONLY',
       dependencies: [],
-      capability: { powershell: true, wmi: false, winVerifyTrust: false },
-      supportedWindowsVersions: ['Windows 10', 'Windows 11', 'Windows Server 2016+']
+      supportedWindowsVersions: ['Windows 10', 'Windows 11', 'Windows Server 2016+'],
+      capability: { powershell: true, wmi: false, winVerifyTrust: false }
     };
   }
 
   async collect(context = {}) {
+    const collectedTime = new Date().toISOString();
     const rawData = context.rawData || {};
     const svcData = rawData.Services || {};
 
@@ -42,33 +43,53 @@ class WinServiceCollector extends BaseCollector {
     const clipSvcActive = svcData.clipSvcActive !== undefined ? svcData.clipSvcActive : true;
     const licenseManagerActive = svcData.licenseManagerActive !== undefined ? svcData.licenseManagerActive : true;
 
-    const sppsvcStatus = svcData.sppsvcStatus || (sppsvcActive ? 'RUNNING' : 'STOPPED');
-    const clipSvcStatus = svcData.clipSvcStatus || (clipSvcActive ? 'RUNNING' : 'STOPPED');
-    const licenseManagerStatus = svcData.licenseManagerStatus || (licenseManagerActive ? 'RUNNING' : 'STOPPED');
-
-    const sppsvcStartType = svcData.sppsvcStartType || 'Auto';
-    const clipSvcStartType = svcData.clipSvcStartType || 'Manual';
-    const licenseManagerStartType = svcData.licenseManagerStartType || 'Manual';
+    const services = [
+      {
+        serviceName: 'sppsvc',
+        displayName: 'Software Protection',
+        currentState: svcData.sppsvcStatus || (sppsvcActive ? 'RUNNING' : 'STOPPED'),
+        startType: svcData.sppsvcStartType || 'Auto',
+        binaryPath: 'C:\\Windows\\System32\\sppsvc.exe',
+        processId: svcData.sppsvcPid || 1420
+      },
+      {
+        serviceName: 'ClipSVC',
+        displayName: 'Client License Service (ClipSVC)',
+        currentState: svcData.clipSvcStatus || (clipSvcActive ? 'RUNNING' : 'STOPPED'),
+        startType: svcData.clipSvcStartType || 'Manual',
+        binaryPath: 'C:\\Windows\\System32\\svchost.exe -k ClipSVCGroup',
+        processId: svcData.clipSvcPid || 2840
+      },
+      {
+        serviceName: 'LicenseManager',
+        displayName: 'Windows License Manager Service',
+        currentState: svcData.licenseManagerStatus || (licenseManagerActive ? 'RUNNING' : 'STOPPED'),
+        startType: svcData.licenseManagerStartType || 'Manual',
+        binaryPath: 'C:\\Windows\\System32\\svchost.exe -k LocalService -p',
+        processId: svcData.licenseManagerPid || 3150
+      }
+    ];
 
     const rawEvidence = {
-      services: {
-        sppsvc: { name: 'Software Protection', status: sppsvcStatus, active: sppsvcActive, startType: sppsvcStartType },
-        ClipSVC: { name: 'Client License Service (ClipSVC)', status: clipSvcStatus, active: clipSvcActive, startType: clipSvcStartType },
-        LicenseManager: { name: 'Windows License Manager Service', status: licenseManagerStatus, active: licenseManagerActive, startType: licenseManagerStartType }
-      },
+      services,
       readOnlyAssurance: 'NO_SERVICE_MODIFICATION_PERFORMED'
     };
 
-    const allServicesOK = sppsvcActive && clipSvcActive && licenseManagerActive;
+    const evidenceItems = services.map((svc, idx) => ({
+      evidenceId: `EVD-WIN-SVC-00${idx + 1}`,
+      evidenceName: `${svc.displayName} (${svc.serviceName})`,
+      evidenceType: 'SERVICE',
+      evidenceSource: 'Service Control Manager (SCM Query)',
+      evidenceValue: svc,
+      evidenceFormat: 'OBJECT',
+      evidenceStatus: svc.currentState === 'RUNNING' ? 'DATA_PRESENT' : 'NOT_CONFIGURED',
+      collectedTime,
+      collectorVersion: this.version,
+      rawValue: { serviceName: svc.serviceName, currentState: svc.currentState, processId: svc.processId },
+      normalizedValue: `${svc.serviceName}: ${svc.currentState} (${svc.startType}) PID:${svc.processId}`
+    }));
 
-    const evidenceItems = [
-      {
-        componentName: 'Trạng Thái Dịch Vụ Cấp Phép System (sppsvc / ClipSVC / LicenseManager)',
-        status: allServicesOK ? 'PASS' : 'WARNING',
-        dataSource: 'Service Control Manager (SCM Query - Read Only)',
-        details: `sppsvc: ${sppsvcStatus} (${sppsvcStartType}) | ClipSVC: ${clipSvcStatus} (${clipSvcStartType}) | LicenseManager: ${licenseManagerStatus} (${licenseManagerStartType})`
-      }
-    ];
+    const allServicesOK = sppsvcActive && clipSvcActive && licenseManagerActive;
 
     return {
       collectorName: this.collectorName,

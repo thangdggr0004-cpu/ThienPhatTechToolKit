@@ -1,5 +1,5 @@
 /**
- * WIN SPP COLLECTOR V1.1 (PURE EVIDENCE COLLECTOR)
+ * WIN SPP COLLECTOR V1.2 (ENTERPRISE DATA MODEL)
  * Category: ENVIRONMENT | Priority: MEDIUM (3)
  * Description: Inspects SPP State & Token Store (tokens.dat) in STRICT READ_ONLY mode. Never touches, repairs, rewrites, or deletes files.
  */
@@ -13,7 +13,7 @@ class WinSPPCollector extends BaseCollector {
     super({
       collectorId: 'WinSPPCollector',
       collectorName: 'Windows Software Protection Platform (SPP) Token Store Collector',
-      version: '1.1.0',
+      version: '1.2.0',
       category: COLLECTOR_CATEGORIES.ENVIRONMENT,
       priority: COLLECTOR_PRIORITIES.MEDIUM,
       timeoutMs: 5000
@@ -21,50 +21,57 @@ class WinSPPCollector extends BaseCollector {
 
     this.metadata = {
       collectorName: 'Windows Software Protection Platform (SPP) Token Store Collector',
-      collectorVersion: '1.1.0',
+      collectorVersion: '1.2.0',
       author: 'Enterprise Windows Diagnostic Engineering',
       description: 'Inspects SPP Token Store file presence, size, and system state in strict READ_ONLY mode',
       category: COLLECTOR_CATEGORIES.ENVIRONMENT,
       priority: COLLECTOR_PRIORITIES.MEDIUM,
-      executionMode: 'READ_ONLY',
       readOnly: true,
+      executionMode: 'READ_ONLY',
       dependencies: [],
-      capability: { powershell: true, wmi: false, winVerifyTrust: false },
-      supportedWindowsVersions: ['Windows 10', 'Windows 11', 'Windows Server 2016+']
+      supportedWindowsVersions: ['Windows 10', 'Windows 11', 'Windows Server 2016+'],
+      capability: { powershell: true, wmi: false, winVerifyTrust: false }
     };
   }
 
   async collect(context = {}) {
+    const collectedTime = new Date().toISOString();
     const rawData = context.rawData || {};
     const sppData = rawData.SPP || {};
 
-    const tokenStorePath = '%SystemRoot%\\System32\\spp\\store\\2.0\\tokens.dat';
-    const tokenStoreExists = sppData.tokenStoreExists !== undefined ? sppData.tokenStoreExists : true;
-    const tokenStoreSizeBytes = sppData.tokenStoreSizeBytes || 154000;
     const sppState = sppData.sppState || 'NORMAL';
+    const tokenStorePath = '%SystemRoot%\\System32\\spp\\store\\2.0\\tokens.dat';
+    const tokenStoreSize = sppData.tokenStoreSizeBytes || 154000;
     const tokenStoreVersion = sppData.tokenStoreVersion || '2.0';
+    const graceState = sppData.graceState || 'NOT_IN_GRACE';
 
     const rawEvidence = {
-      tokenStorePath,
-      tokenStoreExists,
-      tokenStoreSizeBytes,
-      tokenStoreSizeFormatted: `${(tokenStoreSizeBytes / 1024).toFixed(1)} KB`,
       sppState,
+      tokenStorePath,
+      tokenStoreSize,
       tokenStoreVersion,
+      graceState,
       fileAccessMode: 'READ_ONLY_INSPECTION_ONLY',
       fileModificationPerformed: false
     };
 
-    const isHealthy = tokenStoreExists && sppState === 'NORMAL';
-
     const evidenceItems = [
       {
-        componentName: 'Kho Chứng Chỉ SPP Token Store (tokens.dat)',
-        status: isHealthy ? 'PASS' : 'WARNING',
-        dataSource: `FileSystem (${tokenStorePath})`,
-        details: `TokenStore Exists: ${tokenStoreExists} | Size: ${rawEvidence.tokenStoreSizeFormatted} | SPP State: ${sppState} | Version: ${tokenStoreVersion}`
+        evidenceId: 'EVD-WIN-SPP-001',
+        evidenceName: 'SPP Token Store File (tokens.dat)',
+        evidenceType: 'ENVIRONMENT',
+        evidenceSource: `FileSystem (${tokenStorePath})`,
+        evidenceValue: { sppState, tokenStorePath, tokenStoreSize, tokenStoreVersion, graceState },
+        evidenceFormat: 'OBJECT',
+        evidenceStatus: 'DATA_READ_ONLY',
+        collectedTime,
+        collectorVersion: this.version,
+        rawValue: { tokenStoreSize, sppState, graceState },
+        normalizedValue: `Path: ${tokenStorePath} | Size: ${(tokenStoreSize / 1024).toFixed(1)} KB | State: ${sppState} | Grace: ${graceState}`
       }
     ];
+
+    const isHealthy = sppData.tokenStoreExists !== false && sppState === 'NORMAL';
 
     return {
       collectorName: this.collectorName,

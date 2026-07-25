@@ -1,5 +1,5 @@
 /**
- * WIN REGISTRY COLLECTOR V1.1 (PURE EVIDENCE COLLECTOR)
+ * WIN REGISTRY COLLECTOR V1.2 (ENTERPRISE DATA MODEL)
  * Category: REGISTRY | Priority: HIGH (2)
  * Description: Reads Registry keys for SoftwareProtectionPlatform, ClipSVC, WPA without modifying registry or scoring.
  */
@@ -13,7 +13,7 @@ class WinRegistryCollector extends BaseCollector {
     super({
       collectorId: 'WinRegistryCollector',
       collectorName: 'Windows Registry Licensing Collector',
-      version: '1.1.0',
+      version: '1.2.0',
       category: COLLECTOR_CATEGORIES.REGISTRY,
       priority: COLLECTOR_PRIORITIES.HIGH,
       timeoutMs: 5000
@@ -21,20 +21,21 @@ class WinRegistryCollector extends BaseCollector {
 
     this.metadata = {
       collectorName: 'Windows Registry Licensing Collector',
-      collectorVersion: '1.1.0',
+      collectorVersion: '1.2.0',
       author: 'Enterprise Windows Diagnostic Engineering',
       description: 'Gathers raw Registry key values for SoftwareProtectionPlatform, ClipSVC, WPA, and KMS configurations',
       category: COLLECTOR_CATEGORIES.REGISTRY,
       priority: COLLECTOR_PRIORITIES.HIGH,
-      executionMode: 'READ_ONLY',
       readOnly: true,
+      executionMode: 'READ_ONLY',
       dependencies: [],
-      capability: { powershell: true, wmi: false, winVerifyTrust: false },
-      supportedWindowsVersions: ['Windows 10', 'Windows 11', 'Windows Server 2016+']
+      supportedWindowsVersions: ['Windows 10', 'Windows 11', 'Windows Server 2016+'],
+      capability: { powershell: true, wmi: false, winVerifyTrust: false }
     };
   }
 
   async collect(context = {}) {
+    const collectedTime = new Date().toISOString();
     const rawData = context.rawData || {};
     const sysData = rawData.System || {};
     const regData = rawData.Registry || {};
@@ -47,62 +48,51 @@ class WinRegistryCollector extends BaseCollector {
     const kmsHost = regData.KeyManagementServiceName || sysData.RegistryKmsHost || null;
     const kmsPort = regData.KeyManagementServicePort || 1688;
 
-    const softwareProtectionPlatform = {
-      registryPath: sppPath,
-      kmsHost,
-      kmsPort,
-      noGenTicket,
-      vskId: regData.VSKID || null
-    };
-
-    const clipSVC = {
-      registryPath: clipSvcPath,
-      installStatus: regData.ClipSvcInstallStatus || 'INSTALLED',
-      licenseState: regData.ClipSvcLicenseState || 'NORMAL'
-    };
-
-    const wpa = {
-      registryPath: wpaPath,
-      wpaKeyPresent: regData.WpaKeyPresent !== undefined ? regData.WpaKeyPresent : true,
-      tsforgeTrace: sysData.TSforgeTrace === true
-    };
-
-    const kmsConfiguration = {
-      kmsHost,
-      kmsPort,
-      kmsLookupDomain: regData.KmsLookupDomain || null
-    };
-
     const rawEvidence = {
-      softwareProtectionPlatform,
-      clipSVC,
-      wpa,
-      noGenTicket,
-      kmsConfiguration,
-      registryPathsChecked: [sppPath, clipSvcPath, wpaPath],
-      registryValuesCollected: {
+      registryPath: sppPath,
+      registryValue: {
         KeyManagementServiceName: kmsHost || 'NOT_CONFIGURED',
+        KeyManagementServicePort: kmsPort,
         NoGenTicket: noGenTicket ? 1 : 0,
-        TSforgeTrace: wpa.tsforgeTrace ? 1 : 0
-      }
+        ClipSvcInstallStatus: regData.ClipSvcInstallStatus || 'INSTALLED',
+        WpaKeyPresent: regData.WpaKeyPresent !== undefined ? regData.WpaKeyPresent : true,
+        TSforgeTrace: sysData.TSforgeTrace === true ? 1 : 0
+      },
+      registryType: 'REG_SZ / REG_DWORD',
+      registrySource: 'Windows Native Registry (HKLM)',
+      registryTimestamp: collectedTime
     };
-
-    const hasAnomaly = noGenTicket || wpa.tsforgeTrace;
 
     const evidenceItems = [
       {
-        componentName: 'Registry SoftwareProtectionPlatform & KMS Config',
-        status: kmsHost ? 'WARNING' : 'PASS',
-        dataSource: `Registry (${sppPath})`,
-        details: `KMS Host: ${kmsHost || 'None (Standard Direct/OEM)'} | KMS Port: ${kmsPort} | NoGenTicket: ${noGenTicket}`
+        evidenceId: 'EVD-WIN-REG-001',
+        evidenceName: 'SoftwareProtectionPlatform Registry Key',
+        evidenceType: 'REGISTRY',
+        evidenceSource: `Registry (${sppPath})`,
+        evidenceValue: { registryPath: sppPath, kmsHost, kmsPort, noGenTicket },
+        evidenceFormat: 'OBJECT',
+        evidenceStatus: 'DATA_PRESENT',
+        collectedTime,
+        collectorVersion: this.version,
+        rawValue: { kmsHost, kmsPort, noGenTicket },
+        normalizedValue: `KMS Host: ${kmsHost || 'NOT_CONFIGURED'} | Port: ${kmsPort} | NoGenTicket: ${noGenTicket}`
       },
       {
-        componentName: 'Registry ClipSVC & WPA Activation Subsystem',
-        status: hasAnomaly ? 'WARNING' : 'PASS',
-        dataSource: `Registry (${clipSvcPath} & ${wpaPath})`,
-        details: `ClipSVC State: ${clipSVC.licenseState} | WPA Key Present: ${wpa.wpaKeyPresent} | TSforgeTrace: ${wpa.tsforgeTrace}`
+        evidenceId: 'EVD-WIN-REG-002',
+        evidenceName: 'ClipSVC & WPA Subsystem Registry Keys',
+        evidenceType: 'REGISTRY',
+        evidenceSource: `Registry (${clipSvcPath} & ${wpaPath})`,
+        evidenceValue: { clipSvcPath, wpaPath, tsforgeTrace: sysData.TSforgeTrace === true },
+        evidenceFormat: 'OBJECT',
+        evidenceStatus: 'DATA_PRESENT',
+        collectedTime,
+        collectorVersion: this.version,
+        rawValue: { ClipSvcPath: clipSvcPath, WpaPath: wpaPath },
+        normalizedValue: `ClipSVC: INSTALLED | WPA: ACTIVE`
       }
     ];
+
+    const hasAnomaly = noGenTicket || sysData.TSforgeTrace === true;
 
     return {
       collectorName: this.collectorName,

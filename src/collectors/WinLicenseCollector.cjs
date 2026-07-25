@@ -1,7 +1,7 @@
 /**
- * WIN LICENSE COLLECTOR V1.1 (PURE EVIDENCE COLLECTOR)
+ * WIN LICENSE COLLECTOR V1.2 (ENTERPRISE DATA MODEL)
  * Category: LICENSE | Priority: CRITICAL (1)
- * Description: Reads WMI SoftwareLicensingProduct for Windows ApplicationID without scoring or decisions.
+ * Description: Reads WMI SoftwareLicensingProduct for Windows ApplicationID without scoring or judgements.
  */
 
 const path = require('path');
@@ -13,7 +13,7 @@ class WinLicenseCollector extends BaseCollector {
     super({
       collectorId: 'WinLicenseCollector',
       collectorName: 'Windows WMI SoftwareLicensingProduct Collector',
-      version: '1.1.0',
+      version: '1.2.0',
       category: COLLECTOR_CATEGORIES.LICENSE,
       priority: COLLECTOR_PRIORITIES.CRITICAL,
       timeoutMs: 5000,
@@ -22,63 +22,82 @@ class WinLicenseCollector extends BaseCollector {
 
     this.metadata = {
       collectorName: 'Windows WMI SoftwareLicensingProduct Collector',
-      collectorVersion: '1.1.0',
+      collectorVersion: '1.2.0',
       author: 'Enterprise Windows Diagnostic Engineering',
       description: 'Gathers SoftwareLicensingProduct WMI properties for Windows ApplicationID',
       category: COLLECTOR_CATEGORIES.LICENSE,
       priority: COLLECTOR_PRIORITIES.CRITICAL,
-      executionMode: 'READ_ONLY',
       readOnly: true,
+      executionMode: 'READ_ONLY',
       dependencies: [],
-      capability: { powershell: true, wmi: true, winVerifyTrust: false },
-      supportedWindowsVersions: ['Windows 10', 'Windows 11', 'Windows Server 2016+']
+      supportedWindowsVersions: ['Windows 10', 'Windows 11', 'Windows Server 2016+'],
+      capability: { powershell: true, wmi: true, winVerifyTrust: false }
     };
   }
 
   async collect(context = {}) {
+    const collectedTime = new Date().toISOString();
     const rawData = context.rawData || {};
     const winData = rawData.Windows || {};
 
     const licenseStatus = winData.LicenseStatus !== undefined ? winData.LicenseStatus : (winData.LicenseStatusText || 'UNKNOWN');
-    const description = winData.Description || 'N/A';
-    const channel = winData.Channel || 'UNKNOWN';
-    const productKeyChannel = winData.ProductKeyChannel || channel;
+    const licenseStatusReason = winData.LicenseStatusReason || winData.ErrorCode || '0x00000000';
+    const productKeyChannel = winData.ProductKeyChannel || winData.Channel || 'UNKNOWN';
     const partialProductKey = winData.PartialProductKey || winData.PartialKey || 'NONE';
     const activationID = winData.ActivationID || winData.ActivationId || 'NONE';
     const applicationID = winData.ApplicationID || '55c92734-d682-4d71-983e-d6ec3f16059f';
     const skuID = winData.ID || winData.SkuId || winData.SKUID || 'NONE';
+    const licenseFamily = winData.LicenseFamily || winData.Family || winData.Description || 'UNKNOWN';
     const gracePeriod = winData.GracePeriodRemaining !== undefined ? winData.GracePeriodRemaining : 0;
-    const licenseFamily = winData.LicenseFamily || winData.Family || description;
+    const remainingRearmCount = winData.RemainingRearmCount !== undefined ? winData.RemainingRearmCount : 1001;
+    const trustedTime = winData.TrustedTime || collectedTime;
+    const evaluationEndDate = winData.EvaluationEndDate || 'NONE';
 
     const rawEvidence = {
       licenseStatus,
-      description,
-      channel,
+      licenseStatusReason,
       productKeyChannel,
       partialProductKey,
       activationID,
       applicationID,
       skuID,
+      licenseFamily,
       gracePeriod,
-      licenseFamily
+      remainingRearmCount,
+      trustedTime,
+      evaluationEndDate
     };
-
-    const isLicensed = licenseStatus === 1 || licenseStatus === 'LICENSED';
 
     const evidenceItems = [
       {
-        componentName: 'Thông Tin Giấy Phép WMI (SoftwareLicensingProduct)',
-        status: isLicensed ? 'PASS' : 'WARNING',
-        dataSource: 'WMI (SoftwareLicensingProduct: 55c92734-d682-4d71-983e-d6ec3f16059f)',
-        details: `LicenseStatus: ${licenseStatus} | Channel: ${productKeyChannel} | PartialKey: ...${partialProductKey} | ActivationID: ${activationID}`
+        evidenceId: 'EVD-WIN-LIC-001',
+        evidenceName: 'WMI SoftwareLicensingProduct State',
+        evidenceType: 'LICENSE',
+        evidenceSource: 'WMI (SoftwareLicensingProduct: 55c92734-d682-4d71-983e-d6ec3f16059f)',
+        evidenceValue: { licenseStatus, licenseStatusReason, productKeyChannel, partialProductKey, activationID, applicationID },
+        evidenceFormat: 'OBJECT',
+        evidenceStatus: 'DATA_PRESENT',
+        collectedTime,
+        collectorVersion: this.version,
+        rawValue: { licenseStatus, productKeyChannel, partialProductKey, activationID },
+        normalizedValue: `Status: ${licenseStatus} | Channel: ${productKeyChannel} | Key: ...${partialProductKey}`
       },
       {
-        componentName: 'Cấu Hình Sản Phẩm & Grace Period',
-        status: 'PASS',
-        dataSource: 'WMI (SoftwareLicensingProduct Metadata)',
-        details: `Description: ${description} | SKU ID: ${skuID} | GraceRemaining: ${gracePeriod} mins | Family: ${licenseFamily}`
+        evidenceId: 'EVD-WIN-LIC-002',
+        evidenceName: 'WMI License Extended Attributes',
+        evidenceType: 'LICENSE',
+        evidenceSource: 'WMI (SoftwareLicensingProduct Metadata)',
+        evidenceValue: { skuID, licenseFamily, gracePeriod, remainingRearmCount, trustedTime, evaluationEndDate },
+        evidenceFormat: 'OBJECT',
+        evidenceStatus: 'DATA_PRESENT',
+        collectedTime,
+        collectorVersion: this.version,
+        rawValue: { skuID, licenseFamily, gracePeriod, remainingRearmCount },
+        normalizedValue: `Family: ${licenseFamily} | SKU: ${skuID} | GraceRemaining: ${gracePeriod}m`
       }
     ];
+
+    const isLicensed = licenseStatus === 1 || licenseStatus === 'LICENSED';
 
     return {
       collectorName: this.collectorName,
