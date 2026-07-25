@@ -5,7 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const https = require('https');
 const si = require('systeminformation');
-const { OfficeDiagnosticEngineV3 } = require('./OfficeDiagnosticEngineV3.cjs');
+const { OfficeDiagnosticEngineV3, SurgicalRecoveryExecutor } = require('./OfficeDiagnosticEngineV3.cjs');
 
 // 1. MUST BE VERY TOP: Global error logging for debugging crashes on other PCs
 process.on('uncaughtException', (error) => {
@@ -1583,6 +1583,17 @@ powercfg /setactive e9a42b02-d5df-448d-aa00-03f14749eb61
       return { success: true, report };
     } catch (err) {
       return { success: false, error: "Lỗi thực thi Enterprise Engine V3: " + err.message };
+    }
+  });
+
+  ipcMain.handle('restore-office-engine-v3', async () => {
+    try {
+      const engine = new OfficeDiagnosticEngineV3(runPowerShellScript);
+      const diagResult = await engine.runFullDiagnostics();
+      const result = await SurgicalRecoveryExecutor.executeSurgicalPlan(diagResult, runPowerShellScript, engine);
+      return result;
+    } catch (err) {
+      return { success: false, rolledBack: true, error: "Lỗi thực thi Giao dịch Khôi phục V3: " + err.message };
     }
   });
 

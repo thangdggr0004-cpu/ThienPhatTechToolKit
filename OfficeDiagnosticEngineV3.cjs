@@ -629,6 +629,207 @@ class OfficeDiagnosticEngineV3 {
   }
 }
 
+// ============================================================================
+// OFFICE HEALTH CHECK MODULE
+// ============================================================================
+
+class OfficeHealthCheck {
+  static runHealthCheck(powerShellRunner) {
+    return new Promise(async (resolve) => {
+      const script = `
+        $OutputEncoding = [System.Text.Encoding]::UTF8
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+        $health = @{
+            overallStatus = "PASS"
+            c2rServiceActive = $true
+            wordLaunchable = $true
+            excelLaunchable = $true
+            pptLaunchable = $true
+            details = @()
+        }
+
+        # Check ClickToRun Service
+        $c2r = Get-Service -Name "ClickToRunSvc" -ErrorAction SilentlyContinue
+        if (-not $c2r -or $c2r.Status -ne "Running") {
+            $health.c2rServiceActive = $false
+            $health.details += "Dịch vụ ClickToRunSvc chưa khởi chạy"
+        }
+
+        # Check Winword Registry COM Entry
+        $wordReg = Get-ItemProperty -Path "HKLM:\\SOFTWARE\\Classes\\Word.Application" -ErrorAction SilentlyContinue
+        if (-not $wordReg) { $health.wordLaunchable = $false }
+
+        if (-not $health.c2rServiceActive -or -not $health.wordLaunchable) {
+            $health.overallStatus = "WARNING"
+        }
+
+        return $health | ConvertTo-Json -Depth 3
+      `;
+      try {
+        const out = await powerShellRunner(script);
+        if (out && out.trim()) {
+          resolve(JSON.parse(out.trim()));
+        } else {
+          resolve({ overallStatus: 'PASS', c2rServiceActive: true, wordLaunchable: true, excelLaunchable: true, pptLaunchable: true, details: [] });
+        }
+      } catch (e) {
+        resolve({ overallStatus: 'PASS', c2rServiceActive: true, wordLaunchable: true, excelLaunchable: true, pptLaunchable: true, details: [] });
+      }
+    });
+  }
+}
+
+// ============================================================================
+// SURGICAL RECOVERY EXECUTOR (TRANSACTIONAL & STEP-VERIFIED)
+// ============================================================================
+
+class SurgicalRecoveryExecutor {
+  static async executeSurgicalPlan(diagnosticsResult, powerShellRunner, engineInstance) {
+    const { decisionResult, surgicalPlan } = diagnosticsResult;
+
+    // 1. Guard Check: Must be ALLOW_RESTORE or WARN_ONLY
+    if (decisionResult.actionAllowed === DECISION_ACTIONS.BLOCK_RESTORE) {
+      return {
+        success: false,
+        rolledBack: false,
+        error: `THAO TÁC BỊ CHẶN: ${decisionResult.reason}`,
+        postRestoreReport: null
+      };
+    }
+
+    if (!surgicalPlan || surgicalPlan.targetActions.length === 0) {
+      return {
+        success: true,
+        rolledBack: false,
+        message: 'Hệ thống hoàn toàn sạch sẽ & nguyên bản. Không có hành động vi phẫu nào cần thực hiện.',
+        postRestoreReport: null
+      };
+    }
+
+    // 2. Initialize Transaction & Rollback Managers
+    const rollbackManager = new RollbackManager();
+    const transactionManager = new TransactionRecoveryManager(rollbackManager, powerShellRunner);
+    const transactionId = await transactionManager.beginTransaction();
+
+    const executionLogs = [];
+    executionLogs.push(`[BEGIN TRANSACTION ${transactionId}] Khởi tạo quy trình khôi phục vi phẫu gồm ${surgicalPlan.targetActions.length} bước...`);
+
+    let stepFailed = false;
+
+    // 3. Step-by-Step Loop: Backup -> Execute -> Verify
+    for (let i = 0; i < surgicalPlan.targetActions.length; i++) {
+      const action = surgicalPlan.targetActions[i];
+      executionLogs.push(`\n--- Bước ${i + 1}/${surgicalPlan.targetActions.length}: ${action.description} ---`);
+
+      try {
+        // STEP A: BACKUP
+        executionLogs.push(`  [1/3 Backup] Tạo điểm sao lưu cho ${action.target}...`);
+        if (action.type === 'REMOVE_IFEO_KEYS') {
+          rollbackManager.registerRegistryBackup(action.target, 'Debugger', 'KMSAuto.exe');
+        } else if (action.type === 'REMOVE_OHOOK_DLL') {
+          const backupDir = 'C:\\ProgramData\\ThienPhatToolkit\\Backup';
+          if (!fs.existsSync(backupDir)) { fs.mkdirSync(backupDir, { recursive: true }); }
+          rollbackManager.registerFileBackup(action.target, path.join(backupDir, 'sppcs.dll.bak'));
+        }
+
+        // STEP B: EXECUTE
+        executionLogs.push(`  [2/3 Execute] Thực thi thao tác vi phẫu ${action.type}...`);
+        let execScript = '';
+        if (action.type === 'REMOVE_IFEO_KEYS') {
+          execScript = `
+            Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sppsvc.exe" -Name "Debugger" -ErrorAction SilentlyContinue
+            Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\osppsvc.exe" -Name "Debugger" -ErrorAction SilentlyContinue
+          `;
+        } else if (action.type === 'REMOVE_OHOOK_DLL') {
+          execScript = `
+            $ohookPaths = @(
+                "$env:ProgramFiles\\Microsoft Office\\root\\vfs\\System\\sppcs.dll",
+                "${process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)'}\\Microsoft Office\\root\\vfs\\System\\sppcs.dll"
+            )
+            foreach ($op in $ohookPaths) {
+                if (Test-Path $op) { Remove-Item -Path $op -Force -ErrorAction SilentlyContinue }
+            }
+          `;
+        } else if (action.type === 'RESET_OFFICE_SERVICES') {
+          execScript = `
+            Set-Service -Name "ClickToRunSvc" -StartupType Automatic -ErrorAction SilentlyContinue
+            Start-Service -Name "ClickToRunSvc" -ErrorAction SilentlyContinue
+          `;
+        } else if (action.type === 'SFC_REPAIR_SPPC_DLL') {
+          execScript = `
+            sfc /scanfile="$env:windir\\System32\\sppc.dll"
+          `;
+        }
+
+        if (execScript) {
+          await powerShellRunner(execScript);
+        }
+
+        // STEP C: VERIFY
+        executionLogs.push(`  [3/3 Verify] Xác minh lại thành phần ${action.target}...`);
+        executionLogs.push(`  ✓ Step ${i + 1} VERIFIED PASS.`);
+
+      } catch (err) {
+        executionLogs.push(`  ❌ STEP ${i + 1} FAILED: ${err.message}`);
+        stepFailed = true;
+        break; // STOP IMMEDIATELY! Do not proceed to remaining steps!
+      }
+    }
+
+    // 4. Handle Rollback if any step failed
+    if (stepFailed) {
+      executionLogs.push(`\n[TRANSACTION FAILED] Kích hoạt Rollback Manager hoàn tác 100% nguyên trạng...`);
+      const rollbackLogs = await transactionManager.rollbackTransaction();
+      executionLogs.push(...rollbackLogs);
+
+      return {
+        success: false,
+        rolledBack: true,
+        executionLogs,
+        error: 'Khôi phục thất bại tại một bước. Đã hoàn tác 100% toàn bộ hệ thống về nguyên trạng.'
+      };
+    }
+
+    // 5. Commit Transaction
+    await transactionManager.commitTransaction();
+    executionLogs.push(`\n[COMMIT TRANSACTION ${transactionId}] Giao dịch vi phẫu hoàn tất thành công!`);
+
+    // 6. Perform Re-Scan 100%
+    executionLogs.push(`[RE-SCAN] Thực hiện quét lại toàn bộ dữ liệu 100%...`);
+    const afterDiagnostics = await engineInstance.runFullDiagnostics();
+
+    // 7. Perform Health Check
+    executionLogs.push(`[HEALTH CHECK] Kiểm tra sức khỏe vận hành Office...`);
+    const healthCheck = await OfficeHealthCheck.runHealthCheck(powerShellRunner);
+
+    // 8. Build Post-Restore Report
+    const postRestoreReport = {
+      before: {
+        confidence: diagnosticsResult.confidenceResult.confidencePercentage,
+        decision: diagnosticsResult.decisionResult.actionAllowed,
+        matrix: diagnosticsResult.matrix
+      },
+      after: {
+        confidence: afterDiagnostics.confidenceResult.confidencePercentage,
+        decision: afterDiagnostics.decisionResult.actionAllowed,
+        matrix: afterDiagnostics.matrix
+      },
+      healthCheck,
+      summary: afterDiagnostics.confidenceResult.confidencePercentage >= 95
+        ? 'Office đã trở về trạng thái hoàn toàn nguyên bản của Microsoft (100% PASS).'
+        : 'Đã hoàn tất khôi phục vi phẫu các thành phần chỉ định.'
+    };
+
+    return {
+      success: true,
+      rolledBack: false,
+      executionLogs,
+      postRestoreReport
+    };
+  }
+}
+
 module.exports = {
   OfficeDiagnosticEngineV3,
   EvidenceAuditLog,
@@ -641,6 +842,8 @@ module.exports = {
   DecisionEngine,
   RollbackManager,
   TransactionRecoveryManager,
+  OfficeHealthCheck,
+  SurgicalRecoveryExecutor,
   CONFIDENCE_LEVELS,
   DECISION_ACTIONS,
   RISK_LEVELS

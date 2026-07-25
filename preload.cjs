@@ -39,6 +39,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   scanOfficeDeepV2: () => ipcRenderer.invoke('scan-office-deep-v2'),
   restoreOfficeDeepV2: () => ipcRenderer.invoke('restore-office-deep-v2'),
   scanOfficeEngineV3: () => ipcRenderer.invoke('scan-office-engine-v3'),
+  restoreOfficeEngineV3: () => ipcRenderer.invoke('restore-office-engine-v3'),
   // Backup: WiFi
   listWifiProfiles: () => ipcRenderer.invoke('list-wifi-profiles'),
   exportWifi: () => ipcRenderer.invoke('export-wifi'),
