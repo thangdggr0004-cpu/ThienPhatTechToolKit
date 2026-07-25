@@ -423,12 +423,12 @@ ${(report.matrix || []).map((m: any) => `| ${m.componentName} | **${m.status}** 
         </div>
       )}
 
-      {/* TẦNG 2: EVIDENCE-BASED ACTIVATION ASSESSMENT & MANDATORY DISCLAIMER */}
+      {/* TẦNG 2: ĐÁNH GIÁ NGUỒN GỐC KÍCH HOẠT & SHORTENED DISCLAIMER */}
       {report && report.provenance && (
         <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-              <Zap className="w-3.5 h-3.5 text-blue-600" /> EVIDENCE-BASED ACTIVATION ASSESSMENT
+              <Zap className="w-3.5 h-3.5 text-blue-600" /> ĐÁNH GIÁ NGUỒN GỐC KÍCH HOẠT (Evidence-Based Activation Assessment)
             </div>
             <span className="text-[10px] font-bold font-mono text-blue-700 flex items-center">
               Độ tin cậy đánh giá: {report.provenance.confidence}%
@@ -473,9 +473,9 @@ ${(report.matrix || []).map((m: any) => `| ${m.componentName} | **${m.status}** 
               </div>
             </div>
 
-            {/* MANDATORY DISCLAIMER BLOCK */}
+            {/* SHORTENED MANDATORY DISCLAIMER BLOCK */}
             <div className="p-2 bg-amber-950/40 border border-amber-800/50 rounded text-[10px] text-amber-200/90 leading-relaxed font-sans mt-1">
-              <strong>Miễn trừ trách nhiệm pháp lý (Disclaimer):</strong> Đánh giá này chỉ phản ánh những bằng chứng Engine đọc được từ hệ thống tại thời điểm kiểm tra. Đánh giá này <strong>KHÔNG</strong> xác nhận tính hợp pháp của giấy phép. Việc xác minh quyền sử dụng có thể cần các tài liệu ngoài hệ thống.
+              Đánh giá này chỉ phản ánh các bằng chứng kỹ thuật Engine đọc được tại thời điểm kiểm tra. Việc xác minh quyền sử dụng có thể cần thêm tài liệu hoặc hồ sơ cấp phép ngoài hệ thống.
             </div>
           </div>
 
