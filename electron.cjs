@@ -2590,7 +2590,24 @@ Write-Output "OK"
               Unregister-ScheduledTask -TaskName $task -Confirm:$false -ErrorAction SilentlyContinue
           }
 
-          Write-Host "[4/4] Quét và vô hiệu hóa Crack Ohook/Sppcs..."
+          Write-Host "[4/4] Dừng tiến trình Office & Quét diệt triệt để Crack Ohook/Sppcs..."
+          $procsToStop = @("sppsvc", "osppsvc", "OfficeC2RClient", "WINWORD", "EXCEL", "POWERPNT", "OUTLOOK", "ONENOTE", "MSOSP")
+          foreach ($p in $procsToStop) {
+              Stop-Process -Name $p -Force -ErrorAction SilentlyContinue
+              Stop-Service -Name $p -Force -ErrorAction SilentlyContinue
+          }
+          Start-Sleep -Seconds 2
+
+          # Gỡ bỏ các Hook IFEO độc hại
+          $ifeoTargets = @(
+              "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sppsvc.exe",
+              "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\osppsvc.exe",
+              "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sppsvc.exe"
+          )
+          foreach ($ifeo in $ifeoTargets) {
+              if (Test-Path $ifeo) { Remove-Item -Path $ifeo -Recurse -Force -ErrorAction SilentlyContinue }
+          }
+
           $ohookSearchPaths = @(
               "$env:ProgramFiles\\Microsoft Office",
               "$env:SystemDrive\\Program Files (x86)\\Microsoft Office",
@@ -2614,10 +2631,16 @@ Write-Output "OK"
                   Write-Host "-> Phát hiện file nghi ngờ: $file. Đang tước quyền sở hữu và xóa bỏ..."
                   Set-ItemProperty -Path $file -Name IsReadOnly -Value $false -ErrorAction SilentlyContinue
                   Set-ItemProperty -Path $file -Name Attributes -Value "Normal" -ErrorAction SilentlyContinue
-                  takeown.exe /f "$file" /a
-                  icacls.exe "$file" /grant "*S-1-5-32-544:F" /c /L
+                  takeown.exe /f "$file" /a | Out-Null
+                  icacls.exe "$file" /grant "*S-1-5-32-544:F" /c /L | Out-Null
                   cmd /c del /f /q /a "$file" >$null 2>&1
                   Remove-Item -Path $file -Force -ErrorAction SilentlyContinue
+                  
+                  # Nếu kẹt do hệ thống lock file, đổi tên để vô hiệu hóa
+                  if (Test-Path $file) {
+                      Rename-Item -Path $file -NewName "$($file).bak_deleted" -Force -ErrorAction SilentlyContinue
+                      Write-Host "-> Đã vô hiệu hóa tệp kẹt: $($file).bak_deleted"
+                  }
               }
           }
           if (-not (Test-Path "$env:windir\\System32\\sppc.dll")) {
@@ -2625,7 +2648,8 @@ Write-Output "OK"
               sfc /scanfile="$env:windir\\System32\\sppc.dll" | Out-Null
           }
 
-          Write-Host "\nHoàn tất quá trình Deep Clean Office!"
+          Start-Service -Name sppsvc -ErrorAction SilentlyContinue
+          Write-Host "\n[✓] Hoàn tất quá trình Deep Clean & Tách Khóa Ohook Office!"
         `;
       }
 
