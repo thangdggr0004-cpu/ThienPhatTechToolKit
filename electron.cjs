@@ -1528,13 +1528,13 @@ powercfg /setactive e9a42b02-d5df-448d-aa00-03f14749eb61
 
         # Layer 8: Evidence Evaluation
         $score = $report.layers.l8_evidenceEvaluation.riskScore
-        if ($score >= 60) {
+        if ($score -ge 60) {
             $report.layers.l8_evidenceEvaluation.hasTampering = $true
             $report.layers.l8_evidenceEvaluation.verdict = "Tampered"
             $report.layers.l8_evidenceEvaluation.confidenceLevel = "High"
             $report.hasIssues = $true
             $report.summary = "PHÁT HIỆN CAN THIỆP BẢN QUYỀN LẬU CHẮC CHẮN! (Risk Score: $score)"
-        } elseif ($score > 0) {
+        } elseif ($score -gt 0) {
             $report.layers.l8_evidenceEvaluation.hasTampering = $true
             $report.layers.l8_evidenceEvaluation.verdict = "KMS_Intercepted"
             $report.layers.l8_evidenceEvaluation.confidenceLevel = "Medium"
