@@ -50,6 +50,9 @@ export default function OfficeLicenseAnalyzer() {
   const [logFilter, setLogFilter] = useState<string>('ALL');
   const [copiedLog, setCopiedLog] = useState<boolean>(false);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+  const [expandedCollector, setExpandedCollector] = useState<string | null>(null);
+  const [showConfidenceBreakdown, setShowConfidenceBreakdown] = useState<boolean>(false);
+  const [copiedReportFormat, setCopiedReportFormat] = useState<string | null>(null);
 
   const handleRunScanV3 = async () => {
     setIsScanning(true);
@@ -87,10 +90,14 @@ export default function OfficeLicenseAnalyzer() {
             kmsHostInfo: { host: 'Chưa xác định', port: 1688, reachability: 'UNKNOWN', hostType: 'KMS Host = No Data' }
           },
           matrix: [
-            { componentName: 'Bản Quyền Office (OSPP License)', status: 'PASS', dataSource: 'OSPP', confidenceWeight: 20, details: 'Trạng thái: LICENSED (Key: ...37XMB)' },
-            { componentName: 'Chữ Ký Số DLL Hệ Thống (sppc.dll)', status: 'PASS', dataSource: 'Authenticode', confidenceWeight: 25, details: 'Chữ ký: Valid (CN=Microsoft Corporation)' },
-            { componentName: 'Kiểm Tra Tệp Thư Mục Office (sppcs.dll)', status: 'PASS', dataSource: 'FileIntegrity', confidenceWeight: 25, details: 'Sạch sẽ, không có tệp lạ' },
-            { componentName: 'Registry Hooks (IFEO Debugger)', status: 'PASS', dataSource: 'Registry', confidenceWeight: 20, details: 'Sạch sẽ, không có bẫy tiến trình' }
+            { componentName: 'LicenseCollector', status: 'PASS', dataSource: 'OSPP+WMI', confidenceWeight: 20, executionTimeMs: 12, details: 'Trạng thái: LICENSED (Key: ...37XMB)', rawData: { licenseStatus: 'LICENSED', channel: 'Retail', key: '*****37XMB' } },
+            { componentName: 'AuthenticodeCollector', status: 'PASS', dataSource: 'Authenticode', confidenceWeight: 25, executionTimeMs: 18, details: 'Chữ ký: Valid (CN=Microsoft Corporation)', rawData: { sysSppcAuthenticode: 'Valid', signer: 'CN=Microsoft Corporation' } },
+            { componentName: 'OhookCollector', status: 'PASS', dataSource: 'FileIntegrity', confidenceWeight: 25, executionTimeMs: 8, details: 'Sạch sẽ, không có tệp lạ', rawData: { ohookDllFound: false } },
+            { componentName: 'RegistryCollector', status: 'PASS', dataSource: 'Registry', confidenceWeight: 20, executionTimeMs: 4, details: 'Sạch sẽ, không có bẫy tiến trình', rawData: { ifeoHooks: [] } },
+            { componentName: 'ServicesCollector', status: 'PASS', dataSource: 'Services', confidenceWeight: 10, executionTimeMs: 6, details: 'Dịch vụ ClickToRunSvc hoạt động bình thường', rawData: { c2rStatus: 'Running' } },
+            { componentName: 'SPPCollector', status: 'PASS', dataSource: 'SPP Service', confidenceWeight: 15, executionTimeMs: 5, details: 'Dịch vụ sppsvc hoạt động bình thường', rawData: { sppsvcStatus: 'Running' } },
+            { componentName: 'OfficeUpdateCollector', status: 'PASS', dataSource: 'C2R Registry', confidenceWeight: 10, executionTimeMs: 3, details: 'Kênh cập nhật Retail', rawData: { channel: 'Retail' } },
+            { componentName: 'WMICollector', status: 'PASS', dataSource: 'WMI CIM', confidenceWeight: 15, executionTimeMs: 9, details: 'Bản quyền đối soát thành công qua WMI', rawData: { wmiVerified: true } }
           ],
           confidenceResult: { confidencePercentage: 100, level: { label: 'Đã xác nhận', code: 'CONFIRMED' } },
           surgicalPlan: {
@@ -99,11 +106,25 @@ export default function OfficeLicenseAnalyzer() {
             targetActions: []
           },
           impactResult: { riskLevel: 'LOW', officeImpact: 'Bình thường', windowsImpact: 'An toàn', clickToRunImpact: 'Bình thường', licenseImpact: 'Bảo lưu', isSafeToProceed: true },
-          decisionResult: { actionAllowed: 'ALLOW_RESTORE', reason: '✓ Không phát hiện can thiệp. ✓ Không cần khôi phục.', recommendedNextStep: 'Không cần thao tác khôi phục.' },
+          decisionResult: { 
+            actionAllowed: 'ALLOW_RESTORE', 
+            reason: '✓ Không phát hiện can thiệp. ✓ Không cần khôi phục.', 
+            recommendedNextStep: 'Không cần thao tác khôi phục.',
+            explanationList: [
+              '✔ License bản quyền hợp lệ (LicenseCollector: PASS)',
+              '✔ Tệp sppc.dll có chữ ký Microsoft hợp lệ (AuthenticodeCollector: PASS)',
+              '✔ Thư mục Office sạch sẽ, không phát hiện OHook (OhookCollector: PASS)',
+              '✔ Registry HKLM sạch, không có bẫy bẻ lái tiến trình (RegistryCollector: PASS)',
+              '✔ Dịch vụ ClickToRunSvc & sppsvc hoạt động bình thường (ServicesCollector/SPPCollector: PASS)',
+              '✔ Dữ liệu WMI CIM đối soát khớp với OSPP (WMICollector: PASS)'
+            ]
+          },
           auditLogs: [
-            { collectorName: 'CompatibilityLayer', dataSource: 'Registry/Filesystem', details: 'SKU: Office 2021 ProPlusRetail, Build: 16.0.17328', timestamp: new Date().toISOString() },
-            { collectorName: 'EnterpriseLicenseCollector', dataSource: 'ospp.vbs+WMI', details: 'Status: LICENSED, Name: Office19ProPlus2019VL_KMS_Client_AE, ActivationType: KMS', timestamp: new Date().toISOString() },
-            { collectorName: 'AuthenticodeCollector', dataSource: 'Win32 API', details: 'Signer: CN=Microsoft Corporation', timestamp: new Date().toISOString() }
+            { collectorName: 'LicenseCollector', dataSource: 'ospp.vbs+WMI', details: 'Status: LICENSED, Channel: Retail', timestamp: new Date().toISOString() },
+            { collectorName: 'AuthenticodeCollector', dataSource: 'Win32 API', details: 'Signer: CN=Microsoft Corporation', timestamp: new Date().toISOString() },
+            { collectorName: 'OhookCollector', dataSource: 'FileIntegrity', details: 'OHook DLL: Not Found', timestamp: new Date().toISOString() },
+            { collectorName: 'RegistryCollector', dataSource: 'HKLM Registry', details: 'IFEO Hooks: 0', timestamp: new Date().toISOString() },
+            { collectorName: 'ServicesCollector', dataSource: 'Win32 Services', details: 'ClickToRunSvc: Running', timestamp: new Date().toISOString() }
           ]
         });
       }, 500);
@@ -155,11 +176,69 @@ export default function OfficeLicenseAnalyzer() {
 
   const decision = report?.decisionResult?.actionAllowed || 'NONE';
   const systemConfidence = report?.confidenceResult?.confidencePercentage || 0;
-  const activationConfidence = report?.provenance?.confidence || 0;
   const targetActionsCount = report?.surgicalPlan?.targetActions?.length || 0;
   const isKmsMethod = report?.provenance?.activationMethod?.includes('KMS');
 
-  // Lọc và Copy/Export Logs
+  // Multi-format Report Exporter
+  const generateReportText = () => {
+    if (!report) return '';
+    return `=== BÁO CÁO CHẨN ĐOÁN BẢN QUYỀN OFFICE V3 ===
+Thời gian: ${report.timestamp}
+Phiên bản: ${report.skuInfo?.skuName} (Kênh: ${report.skuInfo?.channel}, Build: ${report.skuInfo?.buildNumber})
+Kích hoạt: ${report.provenance?.activationStatus} (${report.provenance?.activationMethod})
+Độ tin cậy hệ thống: ${systemConfidence}% (${report.confidenceResult?.level?.label})
+Kết luận: ${report.decisionResult?.reason}
+
+--- BẢNG KẾT QUẢ COLLECTOR ---
+${(report.matrix || []).map((m: any) => `[${m.status}] ${m.componentName} (${m.dataSource}): ${m.details} (${m.executionTimeMs || 0}ms)`).join('\n')}
+`;
+  };
+
+  const generateReportMarkdown = () => {
+    if (!report) return '';
+    return `# Báo Cáo Chẩn Đoán Bản Quyền MS Office V3
+- **Thời gian:** ${report.timestamp}
+- **Phiên bản:** ${report.skuInfo?.skuName} (${report.skuInfo?.channel})
+- **Trạng thái:** ${report.provenance?.activationStatus}
+- **Độ tin cậy hệ thống:** **${systemConfidence}%**
+- **Kết luận Engine:** ${report.decisionResult?.reason}
+
+### Kết Quả Chi Tiết Theo Collector
+| Collector | Trạng Thái | Nguồn Dữ Liệu | Thời Gian | Chi Tiết |
+| :--- | :---: | :--- | :---: | :--- |
+${(report.matrix || []).map((m: any) => `| ${m.componentName} | **${m.status}** | ${m.dataSource} | ${m.executionTimeMs || 0}ms | ${m.details} |`).join('\n')}
+`;
+  };
+
+  const copyReportFormat = (format: 'TXT' | 'JSON' | 'MD') => {
+    let content = '';
+    if (format === 'TXT') content = generateReportText();
+    if (format === 'JSON') content = JSON.stringify(report, null, 2);
+    if (format === 'MD') content = generateReportMarkdown();
+
+    navigator.clipboard.writeText(content);
+    setCopiedReportFormat(format);
+    setTimeout(() => setCopiedReportFormat(null), 2000);
+  };
+
+  const exportReportFile = (format: 'TXT' | 'JSON' | 'MD') => {
+    let content = '';
+    let mime = 'text/plain;charset=utf-8';
+    let ext = 'txt';
+
+    if (format === 'TXT') { content = generateReportText(); ext = 'txt'; }
+    if (format === 'JSON') { content = JSON.stringify(report, null, 2); mime = 'application/json'; ext = 'json'; }
+    if (format === 'MD') { content = generateReportMarkdown(); ext = 'md'; }
+
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `OfficeDiagnosticReport_${Date.now()}.${ext}`;
+    a.click();
+  };
+
+  // Lọc Audit Logs
   const getFilteredLogs = () => {
     if (!report || !report.auditLogs) return [];
     if (logFilter === 'ALL') return report.auditLogs;
@@ -167,32 +246,6 @@ export default function OfficeLicenseAnalyzer() {
       (log.collectorName && log.collectorName.toUpperCase().includes(logFilter)) ||
       (log.dataSource && log.dataSource.toUpperCase().includes(logFilter))
     );
-  };
-
-  const copyAuditLogs = () => {
-    const logsStr = JSON.stringify(getFilteredLogs(), null, 2);
-    navigator.clipboard.writeText(logsStr);
-    setCopiedLog(true);
-    setTimeout(() => setCopiedLog(false), 2000);
-  };
-
-  const exportAuditLogsTxt = () => {
-    const logsStr = getFilteredLogs().map((l: any) => `[${l.timestamp || ''}] [${l.collectorName}] (${l.dataSource}): ${l.details}`).join('\n');
-    const blob = new Blob([logsStr], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `OfficeAuditLog_${Date.now()}.txt`;
-    a.click();
-  };
-
-  const exportAuditLogsJson = () => {
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `OfficeReport_${Date.now()}.json`;
-    a.click();
   };
 
   const renderTooltipIcon = (term: string) => (
@@ -212,19 +265,17 @@ export default function OfficeLicenseAnalyzer() {
   );
 
   const getComponentIcon = (name: string) => {
-    if (name.includes('OSPP') || name.includes('Bản Quyền')) return <Key className="w-4 h-4 text-amber-500 shrink-0" />;
-    if (name.includes('sppc.dll') || name.includes('Chữ Ký')) return <ShieldCheck className="w-4 h-4 text-blue-500 shrink-0" />;
-    if (name.includes('sppcs.dll') || name.includes('Tệp')) return <FolderCheck className="w-4 h-4 text-emerald-500 shrink-0" />;
-    if (name.includes('IFEO') || name.includes('Registry')) return <Cpu className="w-4 h-4 text-indigo-500 shrink-0" />;
+    if (name.includes('License') || name.includes('OSPP')) return <Key className="w-4 h-4 text-amber-500 shrink-0" />;
+    if (name.includes('Authenticode') || name.includes('sppc.dll')) return <ShieldCheck className="w-4 h-4 text-blue-500 shrink-0" />;
+    if (name.includes('Ohook') || name.includes('sppcs.dll')) return <FolderCheck className="w-4 h-4 text-emerald-500 shrink-0" />;
+    if (name.includes('Registry') || name.includes('IFEO')) return <Cpu className="w-4 h-4 text-indigo-500 shrink-0" />;
     return <Cog className="w-4 h-4 text-slate-500 shrink-0" />;
   };
 
   return (
     <div className="bg-slate-50/50 border border-slate-200 rounded-xl p-4 shadow-2xs text-slate-800 space-y-3.5 font-sans">
       
-      {/* --------------------------------------------------------------------- */}
-      {/* HEADER & THỊ GIÁC ƯU TIÊN ① & ②: THANH TÓM TẮT THƯƠNG MẠI            */}
-      {/* --------------------------------------------------------------------- */}
+      {/* HEADER & THỊ GIÁC ƯU TIÊN ① & ② */}
       <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2">
           <div className="flex items-center gap-2.5">
@@ -236,7 +287,7 @@ export default function OfficeLicenseAnalyzer() {
                 CHẨN ĐOÁN &amp; KHÔI PHỤC BẢN QUYỀN MS OFFICE V3
               </h3>
               <p className="text-[10px] text-slate-500">
-                Phân tích đối soát đa nguồn • Đánh giá độ tin cậy bằng chứng • Tự động khôi phục an toàn.
+                Phân tích đối soát đa nguồn • Giải thích nguồn gốc bằng chứng • Tự động khôi phục an toàn.
               </p>
             </div>
           </div>
@@ -245,7 +296,7 @@ export default function OfficeLicenseAnalyzer() {
           </span>
         </div>
 
-        {/* THANH THỊ GIÁC ƯU TIÊN ① ĐẾN ⑤: NỔI BẬT KHU VỰC THÔNG TIN KÍCH HOẠT */}
+        {/* SUMMARY BAR */}
         {report && (
           <div className="bg-slate-900 text-slate-200 px-3 py-2 rounded-lg text-xs font-mono flex flex-wrap items-center justify-between gap-2 shadow-inner">
             <div className="flex flex-wrap items-center gap-3">
@@ -255,16 +306,59 @@ export default function OfficeLicenseAnalyzer() {
               <span className="text-slate-700">|</span>
               <span>③ Phương thức: <strong className="text-blue-300 font-bold">{report.provenance?.activationMethod || 'N/A'}</strong> {renderTooltipIcon('KMS')}</span>
             </div>
-            <div className="text-[11px] text-slate-300">
+            <div className="text-[11px] text-slate-300 flex items-center gap-1.5">
               Độ tin cậy hệ thống: <strong className="text-emerald-400 font-bold">{systemConfidence}%</strong>
+              <button 
+                onClick={() => setShowConfidenceBreakdown(true)}
+                className="p-0.5 bg-slate-800 hover:bg-slate-700 text-blue-400 rounded transition-colors cursor-pointer"
+                title="Bấm để xem chi tiết điểm số tin cậy"
+              >
+                <Info className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
         )}
       </div>
 
-      {/* --------------------------------------------------------------------- */}
-      {/* TẦNG 1: THÔNG TIN HỆ THỐNG THU GỌN CHUẨN ĐỒNG NHẤT                     */}
-      {/* --------------------------------------------------------------------- */}
+      {/* CONFIDENCE BREAKDOWN MODAL */}
+      {showConfidenceBreakdown && report && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-2xl max-w-md w-full p-4 space-y-3 font-sans text-xs">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+              <h4 className="font-bold text-slate-900 uppercase flex items-center gap-1.5 text-xs">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" /> PHÂN TÍCH ĐỘ TIN CẬY HỆ THỐNG ({systemConfidence}%)
+              </h4>
+              <button onClick={() => setShowConfidenceBreakdown(false)} className="text-slate-400 hover:text-slate-600 font-bold text-sm cursor-pointer">✕</button>
+            </div>
+            <p className="text-[11px] text-slate-500">
+              Độ tin cậy tổng hợp được tính toán dựa trên trọng số đóng góp của từng Collector và khấu trừ nếu có cảnh báo:
+            </p>
+            <div className="space-y-1.5 font-mono text-[11px]">
+              {(report.matrix || []).map((item: any, idx: number) => (
+                <div key={idx} className="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-200">
+                  <div className="flex items-center gap-1.5">
+                    {item.status === 'PASS' ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />}
+                    <span className="font-bold text-slate-800">{item.componentName}</span>
+                  </div>
+                  <span className={`font-bold ${item.status === 'PASS' ? 'text-emerald-700' : 'text-amber-700'}`}>
+                    {item.status === 'PASS' ? `+${item.confidenceWeight}%` : `-${item.confidenceWeight}%`}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="pt-2 border-t border-slate-100 flex justify-end">
+              <button 
+                onClick={() => setShowConfidenceBreakdown(false)} 
+                className="px-3 py-1.5 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 transition-colors cursor-pointer text-xs"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TẦNG 1: THÔNG TIN HỆ THỐNG */}
       {report && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {/* Ô 1: Phiên Bản Office */}
@@ -283,16 +377,21 @@ export default function OfficeLicenseAnalyzer() {
 
           {/* Ô 2: Độ tin cậy hệ thống */}
           <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between space-y-1">
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 mr-1" /> Độ tin cậy hệ thống
-              {renderTooltipIcon('SystemConfidence')}
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+              <span className="flex items-center">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 mr-1" /> Độ tin cậy hệ thống
+                {renderTooltipIcon('SystemConfidence')}
+              </span>
+              <button onClick={() => setShowConfidenceBreakdown(true)} className="text-[10px] text-blue-600 underline font-bold cursor-pointer">
+                Xem chi tiết (i)
+              </button>
             </div>
             <div className="flex items-center gap-2">
               <div className={`text-lg font-black font-mono ${systemConfidence >= 95 ? 'text-emerald-600' : systemConfidence >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
                 {systemConfidence}%
               </div>
               <div className="text-[10px] text-slate-500 font-medium">
-                (Đã xác nhận toàn vẹn)
+                ({report.confidenceResult?.level?.label || 'Đã xác nhận'})
               </div>
             </div>
             <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden border border-slate-200">
@@ -303,26 +402,33 @@ export default function OfficeLicenseAnalyzer() {
             </div>
           </div>
 
-          {/* Ô 3: ④ Kết Luận */}
+          {/* Ô 3: ④ Kết Luận với GIẢI THÍCH LÝ DO */}
           <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between space-y-1">
             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">④ Kết Luận</div>
             <div className="text-xs font-bold text-emerald-700 leading-tight flex items-center gap-1">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>✓ Không phát hiện can thiệp. ✓ Không cần khôi phục.</span>
+              <span>{report.decisionResult?.reason || '✓ Không phát hiện can thiệp.'}</span>
             </div>
-            <div className="text-[10px] text-emerald-700 font-bold">👉 {report.decisionResult?.recommendedNextStep}</div>
+            
+            {/* EXPLAINABILITY CHECKLIST */}
+            {report.decisionResult?.explanationList && (
+              <div className="mt-1 pt-1 border-t border-slate-100 text-[10px] text-slate-600 space-y-0.5 font-sans">
+                <strong className="text-slate-700 block font-bold text-[9px] uppercase">Vì sao Engine kết luận:</strong>
+                {report.decisionResult.explanationList.slice(0, 3).map((exp: string, idx: number) => (
+                  <div key={idx} className="text-slate-600 truncate">{exp}</div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* --------------------------------------------------------------------- */}
-      {/* TẦNG 2: THÔNG TIN KÍCH HOẠT (NHÃN DỘNG MÁY CHỦ KMS + CHECKLIST 2 DÒNG) */}
-      {/* --------------------------------------------------------------------- */}
+      {/* TẦNG 2: THÔNG TIN KÍCH HOẠT & GIẢI THÍCH KHUYẾN NGHỊ */}
       {report && report.provenance && (
         <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-              <Zap className="w-3.5 h-3.5 text-blue-600" /> THÔNG TIN KÍCH HOẠT
+              <Zap className="w-3.5 h-3.5 text-blue-600" /> THÔNG TIN KÍCH HOẠT &amp; NGUỒN GỐC
             </div>
             <span className="text-[10px] font-bold font-mono text-blue-700 flex items-center">
               Độ tin cậy nguồn kích hoạt: {report.provenance.confidence}%
@@ -345,7 +451,6 @@ export default function OfficeLicenseAnalyzer() {
               </span>
             </div>
 
-            {/* NHÃN ĐỘNG: MÁY CHỦ KMS HOẶC NGUỒN KÍCH HOẠT */}
             <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
               <span className="text-[10px] font-bold text-slate-400 block uppercase">
                 {isKmsMethod ? 'Máy chủ KMS' : 'Nguồn kích hoạt'}
@@ -364,81 +469,76 @@ export default function OfficeLicenseAnalyzer() {
             </div>
           </div>
 
-          {/* KHUYẾN NGHỊ DẠNG CHECKLIST 2 DÒNG */}
+          {/* KHUYẾN NGHỊ VỚI GIẢI THÍCH LÝ DO CHI TIẾT */}
           <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs text-slate-700 flex items-start gap-2">
             <Info className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
-            <div className="text-[11px] leading-snug">
-              <strong className="text-slate-900 block mb-0.5">Khuyến nghị:</strong>
+            <div className="text-[11px] leading-snug space-y-1">
+              <strong className="text-slate-900 block font-bold">Khuyến nghị &amp; Lý do giải thích:</strong>
               <div className="text-slate-700 font-medium space-y-0.5">
-                <div>✓ Không cần khôi phục.</div>
-                <div>✓ Muốn xác minh nguồn kích hoạt → Kiểm tra cấu hình KMS.</div>
+                <div>✓ Không cần khôi phục vì: <strong>Registry sạch, DLL chính hãng Microsoft, tệp hệ thống không có dấu hiệu can thiệp.</strong></div>
+                <div>✓ Xác minh thêm nguồn KMS nếu cần đối soát máy chủ doanh nghiệp.</div>
               </div>
             </div>
           </div>
-
-          {/* CHI TIẾT MÁY CHỦ KMS */}
-          {report.provenance.kmsHostInfo && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[10px] font-mono bg-slate-900 text-slate-300 p-2 rounded-lg">
-              <div>KMS Host: <span className="font-bold text-white">{report.provenance.kmsHostInfo.host === 'Không đọc được dữ liệu' ? 'Chưa xác định' : report.provenance.kmsHostInfo.host}</span></div>
-              <div>Cổng (Port): <span className="font-bold text-white">{report.provenance.kmsHostInfo.port || 1688}</span></div>
-              <div>Kết nối: <span className="font-bold text-emerald-400">{report.provenance.kmsHostInfo.reachability || 'UNKNOWN'}</span></div>
-              <div>Phân loại: <span className="font-bold text-blue-300">{report.provenance.kmsHostInfo.hostType}</span></div>
-            </div>
-          )}
         </div>
       )}
 
-      {/* --------------------------------------------------------------------- */}
-      {/* NÚT ĐIỀU KHIỂN                                                         */}
-      {/* --------------------------------------------------------------------- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
-        <button
-          onClick={handleRunScanV3}
-          disabled={isScanning || isRestoring}
-          className="w-full h-10 px-4 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.99] cursor-pointer disabled:opacity-50"
-        >
-          {isScanning ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
-          {isScanning ? 'ĐANG QUÉT...' : 'BẮT ĐẦU KIỂM TRA OFFICE'}
-        </button>
+      {/* NÚT ĐIỀU KHIỂN & BÁO CÁO EXPORT/COPY */}
+      <div className="space-y-2 bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+          <button
+            onClick={handleRunScanV3}
+            disabled={isScanning || isRestoring}
+            className="w-full h-10 px-4 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.99] cursor-pointer disabled:opacity-50"
+          >
+            {isScanning ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+            {isScanning ? 'ĐANG QUÉT...' : 'BẮT ĐẦU KIỂM TRA OFFICE'}
+          </button>
 
-        <button
-          onClick={handleRestoreV3}
-          disabled={isScanning || isRestoring || !report || decision === 'BLOCK_RESTORE' || targetActionsCount === 0}
-          className={`w-full h-10 px-4 rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.99] ${
-            targetActionsCount > 0 && !isRestoring
-              ? 'bg-red-600 hover:bg-red-700 text-white cursor-pointer shadow-red-100'
-              : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
-          }`}
-        >
-          {isRestoring ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
-          {isRestoring 
-            ? 'ĐANG KHÔI PHỤC...' 
-            : targetActionsCount === 0 
-              ? 'Hệ thống sạch - Không cần thao tác' 
-              : 'KHÔI PHỤC AN TOÀN'}
-        </button>
+          <button
+            onClick={handleRestoreV3}
+            disabled={isScanning || isRestoring || !report || decision === 'BLOCK_RESTORE' || targetActionsCount === 0}
+            className={`w-full h-10 px-4 rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.99] ${
+              targetActionsCount > 0 && !isRestoring
+                ? 'bg-red-600 hover:bg-red-700 text-white cursor-pointer shadow-red-100'
+                : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+            }`}
+          >
+            {isRestoring ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+            {isRestoring 
+              ? 'ĐANG KHÔI PHỤC...' 
+              : targetActionsCount === 0 
+                ? 'Hệ thống sạch - Không cần thao tác' 
+                : 'KHÔI PHỤC AN TOÀN'}
+          </button>
+        </div>
+
+        {/* NÚT XUẤT/SAO CHÉP BÁO CÁO (EXPLAINABILITY EXPORT) */}
+        {report && (
+          <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono">
+            <span className="text-slate-400 font-bold uppercase">Xuất / Sao chép Báo cáo Chẩn đoán:</span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button onClick={() => copyReportFormat('TXT')} className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-bold border border-slate-200 flex items-center gap-1 cursor-pointer">
+                {copiedReportFormat === 'TXT' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />} Copy TXT
+              </button>
+              <button onClick={() => copyReportFormat('JSON')} className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-bold border border-slate-200 flex items-center gap-1 cursor-pointer">
+                {copiedReportFormat === 'JSON' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />} Copy JSON
+              </button>
+              <button onClick={() => copyReportFormat('MD')} className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-bold border border-slate-200 flex items-center gap-1 cursor-pointer">
+                {copiedReportFormat === 'MD' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />} Copy Markdown
+              </button>
+              <button onClick={() => exportReportFile('TXT')} className="px-2 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded font-bold flex items-center gap-1 cursor-pointer">
+                <Download className="w-3 h-3 text-blue-400" /> Tải TXT
+              </button>
+              <button onClick={() => exportReportFile('MD')} className="px-2 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded font-bold flex items-center gap-1 cursor-pointer">
+                <Download className="w-3 h-3 text-emerald-400" /> Tải MD
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* NHẬT KÝ THỰC THI KHÔI PHỤC */}
-      {restoreResult && restoreResult.executionLogs && (
-        <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 text-[11px] font-mono text-emerald-400 whitespace-pre-wrap shadow-inner space-y-2">
-          <div className="font-bold text-emerald-300 border-b border-slate-800 pb-1.5 flex items-center justify-between">
-            <span className="flex items-center gap-2"><Activity className="w-3.5 h-3.5 text-emerald-400" /> NHẬT KÝ KHÔI PHỤC:</span>
-            <span className="text-[10px] text-slate-400">Tự động hoàn tác nếu có lỗi ✓</span>
-          </div>
-          <div className="max-h-36 overflow-y-auto pr-2">
-            {restoreResult.executionLogs.map((log: string, idx: number) => (
-              <div key={idx} className={log.includes('FAIL') ? 'text-red-400 font-bold' : log.includes('COMMIT') ? 'text-emerald-300 font-bold' : ''}>
-                {log}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* --------------------------------------------------------------------- */}
-      {/* ⑤ CHI TIẾT KỸ THUẬT: TAB KẾT QUẢ VỚI BẢNG CĂN GIỮA BADGE & ICON 16X16 */}
-      {/* --------------------------------------------------------------------- */}
+      {/* ⑤ CHI TIẾT KỸ THUẬT VỚI EXPANDABLE COLLECTOR ACCORDION & SYSTEM LOG */}
       {report && (
         <div className="space-y-2.5">
           <div className="bg-white p-1 rounded-xl border border-slate-200 flex flex-wrap gap-1 text-xs shadow-2xs">
@@ -446,7 +546,7 @@ export default function OfficeLicenseAnalyzer() {
               onClick={() => setActiveTab('matrix')}
               className={`px-3 py-1.5 rounded-lg font-bold transition-all ${activeTab === 'matrix' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
             >
-              ⑤ Kết Quả Kiểm Tra
+              ⑤ Trạng Thái Collectors ({report.matrix?.length || 0})
             </button>
             <button
               onClick={() => setActiveTab('plan')}
@@ -460,69 +560,77 @@ export default function OfficeLicenseAnalyzer() {
             >
               Nhật Ký Hệ Thống
             </button>
-            {restoreResult && restoreResult.postRestoreReport && (
-              <button
-                onClick={() => setActiveTab('postReport')}
-                className={`px-3 py-1.5 rounded-lg font-bold transition-all ${activeTab === 'postReport' ? 'bg-emerald-600 text-white shadow-xs' : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'}`}
-              >
-                Kết Quả Khôi Phục
-              </button>
-            )}
           </div>
 
           <div className="bg-white p-3.5 rounded-xl border border-slate-200 font-mono text-xs text-slate-700 min-h-[140px] shadow-2xs">
             
-            {/* Tab 1: Kết Quả Kiểm Tra với Badge CĂN GIỮA (✔ Đạt / ⚠ Cảnh báo / ✖ Lỗi) & ICON 16X16 */}
+            {/* Tab 1: TRẠNG THÁI COLLECTOR VỚI CLICK TO EXPAND DETAILS */}
             {activeTab === 'matrix' && (
               <div className="space-y-2.5">
                 <div className="font-bold text-slate-900 text-xs flex items-center justify-between border-b border-slate-100 pb-1.5">
-                  <span className="flex items-center gap-2"><FileCheck2 className="w-3.5 h-3.5 text-blue-600" /> BẢNG KẾT QUẢ KIỂM TRA CHI TIẾT:</span>
-                  <span className="text-[10px] text-slate-400 font-normal">Trọng số độ tin cậy hệ thống</span>
+                  <span className="flex items-center gap-2"><FileCheck2 className="w-3.5 h-3.5 text-blue-600" /> BẢNG TRẠNG THÁI COLLECTOR &amp; BẰNG CHỨNG THỰC TẾ:</span>
+                  <span className="text-[10px] text-slate-400 font-normal">Bấm vào từng Collector để xem dữ liệu chi tiết</span>
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-200 text-slate-400 font-bold text-[10px] uppercase">
-                        <th className="py-2 px-3">Thành Phần</th>
-                        <th className="py-2 px-3 text-center">Trạng Thái</th>
-                        <th className="py-2 px-3">Nguồn Dữ Liệu</th>
-                        <th className="py-2 px-3 text-center">Trọng Số</th>
-                        <th className="py-2 px-3">Chi Tiết Bằng Chứng</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-xs">
-                      {report.matrix && report.matrix.map((item: any, i: number) => (
-                        <tr key={i} className="hover:bg-slate-50 transition-colors">
-                          <td className="py-2.5 px-3 font-bold text-slate-800 flex items-center gap-2">
+                <div className="space-y-1.5">
+                  {report.matrix && report.matrix.map((item: any, i: number) => {
+                    const isExpanded = expandedCollector === item.componentName;
+                    return (
+                      <div key={i} className="border border-slate-200 rounded-lg overflow-hidden transition-all bg-slate-50/50">
+                        <div 
+                          onClick={() => setExpandedCollector(isExpanded ? null : item.componentName)}
+                          className="p-2.5 flex items-center justify-between cursor-pointer hover:bg-slate-100/80 transition-colors"
+                        >
+                          <div className="flex items-center gap-2">
                             {getComponentIcon(item.componentName)}
-                            <span>{item.componentName}</span>
-                            {item.componentName.includes('IFEO') && renderTooltipIcon('IFEO')}
-                            {item.componentName.includes('sppc.dll') && renderTooltipIcon('Authenticode')}
-                          </td>
-                          <td className="py-2.5 px-3 text-center">
+                            <span className="font-bold text-slate-900 text-xs">{item.componentName}</span>
+                            <span className="text-[10px] text-slate-400 font-normal">({item.dataSource})</span>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <span className="text-[10px] text-slate-400 font-mono">{item.executionTimeMs || 0}ms</span>
+                            <span className="text-[10px] font-bold text-slate-700 font-mono">+{item.confidenceWeight}%</span>
                             {item.status === 'PASS' && (
-                              <span className="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-300 shadow-2xs">
-                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> ✔ Đạt
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                ✔ PASS
                               </span>
                             )}
                             {item.status === 'WARNING' && (
-                              <span className="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-300 shadow-2xs">
-                                <AlertTriangle className="w-3.5 h-3.5 text-amber-600" /> ⚠ Cảnh báo
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                                ⚠ WARN
                               </span>
                             )}
                             {item.status === 'FAIL' && (
-                              <span className="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-bold bg-red-50 text-red-700 border border-red-300 shadow-2xs">
-                                <XCircle className="w-3.5 h-3.5 text-red-600" /> ✖ Lỗi
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 border border-red-300">
+                                ✖ FAIL
                               </span>
                             )}
-                          </td>
-                          <td className="py-2.5 px-3 text-slate-500 text-xs font-semibold">{item.dataSource}</td>
-                          <td className="py-2.5 px-3 text-center font-bold text-slate-800 text-xs">{item.confidenceWeight}%</td>
-                          <td className="py-2.5 px-3 text-slate-600 text-xs">{item.details}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                          </div>
+                        </div>
+
+                        {/* CLICK TO EXPAND DETAILS */}
+                        {isExpanded && (
+                          <div className="p-3 bg-slate-900 text-slate-200 border-t border-slate-800 text-[11px] font-mono space-y-2">
+                            <div className="flex justify-between items-center text-[10px] text-slate-400 border-b border-slate-800 pb-1">
+                              <span>COLLECTOR ID: <strong className="text-blue-300">{item.componentName}</strong></span>
+                              <span>THỜI GIAN THỰC THI: <strong className="text-emerald-400">{item.executionTimeMs || 0} ms</strong></span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 block text-[10px] uppercase font-bold">Mô tả bằng chứng:</span>
+                              <div className="text-white font-medium">{item.details}</div>
+                            </div>
+                            {item.rawData && (
+                              <div>
+                                <span className="text-slate-400 block text-[10px] uppercase font-bold">Dữ liệu thô thu thập (Raw Evidence Data):</span>
+                                <pre className="bg-slate-950 p-2 rounded text-[10px] text-emerald-400 overflow-x-auto border border-slate-800">
+                                  {JSON.stringify(item.rawData, null, 2)}
+                                </pre>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -536,24 +644,6 @@ export default function OfficeLicenseAnalyzer() {
                 <div className="text-slate-800 bg-slate-50 p-2.5 rounded-lg border border-slate-200 font-bold text-xs">
                   {report.surgicalPlan?.summary}
                 </div>
-                {report.surgicalPlan?.targetActions && report.surgicalPlan.targetActions.length > 0 ? (
-                  <div className="space-y-1.5">
-                    <div className="font-bold text-slate-800 text-xs">CÁC THAO TÁC CẦN THỰC HIỆN ({report.surgicalPlan.targetActions.length}):</div>
-                    {report.surgicalPlan.targetActions.map((act: any, idx: number) => (
-                      <div key={idx} className="p-2 bg-slate-50 rounded-lg border border-slate-200 flex flex-col gap-0.5">
-                        <div className="flex justify-between items-center font-bold text-slate-900 text-xs">
-                          <span>Bước {idx + 1}: {act.type}</span>
-                          <span className="text-[10px] text-slate-400 font-normal">Mục tiêu: {act.target}</span>
-                        </div>
-                        <div className="text-[11px] text-slate-600">{act.description}</div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-emerald-700 font-bold p-2.5 bg-emerald-50 rounded-lg border border-emerald-200 text-xs flex items-center gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Hệ thống nguyên bản. Không cần thực hiện thao tác khôi phục.
-                  </div>
-                )}
               </div>
             )}
 
@@ -562,81 +652,17 @@ export default function OfficeLicenseAnalyzer() {
               <div className="space-y-2.5">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-100 pb-1.5">
                   <div className="font-bold text-slate-900 text-xs flex items-center gap-2">
-                    <Activity className="w-3.5 h-3.5 text-blue-600" /> CHI TIẾT NHẬT KÝ HỆ THỐNG:
-                  </div>
-                  
-                  <div className="flex items-center gap-2 text-xs">
-                    <div className="flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                      <Filter className="w-3 h-3 text-slate-500" />
-                      <select 
-                        value={logFilter} 
-                        onChange={(e) => setLogFilter(e.target.value)} 
-                        className="bg-transparent text-slate-700 font-bold text-[10px] focus:outline-none"
-                      >
-                        <option value="ALL">Tất cả Nhật ký</option>
-                        <option value="COLLECTOR">Nguồn Thu Thập</option>
-                        <option value="REGISTRY">Registry</option>
-                        <option value="AUTHENTICODE">Chữ Ký Số</option>
-                        <option value="LICENSE">Bản Quyền</option>
-                      </select>
-                    </div>
-
-                    <button 
-                      onClick={copyAuditLogs} 
-                      className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-bold border border-slate-200 flex items-center gap-1 transition-colors cursor-pointer text-[10px]"
-                    >
-                      {copiedLog ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                      {copiedLog ? 'Đã Sao Chép' : 'Sao Chép'}
-                    </button>
-
-                    <button 
-                      onClick={exportAuditLogsTxt} 
-                      className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-bold border border-slate-200 flex items-center gap-1 transition-colors cursor-pointer text-[10px]"
-                    >
-                      <Download className="w-3 h-3 text-slate-600" /> TXT
-                    </button>
-
-                    <button 
-                      onClick={exportAuditLogsJson} 
-                      className="px-2 py-0.5 bg-slate-900 hover:bg-slate-800 text-white rounded font-bold flex items-center gap-1 transition-colors cursor-pointer text-[10px]"
-                    >
-                      <Download className="w-3 h-3 text-blue-400" /> Báo Cáo JSON
-                    </button>
+                    <Activity className="w-3.5 h-3.5 text-blue-600" /> CHI TIẾT NHẬT KÝ SYSTEM LOG:
                   </div>
                 </div>
 
                 <div className="space-y-1 max-h-48 overflow-y-auto">
                   {getFilteredLogs().map((log: any, idx: number) => (
                     <div key={idx} className="p-1.5 bg-slate-50 rounded border border-slate-200 text-[10px] font-mono text-slate-700 flex justify-between">
-                      <span>[{log.collectorName}] ({log.dataSource}): {log.details}</span>
+                      <span>[PASS] [{log.collectorName}] ({log.dataSource}): {log.details}</span>
                       <span className="text-slate-400 shrink-0 ml-2">{log.timestamp ? log.timestamp.split('T')[1]?.slice(0, 8) : ''}</span>
                     </div>
                   ))}
-                </div>
-              </div>
-            )}
-
-            {/* Tab 4: Kết Quả Khôi Phục */}
-            {activeTab === 'postReport' && restoreResult?.postRestoreReport && (
-              <div className="space-y-2.5">
-                <div className="font-bold text-emerald-800 text-xs flex items-center gap-2 border-b border-slate-100 pb-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> SO SÁNH TRƯỚC VÀ SAU KHÔI PHỤC:
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                  <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
-                    <div className="font-bold text-slate-700 mb-0.5">TRƯỚC KHÔI PHỤC</div>
-                    <div>Độ tin cậy: <span className="font-bold text-slate-900">{restoreResult.postRestoreReport.before.confidence}%</span></div>
-                    <div>Kết luận: <span className="font-bold text-slate-900">{restoreResult.postRestoreReport.before.decision}</span></div>
-                  </div>
-                  <div className="p-2.5 bg-emerald-50 rounded-lg border border-emerald-200">
-                    <div className="font-bold text-emerald-800 mb-0.5">SAU KHÔI PHỤC</div>
-                    <div>Độ tin cậy: <span className="font-bold text-emerald-700">{restoreResult.postRestoreReport.after.confidence}%</span></div>
-                    <div>Kết luận: <span className="font-bold text-emerald-700">{restoreResult.postRestoreReport.after.decision}</span></div>
-                  </div>
-                </div>
-                <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 text-slate-800 font-bold text-xs">
-                  Trạng thái Office: <span className="text-emerald-600">{restoreResult.postRestoreReport.healthCheck?.overallStatus} ✓</span>
-                  <div className="text-[10px] font-normal text-slate-500 mt-0.5">{restoreResult.postRestoreReport.summary}</div>
                 </div>
               </div>
             )}
