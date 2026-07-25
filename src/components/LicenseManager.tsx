@@ -504,82 +504,82 @@ export default function LicenseManager() {
           </div>
 
           <div className="space-y-6">
-            {activeTab === 'office' && (
-              <div className="mb-6">
-                <OfficeLicenseAnalyzer />
-              </div>
+            {activeTab === 'office' ? (
+              <OfficeLicenseAnalyzer />
+            ) : (
+              <>
+                <MainResultCard />
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <button onClick={handleStartScan} disabled={isLoading || isResetting || isRestoringOem} className="w-full bg-blue-600 text-white font-bold py-3 px-3 rounded-lg hover:bg-blue-700 transition-colors shadow-sm disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center text-xs">
+                    {isLoading ? <Loader className="animate-spin mr-2 h-4 w-4" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
+                    {isLoading ? 'Đang Quét...' : 'Quét Bản Quyền Windows (8 Bước)'}
+                  </button>
+
+                  <button onClick={handleRestoreOemBiosKey} disabled={isLoading || isResetting || isRestoringOem} className="w-full bg-emerald-600 text-white font-bold py-3 px-3 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm disabled:bg-emerald-400 disabled:cursor-not-allowed flex items-center justify-center text-xs">
+                    {isRestoringOem ? <Loader className="animate-spin mr-2 h-4 w-4" /> : <KeyRound className="mr-2 h-4 w-4" />}
+                    {isRestoringOem ? 'Đang Khôi Phục...' : 'Khôi Phục Key Gốc từ BIOS'}
+                  </button>
+
+                  <button onClick={handleResetActivation} disabled={isLoading || isResetting || isRestoringOem} className="w-full bg-slate-800 text-white font-bold py-3 px-3 rounded-lg hover:bg-slate-900 transition-colors shadow-sm disabled:bg-slate-500 disabled:cursor-not-allowed flex items-center justify-center text-xs">
+                    {isResetting ? <Loader className="animate-spin mr-2 h-4 w-4" /> : <ShieldX className="mr-2 h-4 w-4" />}
+                    {isResetting ? 'Đang Đặt Lại...' : 'Đặt Lại Bản Quyền Windows Gốc'}
+                  </button>
+                </div>
+                
+                {currentScanResult && <div className="grid grid-cols-3 gap-4 text-center">
+                    <div className="bg-emerald-100/60 p-3 rounded-lg"><span className="font-bold text-emerald-700 text-xl">{cleanCount}</span><p className="text-xs text-emerald-600">SẠCH</p></div>
+                    <div className="bg-amber-100/60 p-3 rounded-lg"><span className="font-bold text-amber-700 text-xl">{warningCount}</span><p className="text-xs text-amber-600">CẢNH BÁO</p></div>
+                    <div className="bg-red-100/60 p-3 rounded-lg"><span className="font-bold text-red-700 text-xl">{dangerCount}</span><p className="text-xs text-red-600">NGUY HIỂM</p></div>
+                </div>}
+              </>
             )}
-            <MainResultCard />
-
-            <div className={`grid grid-cols-1 ${activeTab === 'windows' ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-3`}>
-              <button onClick={handleStartScan} disabled={isLoading || isResetting || isRestoringOem} className="w-full bg-blue-600 text-white font-bold py-3 px-3 rounded-lg hover:bg-blue-700 transition-colors shadow-sm disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center text-xs">
-                {isLoading ? <Loader className="animate-spin mr-2 h-4 w-4" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
-                {isLoading ? 'Đang Quét...' : activeTab === 'windows' ? 'Quét Bản Quyền Windows (8 Bước)' : 'Quét Bản Quyền MS Office (8 Bước)'}
-              </button>
-
-              {activeTab === 'windows' && (
-                <button onClick={handleRestoreOemBiosKey} disabled={isLoading || isResetting || isRestoringOem} className="w-full bg-emerald-600 text-white font-bold py-3 px-3 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm disabled:bg-emerald-400 disabled:cursor-not-allowed flex items-center justify-center text-xs">
-                  {isRestoringOem ? <Loader className="animate-spin mr-2 h-4 w-4" /> : <KeyRound className="mr-2 h-4 w-4" />}
-                  {isRestoringOem ? 'Đang Khôi Phục...' : 'Khôi Phục Key Gốc từ BIOS'}
-                </button>
-              )}
-
-              <button onClick={handleResetActivation} disabled={isLoading || isResetting || isRestoringOem} className="w-full bg-slate-800 text-white font-bold py-3 px-3 rounded-lg hover:bg-slate-900 transition-colors shadow-sm disabled:bg-slate-500 disabled:cursor-not-allowed flex items-center justify-center text-xs">
-                {isResetting ? <Loader className="animate-spin mr-2 h-4 w-4" /> : <ShieldX className="mr-2 h-4 w-4" />}
-                {isResetting ? 'Đang Đặt Lại...' : activeTab === 'windows' ? 'Đặt Lại Bản Quyền Windows Gốc' : 'Đặt Lại Bản Quyền Office Gốc'}
-              </button>
-            </div>
-            
-            {currentScanResult && <div className="grid grid-cols-3 gap-4 text-center">
-                <div className="bg-emerald-100/60 p-3 rounded-lg"><span className="font-bold text-emerald-700 text-xl">{cleanCount}</span><p className="text-xs text-emerald-600">SẠCH</p></div>
-                <div className="bg-amber-100/60 p-3 rounded-lg"><span className="font-bold text-amber-700 text-xl">{warningCount}</span><p className="text-xs text-amber-600">CẢNH BÁO</p></div>
-                <div className="bg-red-100/60 p-3 rounded-lg"><span className="font-bold text-red-700 text-xl">{dangerCount}</span><p className="text-xs text-red-600">NGUY HIỂM</p></div>
-            </div>}
           </div>
         </div>
       </div>
 
-      <div className="mt-8">
-        <div className="flex justify-between items-center mb-4">
-            <h2 className="text-base font-bold text-slate-800">KẾT QUẢ CHẨN ĐOÁN BẢN QUYỀN ({activeTab === 'windows' ? 'WINDOWS' : 'MS OFFICE'})</h2>
-            <div className="flex items-center gap-2 rounded-lg bg-slate-200 p-0.5">
-                <button onClick={() => setViewMode('visual')} className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${viewMode === 'visual' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
-                    <FileText className="inline w-3 h-3 mr-1.5"/>8 Bước Trực Quan
-                </button>
-                <button onClick={() => setViewMode('terminal')} className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${viewMode === 'terminal' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
-                    <Terminal className="inline w-3 h-3 mr-1.5"/>Terminal Logs
-                </button>
-            </div>
+      {activeTab === 'windows' && (
+        <div className="mt-8">
+          <div className="flex justify-between items-center mb-4">
+              <h2 className="text-base font-bold text-slate-800">KẾT QUẢ CHẨN ĐOÁN BẢN QUYỀN (WINDOWS)</h2>
+              <div className="flex items-center gap-2 rounded-lg bg-slate-200 p-0.5">
+                  <button onClick={() => setViewMode('visual')} className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${viewMode === 'visual' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
+                      <FileText className="inline w-3 h-3 mr-1.5"/>8 Bước Trực Quan
+                  </button>
+                  <button onClick={() => setViewMode('terminal')} className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${viewMode === 'terminal' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
+                      <Terminal className="inline w-3 h-3 mr-1.5"/>Terminal Logs
+                  </button>
+              </div>
+          </div>
+
+          {viewMode === 'visual' && currentScanResult && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                      {diagnosticSteps.map(step => (
+                          <DiagnosticStepItem key={step.id} step={step} isActive={activeStep === step.id} onClick={() => setActiveStep(step.id)} />
+                      ))}
+                  </div>
+                  <div className="bg-white p-4 rounded-lg border border-slate-200 h-full min-h-[200px]">
+                      <h3 className="font-bold text-slate-800">{`CHI TIẾT — BƯỚC ${selectedStepDetails?.id}`}</h3>
+                      <div className="mt-4 text-sm text-slate-600 space-y-2 text-left">
+                         {selectedStepDetails?.details.map((line, index) => (
+                             <p key={index} className="text-xs font-mono" dangerouslySetInnerHTML={{ __html: line.replace(/🔴/g, '<span class="text-red-500">🔴</span>').replace(/⚠️/g, '<span class="text-amber-500">⚠️</span>').replace(/✅/g, '<span class="text-emerald-500">✅</span>') }}></p>
+                         ))}
+                         {selectedStepDetails?.details.length === 0 && <p className="text-xs text-slate-400">Chưa có thông tin chi tiết cho bước này.</p>}
+                      </div>
+                  </div>
+              </div>
+          )}
+
+          {viewMode === 'terminal' && (
+              <div className="bg-slate-900 text-slate-100 p-4 rounded-lg font-mono text-xs overflow-x-auto min-h-[250px] shadow-inner text-left">
+                  {rawLogs ? rawLogs.split('\n').map((line, i) => (
+                      <div key={i} className="py-0.5">{line}</div>
+                  )) : <div className="text-slate-500 italic">Chưa có dữ liệu terminal logs. Hãy nhấn "Quét Bản Quyền Windows (8 Bước)".</div>}
+              </div>
+          )}
         </div>
-
-        {viewMode === 'visual' && currentScanResult && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                    {diagnosticSteps.map(step => (
-                        <DiagnosticStepItem key={step.id} step={step} isActive={activeStep === step.id} onClick={() => setActiveStep(step.id)} />
-                    ))}
-                </div>
-                <div className="bg-white p-4 rounded-lg border border-slate-200 h-full min-h-[200px]">
-                    <h3 className="font-bold text-slate-800">{`CHI TIẾT — BƯỚC ${selectedStepDetails?.id}`}</h3>
-                    <div className="mt-4 text-sm text-slate-600 space-y-2 text-left">
-                       {selectedStepDetails?.details.map((line, index) => (
-                           <p key={index} className="text-xs font-mono" dangerouslySetInnerHTML={{ __html: line.replace(/🔴/g, '<span class="text-red-500">🔴</span>').replace(/⚠️/g, '<span class="text-amber-500">⚠️</span>').replace(/✅/g, '<span class="text-emerald-500">✅</span>') }}></p>
-                       ))}
-                       {selectedStepDetails?.details.length === 0 && <p className="text-xs text-slate-400">Chưa có thông tin chi tiết cho bước này.</p>}
-                    </div>
-                </div>
-            </div>
-        )}
-
-        {viewMode === 'terminal' && (
-            <div className="bg-gray-900 text-white font-mono text-xs rounded-lg p-4 h-96 overflow-y-auto">
-                {isLoading && <p>&gt; Starting diagnostic scan...</p>}
-                {error && <p className="text-red-400">&gt; ERROR: {error}</p>}
-                {currentScanResult && <pre>{JSON.stringify(currentScanResult, null, 2)}</pre>}
-                {!isLoading && !currentScanResult && !error && <p className="text-gray-500">&gt; Bảng điều khiển log sẽ hiển thị dữ liệu JSON thô sau khi quét.</p>}
-            </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }

@@ -371,14 +371,19 @@ function createWindow() {
     win.loadFile(path.join(__dirname, 'dist', 'index.html'));
   }
 
-  // Force window to show, focus and restore on screen
+  // Force window to show, focus, restore and pop to front on screen
   win.once('ready-to-show', () => {
+    win.setAlwaysOnTop(true);
     win.show();
     win.focus();
     if (win.isMinimized()) win.restore();
+    win.setAlwaysOnTop(false);
   });
+  win.setAlwaysOnTop(true);
   win.show();
   win.focus();
+  if (win.isMinimized()) win.restore();
+  win.setAlwaysOnTop(false);
 
   // Open external links in default browser instead of inside the app
   win.webContents.setWindowOpenHandler(({ url }) => {
