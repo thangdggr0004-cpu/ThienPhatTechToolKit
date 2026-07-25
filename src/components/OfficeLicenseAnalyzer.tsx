@@ -123,7 +123,7 @@ export default function OfficeLicenseAnalyzer() {
     setIsRestoring(false);
   };
 
-  const evalState = report?.layers.l8_evidenceEvaluation;
+  const evalState = report?.layers?.l8_evidenceEvaluation;
   const verdict = evalState?.verdict || 'InsufficientData';
 
   const getVerdictBadge = () => {
