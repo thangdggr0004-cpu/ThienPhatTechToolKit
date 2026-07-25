@@ -510,6 +510,32 @@ const DATASET_SCENARIOS = [
       hasTampering: false,
       recoveryAction: 'RECOMMEND_OFFICE_QUICK_REPAIR'
     }
+  },
+  {
+    testId: 'TC-23',
+    name: 'KMS Client - Host Null (Office 2019 FTUApps)',
+    description: 'Bản quyền KMS Client hợp lệ nhưng chưa xác định tên KMS Host.',
+    inputData: {
+      sku: { skuName: 'Office 2019 ProPlus2019VL', channel: 'Volume', bitness: 'x64', installType: 'ClickToRun', buildNumber: '16.0.10380' },
+      licenseStatus: 'LICENSED',
+      licenseName: 'Office19ProPlus2019VL_KMS_Client_AE edition',
+      kmsHost: '',
+      activationType: 'KMS',
+      sysSppcAuthenticode: 'Valid',
+      sysSppcSigner: 'CN=Microsoft Corporation',
+      ohookDllFound: false,
+      ifeoHooks: [],
+      appInitDlls: '',
+      services: [{ name: 'ClickToRunSvc', status: 'Running' }]
+    },
+    expected: {
+      evidenceStatus: { license: 'PASS', authenticode: 'PASS', ohook: 'PASS', registry: 'PASS' },
+      confidenceMin: 95,
+      confidenceMax: 100,
+      decision: 'ALLOW_RESTORE',
+      hasTampering: false,
+      recoveryAction: 'NONE'
+    }
   }
 ];
 

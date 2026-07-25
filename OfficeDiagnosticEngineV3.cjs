@@ -796,68 +796,82 @@ class ActivationProvenanceAnalyzer {
     let confidence = licData?.confidence || 50;
     let recommendation = 'Theo dõi & Kiểm tra định kỳ';
 
-    if (activationStatus === 'LICENSED') {
-      // Check KMS Host
-      if (licData.kmsHost && licData.kmsHost !== 'N/A' && licData.kmsHost.trim().length > 0) {
+    const licName = licData?.licenseName || '';
+    const licDesc = licData?.licenseDescription || '';
+    const actType = licData?.activationType || '';
+    const prodKeyChan = licData?.productKeyChannel || '';
+    const kmsHost = licData?.kmsHost;
+    const hasKmsHost = kmsHost && kmsHost !== 'N/A' && kmsHost.trim().length > 0;
+
+    // 1. RULE FOR KMS CLIENT (GVLK)
+    const isKmsClient = actType === 'KMS' ||
+      licName.includes('_KMS_Client') ||
+      licName.includes('GVLK') ||
+      licDesc.includes('VOLUME_KMSCLIENT') ||
+      prodKeyChan === 'GVLK' ||
+      hasKmsHost;
+
+    if (activationStatus === 'LICENSED' || isKmsClient) {
+      if (isKmsClient) {
         activationMethod = 'KMS Client (GVLK)';
-        evidenceUsed.push(`Phát hiện máy chủ KMS: ${licData.kmsHost}`);
-        
-        if (licData.kmsHost.includes('msguides.com') || licData.kmsHost.includes('kms') || licData.kmsHost.match(/\d+\.\d+\.\d+\.\d+/)) {
-          activationSource = 'External / Unknown KMS Host';
-          recommendation = 'Further Investigation';
-          confidence = 78;
+        confidence = 80; // 75–85% range per specification
+
+        if (hasKmsHost) {
+          activationSource = `KMS Host: ${kmsHost}`;
+          recommendation = 'KMS Host đã được xác định.';
+          evidenceUsed.push(`ActivationType: KMS`, `License Name: ${licName}`, `KMS Host: ${kmsHost}`);
         } else {
-          activationSource = 'Internal Corporate KMS Server';
-          recommendation = 'Kích hoạt hợp lệ qua máy chủ doanh nghiệp';
-          confidence = 95;
+          activationSource = 'KMS (Host chưa xác định)';
+          recommendation = 'Nên kiểm tra KMS Host để xác định nguồn kích hoạt.';
+          evidenceUsed.push(`ActivationType: KMS`, `License Name: ${licName}`, `Status: LICENSED`, `Reasoning: Phát hiện cấu hình KMS Client nhưng chưa lấy được tên KMS Host.`);
         }
-      } 
-      // Check License Name for MAK
-      else if (licData.licenseName && licData.licenseName.includes('MAK')) {
+      }
+      // 2. RULE FOR VOLUME MAK
+      else if (licName.includes('MAK') || actType === 'MAK' || prodKeyChan === 'MAK') {
         activationMethod = 'Volume MAK';
         activationSource = 'Microsoft Multiple Activation Key';
-        evidenceUsed.push(`License Name chứa mã MAK: ${licData.licenseName}`);
-        recommendation = 'Giấy phép Volume MAK chính hãng';
         confidence = 95;
+        recommendation = 'Giấy phép Volume MAK chính hãng.';
+        evidenceUsed.push(`ActivationType: MAK`, `License Name: ${licName}`);
       }
-      // Check Subscription / Microsoft 365
-      else if (licData.licenseChannel === 'Microsoft 365' || (licData.licenseName && licData.licenseName.match(/Subscription|365/i))) {
+      // 3. RULE FOR SUBSCRIPTION / MICROSOFT 365
+      else if (licData.licenseChannel === 'Microsoft 365' || licName.match(/Subscription|365/i) || actType === 'Subscription') {
         activationMethod = 'Subscription';
         activationSource = 'Microsoft 365 Cloud';
-        evidenceUsed.push(`Xác nhận kênh Microsoft 365 Account Subscription`);
-        recommendation = 'Đăng ký tài khoản Microsoft 365 Cloud chính hãng';
         confidence = 99;
+        recommendation = 'Đăng ký tài khoản Microsoft 365 Cloud chính hãng.';
+        evidenceUsed.push(`ActivationType: Subscription`, `License Channel: ${licData.licenseChannel}`);
       }
-      // Check Retail Key
-      else if (licData.licenseChannel === 'Retail' || (licData.licenseName && licData.licenseName.includes('Retail'))) {
+      // 4. RULE FOR RETAIL KEY
+      else if (licData.licenseChannel === 'Retail' || licName.includes('Retail') || actType === 'Retail') {
         activationMethod = 'Retail Key';
         activationSource = 'Microsoft Genuine Retail';
-        evidenceUsed.push(`Khóa Retail hợp lệ (Partial Key: ...${licData.partialKey || 'N/A'})`);
-        recommendation = 'Bản quyền Retail chính hãng của Microsoft';
         confidence = 99;
+        recommendation = 'Bản quyền Retail chính hãng của Microsoft.';
+        evidenceUsed.push(`ActivationType: Retail`, `Partial Key: ...${licData.partialKey || 'N/A'}`);
       }
-      // Check Digital License
+      // 5. RULE FOR DIGITAL LICENSE
       else if (licData.sourcesUsed && licData.sourcesUsed.includes('LicensingVK_Registry')) {
         activationMethod = 'Digital License';
         activationSource = 'Windows Digital Entitlement';
-        evidenceUsed.push('Tìm thấy chứng chỉ Digital LicensingVK trong Registry HKLM');
-        recommendation = 'Bản quyền số Digital License chính hãng';
         confidence = 90;
+        recommendation = 'Bản quyền số Digital License chính hãng.';
+        evidenceUsed.push(`ActivationType: Digital`, `Source: Registry LicensingVK`);
       }
-      // Fallback
+      // 6. STRICT FALLBACK IF UNKNOWN (NEVER GUESS)
       else {
         activationMethod = 'Không đủ bằng chứng để xác định phương thức kích hoạt.';
         activationSource = 'Local Licensing Cache';
-        evidenceUsed.push('Office hiển thị LICENSED nhưng chưa đủ dữ liệu đối soát chìa khóa bản quyền.');
-        recommendation = 'Giữ nguyên trạng thái vận hành, theo dõi thêm.';
         confidence = 60;
+        recommendation = 'Giữ nguyên trạng thái vận hành, theo dõi thêm.';
+        evidenceUsed.push(`Status: LICENSED`, `Reasoning: Dữ liệu hiện tại chưa đủ đối soát chìa khóa.`);
       }
     } else if (activationStatus === 'UNLICENSED') {
       activationMethod = 'Chưa Kích Hoạt';
       activationSource = 'None';
-      evidenceUsed.push('Hệ thống chưa tìm thấy chứng chỉ bản quyền hợp lệ.');
-      recommendation = 'Cần nạp khóa bản quyền chính hãng để sử dụng đầy đủ tính năng.';
       confidence = 100;
+      recommendation = 'Cần nạp khóa bản quyền chính hãng để sử dụng đầy đủ tính năng.';
+      evidenceUsed.push('Hệ thống chưa tìm thấy chứng chỉ bản quyền hợp lệ.');
     } else if (activationStatus === 'GRACE_PERIOD') {
       activationMethod = 'Thời Gian Gia Hạn (Grace Period)';
       activationSource = 'Trial / Grace License';
