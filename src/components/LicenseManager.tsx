@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { ShieldCheck, ShieldAlert, ShieldX, FileText, Terminal, Loader, ServerCrash, RefreshCw, KeyRound } from 'lucide-react';
+import OfficeLicenseAnalyzer from './OfficeLicenseAnalyzer';
 
 // Define types for scan results
 type DiagnosticStepStatus = 'idle' | 'clean' | 'warning' | 'danger';
@@ -503,6 +504,11 @@ export default function LicenseManager() {
           </div>
 
           <div className="space-y-6">
+            {activeTab === 'office' && (
+              <div className="mb-6">
+                <OfficeLicenseAnalyzer />
+              </div>
+            )}
             <MainResultCard />
 
             <div className={`grid grid-cols-1 ${activeTab === 'windows' ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-3`}>
