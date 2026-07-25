@@ -462,10 +462,22 @@ class TransactionRecoveryManager {
 // MAIN DIAGNOSTIC ENGINE CLASS (PHASE 1 CORE IMPLEMENTATION)
 // ============================================================================
 
+const { 
+  CollectorRegistry, 
+  CollectorPipeline, 
+  CollectorHealthMonitor,
+  BaseCollector, 
+  COLLECTOR_CATEGORIES, 
+  COLLECTOR_PRIORITIES 
+} = require('./EnterpriseCollectorFramework.cjs');
+
 class OfficeDiagnosticEngineV3 {
   constructor(powerShellRunner) {
     this.powerShellRunner = powerShellRunner;
     this.auditLog = new EvidenceAuditLog();
+    this.collectorRegistry = new CollectorRegistry();
+    this.collectorHealthMonitor = new CollectorHealthMonitor();
+    this.collectorPipeline = new CollectorPipeline(this.collectorRegistry, this.collectorHealthMonitor);
   }
 
   async runFullDiagnostics() {
