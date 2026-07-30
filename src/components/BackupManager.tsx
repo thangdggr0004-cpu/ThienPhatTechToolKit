@@ -35,7 +35,7 @@ export default function BackupManager() {
     setWifiLoading(true);
     setMessage(null);
     try {
-      const profiles = await (window as any).electronAPI.listWifiProfiles();
+      const profiles = await window.electronAPI.listWifiProfiles();
       if (Array.isArray(profiles)) {
         setWifiProfiles(profiles);
         setWifiScanned(true);
@@ -56,7 +56,7 @@ export default function BackupManager() {
     setWifiExporting(true);
     setMessage(null);
     try {
-      const result = await (window as any).electronAPI.exportWifi();
+      const result = await window.electronAPI.exportWifi();
       if (result && result.success) {
         showMessage('success', `Đã sao lưu WiFi thành công vào: ${result.path}`);
       } else {

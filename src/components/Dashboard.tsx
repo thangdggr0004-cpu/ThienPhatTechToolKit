@@ -12,7 +12,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   React.useEffect(() => {
     const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
     if (isElectron && (window as any).electronAPI.getDefenderStatus) {
-      (window as any).electronAPI.getDefenderStatus().then((res: any) => {
+      window.electronAPI.getDefenderStatus().then((res) => {
         if (res && typeof res.enabled === 'boolean') {
           setDefenderEnabled(res.enabled);
         }
@@ -360,7 +360,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               onClick={() => {
                 const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
                 if (isElectron) {
-                  (window as any).electronAPI.runPowerShell('Start-Process "https://www.facebook.com/ThangDG/"');
+                  window.electronAPI.runPowerShell('Start-Process "https://www.facebook.com/ThangDG/"');
                 } else {
                   window.open('https://www.facebook.com/ThangDG/', '_blank');
                 }

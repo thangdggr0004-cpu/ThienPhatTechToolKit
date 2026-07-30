@@ -14,13 +14,13 @@ export default function BitLockerManager() {
   const [noModule, setNoModule] = useState(false);
   const [processingDrives, setProcessingDrives] = useState<Record<string, boolean>>({});
   
-  const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
+  const isElectron = typeof window !== 'undefined' && window.electronAPI !== undefined;
 
   const loadStatus = async () => {
     if (!isElectron) return;
     setLoading(true);
     try {
-      const res = await (window as any).electronAPI.getBitlockerStatus();
+      const res = await window.electronAPI.getBitlockerStatus();
       if (res.success) {
         if (res.data === 'NO_MODULE') {
           setNoModule(true);
@@ -77,7 +77,7 @@ export default function BitLockerManager() {
     for (const vol of encryptedVols) {
       setProcessingDrives(prev => ({ ...prev, [vol.MountPoint]: true }));
       try {
-        await (window as any).electronAPI.disableBitlocker(vol.MountPoint);
+        await window.electronAPI.disableBitlocker(vol.MountPoint);
       } catch (e) {
         console.error("Lỗi khi tắt", vol.MountPoint, e);
       } finally {

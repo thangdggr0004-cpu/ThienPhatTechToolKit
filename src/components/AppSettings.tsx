@@ -93,7 +93,7 @@ export default function AppSettings() {
           (window as any).electronAPI.setCloseToTray(value);
         }
         if (key === 'autoRamClean' && value === true) {
-          (window as any).electronAPI.cleanRamNow().then((res: any) => {
+          window.electronAPI.cleanRamNow().then((res) => {
             if (res && res.success) console.log(res.message);
           });
         }
@@ -147,7 +147,7 @@ export default function AppSettings() {
     try {
       const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
       if (isElectron) {
-        const res = await (window as any).electronAPI.checkForUpdates();
+        const res = await window.electronAPI.checkForUpdates();
         if (res && res.hasUpdate === false) {
           await (window as any).electronAPI.showInfoDialog({
             title: 'Thông Tin Cập Nhật',
