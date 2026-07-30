@@ -84,7 +84,7 @@ export default function AppSettings() {
     setConfig(prev => {
       const nextConfig = { ...prev, [key]: value };
       
-      const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
+      const isElectron = typeof window !== 'undefined' && window.electronAPI !== undefined;
       if (isElectron) {
         if (key === 'autoStart') {
           (window as any).electronAPI.setAutoStart(value);
