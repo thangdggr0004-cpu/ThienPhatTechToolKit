@@ -7,14 +7,27 @@ const { runPipeline } = require('./diagnosticPipeline.js');
 
 let mainWindow;
 
+function traceMain(stage, channel, meta) {
+    const ts = new Date().toISOString();
+    if (meta !== undefined) {
+        console.log(`[MAIN][${ts}][${channel}] ${stage}`, meta);
+    } else {
+        console.log(`[MAIN][${ts}][${channel}] ${stage}`);
+    }
+}
+
 // Helper to run PowerShell scripts robustly
 function runPowerShell(script) {
     const tempDir = os.tmpdir();
     const scriptPath = path.join(tempDir, `tpt-script-${Date.now()}.ps1`);
+    const startedAt = Date.now();
+
     // Use UTF8 with BOM for PowerShell to correctly handle special characters
     fs.writeFileSync(scriptPath, "\ufeff" + script, { encoding: 'utf8' });
+    traceMain('powershell-script-written', 'powershell', { scriptPath });
 
     const command = `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}"`;
+    traceMain('powershell-exec-start', 'powershell', { command });
 
     return new Promise((resolve, reject) => {
         exec(command, { encoding: 'utf8', maxBuffer: 1024 * 1024 * 5 }, (error, stdout, stderr) => {
@@ -24,14 +37,22 @@ function runPowerShell(script) {
                 console.warn(`Failed to cleanup temp PowerShell script: ${cleanupErr.message}`);
             }
 
+            const durationMs = Date.now() - startedAt;
+
             if (error) {
                 console.error(`PowerShell Error: ${error.message}`);
                 console.error(`PowerShell Stderr: ${stderr}`);
+                traceMain('powershell-exec-error', 'powershell', { durationMs, message: error.message, stderr });
                 return reject(new Error(`Lỗi thực thi PowerShell: ${stderr || error.message}`));
             }
             if (stderr) {
                 console.warn(`PowerShell Stderr: ${stderr}`);
             }
+
+            traceMain('powershell-exec-success', 'powershell', {
+                durationMs,
+                stdoutLength: typeof stdout === 'string' ? stdout.length : 0
+            });
             resolve(stdout);
         });
     });
@@ -60,7 +81,9 @@ function createWindow() {
 // --- IPC Handlers ---
 
 ipcMain.handle('scan-activation', async (event, payload) => {
-    const script = `
+    traceMain('request-received', 'scan-activation', { payload });
+    try {
+        const script = `
         $ErrorActionPreference = 'SilentlyContinue'
         $result = @{
             Windows = @{}
@@ -138,29 +161,43 @@ ipcMain.handle('scan-activation', async (event, payload) => {
 
         $result | ConvertTo-Json -Depth 5
     `;
-    const jsonResult = await runPowerShell(script);
-    const evidenceMatrix = JSON.parse(jsonResult);
+        const jsonResult = await runPowerShell(script);
 
-    // The Orchestrator's only job is to call the pipeline.
-    // All business logic is encapsulated within the pipeline.
-    const finalReport = runPipeline(evidenceMatrix);
+        let evidenceMatrix;
+        try {
+            evidenceMatrix = JSON.parse(jsonResult);
+        } catch (parseErr) {
+            traceMain('json-parse-error', 'scan-activation', { parseError: parseErr.message, raw: jsonResult });
+            throw new Error(`Không thể parse JSON từ PowerShell: ${parseErr.message}`);
+        }
 
-    // The Public Contract returns the final report from the pipeline,
-    // ensuring the frontend receives the processed assessment.
-    return finalReport;
+        // The Orchestrator's only job is to call the pipeline.
+        // All business logic is encapsulated within the pipeline.
+        const finalReport = runPipeline(evidenceMatrix);
+
+        traceMain('request-success', 'scan-activation');
+        // The Public Contract returns the final report from the pipeline,
+        // ensuring the frontend receives the processed assessment.
+        return finalReport;
+    } catch (err) {
+        traceMain('request-error', 'scan-activation', { message: err.message });
+        throw err;
+    }
 });
 
 ipcMain.handle('deep-clean-activation', async (event, type) => {
-    let script = '';
-    if (type === 'windows') {
-        script = `
+    traceMain('request-received', 'deep-clean-activation', { type });
+    try {
+        let script = '';
+        if (type === 'windows') {
+            script = `
             cscript //nologo C:\\Windows\\System32\\slmgr.vbs /upk
             cscript //nologo C:\\Windows\\System32\\slmgr.vbs /cpky
             cscript //nologo C:\\Windows\\System32\\slmgr.vbs /rearm
             "Hoàn tất gỡ bản quyền Windows. Vui lòng khởi động lại máy."
         `;
-    } else if (type === 'office') {
-        script = `
+        } else if (type === 'office') {
+            script = `
             $officePath = ""
             if (Test-Path "C:\\Program Files\\Microsoft Office\\Office16") { $officePath = "C:\\Program Files\\Microsoft Office\\Office16" }
             elseif (Test-Path "C:\\Program Files (x86)\\Microsoft Office\\Office16") { $officePath = "C:\\Program Files (x86)\\Microsoft Office\\Office16" }
@@ -179,13 +216,26 @@ ipcMain.handle('deep-clean-activation', async (event, type) => {
                 $log -join \`n
             } else { "Không tìm thấy tệp ospp.vbs để reset bản quyền Office." }
         `;
+        }
+
+        if (script) {
+            const output = await runPowerShell(script);
+            traceMain('request-success', 'deep-clean-activation');
+            return output;
+        }
+
+        traceMain('request-success', 'deep-clean-activation', { note: 'invalid-type' });
+        return "Loại không hợp lệ.";
+    } catch (err) {
+        traceMain('request-error', 'deep-clean-activation', { message: err.message });
+        throw err;
     }
-    if (script) return await runPowerShell(script);
-    return "Loại không hợp lệ.";
 });
 
 ipcMain.handle('restore-oem-bios-key', async () => {
-    const script = `
+    traceMain('request-received', 'restore-oem-bios-key');
+    try {
+        const script = `
         $ErrorActionPreference = 'Stop'
         $oa3 = (Get-CimInstance -ClassName SoftwareLicensingService).OA3xOriginalProductKey
         if (-not $oa3) {
@@ -199,21 +249,48 @@ ipcMain.handle('restore-oem-bios-key', async () => {
 
         "Đã khôi phục OEM key thành công. Kết quả kích hoạt:\`n$($ato -join \`n)"
     `;
-    return await runPowerShell(script);
+        const output = await runPowerShell(script);
+        traceMain('request-success', 'restore-oem-bios-key');
+        return output;
+    } catch (err) {
+        traceMain('request-error', 'restore-oem-bios-key', { message: err.message });
+        throw err;
+    }
 });
 
 ipcMain.handle('show-confirm-dialog', async (event, options) => {
-    const result = await dialog.showMessageBox(mainWindow, {
-        type: options.type || 'question', buttons: ['Hủy', 'OK'], defaultId: 1,
-        title: options.title, message: options.message,
-    });
-    return result.response === 1;
+    traceMain('request-received', 'show-confirm-dialog', { options });
+    try {
+        const result = await dialog.showMessageBox(mainWindow, {
+            type: options?.type || 'question',
+            buttons: ['Hủy', 'OK'],
+            defaultId: 1,
+            title: options?.title,
+            message: options?.message,
+        });
+        const confirmed = result.response === 1;
+        traceMain('request-success', 'show-confirm-dialog', { confirmed });
+        return confirmed;
+    } catch (err) {
+        traceMain('request-error', 'show-confirm-dialog', { message: err.message });
+        throw err;
+    }
 });
 
 ipcMain.handle('show-info-dialog', async (event, options) => {
-    return await dialog.showMessageBox(mainWindow, {
-        type: 'info', title: options.title, message: options.message,
-    });
+    traceMain('request-received', 'show-info-dialog', { options });
+    try {
+        const result = await dialog.showMessageBox(mainWindow, {
+            type: 'info',
+            title: options?.title,
+            message: options?.message,
+        });
+        traceMain('request-success', 'show-info-dialog', { response: result.response });
+        return result;
+    } catch (err) {
+        traceMain('request-error', 'show-info-dialog', { message: err.message });
+        throw err;
+    }
 });
 
 app.whenReady().then(() => {
