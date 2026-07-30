@@ -80,6 +80,45 @@ const translateFieldValue = (str) => {
   return translated;
 };
 
+// Normalize IPC scan payloads from different backend response shapes
+const normalizeScanActivationResult = (raw: any): any => {
+  if (!raw) return null;
+
+  // hard failures from backend
+  if (raw.Success === false) {
+    throw new Error(raw.Error || 'Backend scan failed.');
+  }
+  if (raw.success === false) {
+    throw new Error(raw.error || 'Backend scan failed.');
+  }
+
+  // direct object shape already expected by UI
+  if (raw.Windows || raw.Office || raw.System) return raw;
+
+  // common wrappers: { Data }, { data }
+  if (raw.Data) {
+    if (typeof raw.Data === 'string') {
+      try {
+        const parsed = JSON.parse(raw.Data);
+        if (parsed && (parsed.Windows || parsed.Office || parsed.System)) return parsed;
+      } catch {}
+    }
+    if (raw.Data.Windows || raw.Data.Office || raw.Data.System) return raw.Data;
+  }
+
+  if (raw.data) {
+    if (typeof raw.data === 'string') {
+      try {
+        const parsed = JSON.parse(raw.data);
+        if (parsed && (parsed.Windows || parsed.Office || parsed.System)) return parsed;
+      } catch {}
+    }
+    if (raw.data.Windows || raw.data.Office || raw.data.System) return raw.data;
+  }
+
+  return null;
+};
+
 // Define types for scan results
 type DiagnosticStepStatus = 'idle' | 'clean' | 'warning' | 'danger';
 type DiagnosticStep = {
@@ -230,18 +269,33 @@ export default function LicenseManager() {
 
     try {
       const type = activeTab;
-      const result = await (window as any).electronAPI.scanActivation({ type });
+      const api = (window as any)?.electronAPI;
+      if (!api?.scanActivation) {
+        throw new Error('scanActivation IPC is not available.');
+      }
+
+      const rawResult = await api.scanActivation({ type });
+      const result = normalizeScanActivationResult(rawResult);
+
+      if (!result) {
+        throw new Error('Không nhận được dữ liệu quét hợp lệ từ backend.');
+      }
       
       if (type === 'windows') {
-          const evidences = EvidenceFactory.createFromRawData(result);
-          const repo = new EvidenceRepository(evidences);
-          const report = VerificationEngine.verifyDeepCleanWithRepository(repo);
-          
-          result.Forensics = {
-              decision: report.passed ? 'GENUINE' : 'TAMPERED',
-              confidence: { final: report.confidence },
-              issues: report.issues
-          };
+          try {
+            const evidences = EvidenceFactory.createFromRawData(result);
+            const repo = new EvidenceRepository(evidences);
+            const report = VerificationEngine.verifyDeepCleanWithRepository(repo);
+            
+            result.Forensics = {
+                decision: report.passed ? 'GENUINE' : 'TAMPERED',
+                confidence: { final: report.confidence },
+                issues: report.issues
+            };
+          } catch (forensicErr) {
+            // Keep scan result usable even if forensic enrichment fails
+            result.Forensics = result.Forensics || {};
+          }
           
           setWindowsScanResult(result);
           processWindowsScanResults(result);
