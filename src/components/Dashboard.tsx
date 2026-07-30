@@ -48,8 +48,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         } else {
           alert(`Không thể ${targetState ? 'bật' : 'tắt'} Windows Defender\n\nMã lỗi: DEFENDER_${targetState ? 'ENABLE' : 'DISABLE'}_FAIL\nChi tiết: ${res?.error || 'Nguyên nhân không xác định'}\n\nVui lòng thử lại hoặc liên hệ hỗ trợ kỹ thuật`);
         }
-      } catch (err: any) {
-        alert("Lỗi khi điều khiển Windows Defender: " + err.message);
+      } catch (err: unknown) {
+        alert(`Lỗi khi điều khiển Windows Defender: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
       } finally {
         setTogglingDefender(false);
       }

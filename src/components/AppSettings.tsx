@@ -73,7 +73,7 @@ export default function AppSettings() {
 
   useEffect(() => {
     // Initial sync with backend
-    const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
+    const isElectron = typeof window !== 'undefined' && window.electronAPI !== undefined;
     if (isElectron) {
       window.electronAPI.setAutoStart(config.autoStart);
       window.electronAPI.setCloseToTray(config.closeToTray);
