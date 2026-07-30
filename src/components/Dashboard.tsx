@@ -36,7 +36,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     setTogglingDefender(true);
     if (isElectron && (window as any).electronAPI.toggleDefenderStatus) {
       try {
-        const res = await (window as any).electronAPI.toggleDefenderStatus(targetState);
+        const res = await window.electronAPI.toggleDefenderStatus(targetState);
         if (res && res.success) {
           // Re-fetch live status
           const check = await (window as any).electronAPI.getDefenderStatus();
@@ -360,7 +360,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               onClick={() => {
                 const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
                 if (isElectron) {
-                  window.electronAPI.runPowerShell('Start-Process "https://www.facebook.com/ThangDG/"');
+                  window.open('https://www.facebook.com/ThangDG/', '_blank');
                 } else {
                   window.open('https://www.facebook.com/ThangDG/', '_blank');
                 }

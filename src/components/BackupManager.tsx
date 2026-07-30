@@ -75,7 +75,7 @@ export default function BackupManager() {
     setWifiRestoring(true);
     setMessage(null);
     try {
-      const result = await (window as any).electronAPI.restoreWifi();
+      const result = await window.electronAPI.restoreWifi();
       if (result && result.success) {
         showMessage('success', `Đã phục hồi ${result.count || ''} mạng WiFi thành công!`);
       } else {
@@ -115,7 +115,7 @@ export default function BackupManager() {
     setMessage(null);
     showMessage('info', 'Đang phục hồi driver (cần quyền Admin)...');
     try {
-      const result = await (window as any).electronAPI.restoreDrivers();
+      const result = await window.electronAPI.restoreDrivers();
       if (result && result.success) {
         showMessage('success', 'Đã phục hồi driver thành công! Khuyến nghị khởi động lại máy.');
       } else {
