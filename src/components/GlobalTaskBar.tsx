@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTaskManager, AppTask } from '../context/TaskManagerContext';
+import { useTaskManager, AppTask } from '../context/TaskManagerContext.js';
 import { Activity, CheckCircle2, AlertCircle, ChevronUp, ChevronDown, X, Terminal } from 'lucide-react';
 
 interface GlobalTaskBarProps {
