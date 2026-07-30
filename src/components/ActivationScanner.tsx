@@ -1,16 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Scan, Download, ShieldCheck, HardDrive, Server, FileText, Activity, AlertTriangle, GanttChartSquare, Microscope, Stethoscope, Info } from 'lucide-react';
+import { Scan, Download, ShieldCheck, GanttChartSquare, Info } from 'lucide-react';
 import { generateWinActivationScript } from '../utils/scriptGenerator.js';
 
 // Import new components
-import RiskScoreGauge from './RiskScoreGauge.tsx';
-import SystemSummary from './SystemSummary.tsx';
 import DiagnosticStatusBar from './DiagnosticStatusBar.tsx';
 import ExecutionTimeline, {
     TimelineEvent
 } from './ExecutionTimeline.tsx';
-import FindingsReport, { Finding } from './FindingsReport.tsx';
+import { Finding } from './FindingsReport.tsx';
 
 import { useCore } from '../context/CoreContext.js';
 import { ExecutionEventType } from '../core/executor/ExecutionEvents.js';
@@ -42,7 +40,6 @@ interface SystemInfo {
     hasOA3Key?: boolean;
 }
 
-// This will be the main object passed to the new components
 export interface IWindowsDiagnosticData {
     status: ScanStatus;
     verdict: FinalVerdict;
@@ -92,24 +89,45 @@ const addTimelineEvent = (
 export default function ActivationScanner() {
     const { registry, engine, executor, eventBus, historyManager } = useCore();
     const [winState, setWinState] = useState<DiagnosticState>(initialState);
-    // The office state and logic can be removed or kept separate if needed
-    // For this task, we focus only on the Windows UI
     const [activeTab, setActiveTab] = useState<'windows' | 'office'>('windows');
 
     // Helper to sleep for a given time
     const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+    const traceFlow = (
+        message: string,
+        type: TimelineEvent['type'] = 'info',
+        meta?: unknown
+    ) => {
+        addTimelineEvent(setWinState, message, type);
+        if (meta !== undefined) {
+            console.debug(`[ActivationScanner][TRACE] ${message}`, meta);
+        } else {
+            console.debug(`[ActivationScanner][TRACE] ${message}`);
+        }
+    };
+
     const startWinScan = async () => {
         if (winState.status === 'Scanning') return;
-        setWinState(initialState); // Reset state before scan
+
+        const flowStartTs = Date.now();
+        setWinState(initialState);
         await sleep(100);
 
-        setWinState(prev => ({ ...prev, status: 'Scanning', progress: 5, statusText: 'Khởi tạo quét...', scanStartTime: Date.now() }));
-        addTimelineEvent(setWinState, 'Bắt đầu quy trình chẩn đoán Windows bằng Architecture V3.', 'system');
+        setWinState(prev => ({
+            ...prev,
+            status: 'Scanning',
+            progress: 5,
+            statusText: 'Khởi tạo quét...',
+            scanStartTime: Date.now()
+        }));
+        traceFlow('Scan pipeline initialized.', 'system', { startedAt: new Date(flowStartTs).toISOString() });
 
         try {
+            traceFlow('Looking up action in registry: WINDOWS_LICENSE_SCAN', 'info');
             const action = registry.getById('WINDOWS_LICENSE_SCAN');
             if (!action) throw new Error('Action WINDOWS_LICENSE_SCAN không tồn tại trong Registry.');
+            traceFlow('Action resolved from registry.', 'success', { actionId: action.id });
 
             // Mock snapshot for initialization
             const mockSnapshot: any = {
@@ -120,40 +138,59 @@ export default function ActivationScanner() {
                 network: { isOnline: true, hostsFileModified: false },
                 rawEvidence: []
             };
+            traceFlow('Initial snapshot prepared.', 'info', mockSnapshot);
 
             let unsubscribe = () => {};
             let result;
+            const execStartedAt = Date.now();
+
             try {
+                traceFlow('Subscribing to event bus for executor state changes.', 'info');
                 unsubscribe = eventBus.subscribe({
                     onEvent: (event) => {
                         if (event.type === ExecutionEventType.STATE_CHANGED && event.actionId === 'WINDOWS_LICENSE_SCAN') {
-                            addTimelineEvent(setWinState, `Executor State: ${event.state}`, 'info');
+                            traceFlow(`Executor state changed: ${event.state}`, 'info', event);
                         }
                     }
                 });
 
                 setWinState(prev => ({ ...prev, progress: 30, statusText: 'Thực thi PowerShell backend qua IPC...' }));
+                traceFlow('Calling executor.execute(...)', 'system', { actionId: action.id });
                 result = await executor.execute(action, mockSnapshot, eventBus);
+                traceFlow('executor.execute(...) returned.', 'success', {
+                    durationMs: Date.now() - execStartedAt,
+                    success: result?.success
+                });
             } finally {
                 unsubscribe();
+                traceFlow('Event bus subscription released.', 'info');
             }
 
             if (!result.success || !result.data) {
+                traceFlow('Executor returned invalid result payload.', 'error', result);
                 throw new Error(result.error || 'Lỗi không xác định từ IPC Backend');
             }
 
             if (result.data.Success === false) {
+                traceFlow('Backend reported failure flag.', 'error', result.data);
                 throw new Error(result.data.Error || 'Lỗi từ PowerShell script');
             }
 
             const winData = result.data.Data;
             if (!winData) {
+                traceFlow('Backend payload missing Data.', 'error', result.data);
                 throw new Error('Dữ liệu trả về bị rỗng (Null/Empty).');
             }
+
+            traceFlow('Backend payload validated.', 'success', {
+                keys: Object.keys(winData || {})
+            });
+
             setWinState(prev => ({ ...prev, progress: 60, statusText: 'Phân tích dữ liệu WMI trả về...' }));
             await sleep(300);
 
             // Xây dựng các Evidence Objects V2 chuẩn định dạng
+            traceFlow('Building structured evidences from backend payload.', 'info');
             const structuredEvidences: import('../core/domain/EvidenceModel.js').StructuredEvidence[] = [
                 {
                     source: 'license',
@@ -197,6 +234,7 @@ export default function ActivationScanner() {
                     suspicious: true
                 }))
             ];
+            traceFlow('Structured evidences built.', 'success', { count: structuredEvidences.length });
 
             // Cập nhật Snapshot thực tế với dữ liệu Forensic đầy đủ
             const realSnapshot = {
@@ -218,8 +256,12 @@ export default function ActivationScanner() {
             };
 
             setWinState(prev => ({ ...prev, progress: 80, statusText: 'Engine nội suy Recommendation Rules...' }));
+            traceFlow('Calling engine.evaluateAll(...)', 'system');
             const engineCtx: any = { snapshot: realSnapshot, history: historyManager.getActiveSession().history, isOffline: false };
             const recommendations = engine.evaluateAll(engineCtx, () => true);
+            traceFlow('Engine evaluation completed.', 'success', {
+                recommendationCount: recommendations.length
+            });
 
             let riskScore = 0;
             let verdict: FinalVerdict = 'Genuine';
@@ -227,49 +269,69 @@ export default function ActivationScanner() {
 
             if (recommendations.length > 0) {
                 recommendations.forEach(r => {
+                    traceFlow(`Processing recommendation: ${r.id}`, 'info', r);
                     if (r.id === 'REC_WIN_REMOVE_CRACK') {
                         verdict = 'Tampered';
                         riskScore += 80;
                         newFindings.push({ category: 'KMS', severity: 'danger', description: r.reason });
-                        addTimelineEvent(setWinState, `[ENGINE ALERT] ${r.title}`, 'error');
+                        traceFlow(`[ENGINE ALERT] ${r.title}`, 'error');
                     } else if (r.id === 'REC_WIN_ACTIVATE') {
                         if (verdict !== 'Tampered') verdict = 'Warning';
                         riskScore += 20;
                         newFindings.push({ category: 'System', severity: 'warning', description: r.reason });
-                        addTimelineEvent(setWinState, `[ENGINE ALERT] ${r.title}`, 'warning');
+                        traceFlow(`[ENGINE ALERT] ${r.title}`, 'warning');
                     }
                 });
             } else {
                 newFindings.push({ category: 'System', severity: 'clean', description: 'Hệ thống bản quyền an toàn, không có lỗi.' });
-                addTimelineEvent(setWinState, 'Hệ thống bản quyền an toàn, không có Đề xuất nào.', 'success');
+                traceFlow('No recommendations returned. System considered clean.', 'success');
             }
 
+            const clampedRisk = Math.min(100, riskScore);
             setWinState(prev => ({
                 ...prev,
                 status: 'Completed',
                 verdict: verdict,
                 progress: 100,
-                riskScore: Math.min(100, riskScore),
+                riskScore: clampedRisk,
                 findings: newFindings,
                 statusText: 'Hoàn tất chẩn đoán!',
-                systemInfo: { ...prev.systemInfo, licenseStatus: winData.status, licenseChannel: winData.productKeyChannel, hasOA3Key: winData.hasOA3Key },
+                systemInfo: {
+                    ...prev.systemInfo,
+                    licenseStatus: winData.status,
+                    licenseChannel: winData.productKeyChannel,
+                    hasOA3Key: winData.hasOA3Key
+                },
             }));
+            traceFlow('Final state committed.', 'success', {
+                verdict,
+                riskScore: clampedRisk,
+                findings: newFindings.length
+            });
 
             // Record to History
-            await historyManager.recordAction({ actionId: 'WINDOWS_LICENSE_SCAN', startTime: Date.now(), parameters: {}, isRollback: false, token: null as any, attempt: 1 }, result);
-            addTimelineEvent(setWinState, `Đã ghi nhận Action History: Thành công.`, 'system');
+            traceFlow('Recording action into history manager.', 'info');
+            await historyManager.recordAction(
+                { actionId: 'WINDOWS_LICENSE_SCAN', startTime: Date.now(), parameters: {}, isRollback: false, token: null as any, attempt: 1 },
+                result
+            );
+            traceFlow('Action history recorded successfully.', 'system');
+
+            traceFlow('Scan pipeline completed successfully.', 'success', {
+                totalDurationMs: Date.now() - flowStartTs
+            });
 
         } catch (err: any) {
             const errorMessage = err.message || 'Lỗi không xác định.';
             setWinState(prev => ({ ...prev, status: 'Error', statusText: errorMessage }));
-            addTimelineEvent(setWinState, `Quá trình quét thất bại: ${errorMessage}`, 'error');
+            traceFlow(`Scan pipeline failed: ${errorMessage}`, 'error', err);
         }
     };
 
     const handleGenerateResetScript = () => {
-        // This function remains as it is not part of the core UI redesign
         const scriptContent = generateWinActivationScript('delete');
         downloadFile(scriptContent, 'Reset_Windows_License.bat', 'application/bat');
+        traceFlow('Generated reset script: Reset_Windows_License.bat', 'system');
     };
 
     const isScanning = winState.status === 'Scanning';
@@ -319,56 +381,57 @@ export default function ActivationScanner() {
                                     </button>
                                 </div>
 
-                                 {isScanCompleted && (
-                                     <>
-                                     <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm mb-4">
-                                         <h4 className="font-bold text-slate-800">License Health</h4>
-                                         <p className="text-sm text-slate-600">Verdict: {winState.verdict}</p>
-                                     </div>
-                                     <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
-                                         <button onClick={handleGenerateResetScript} className="w-full flex items-center justify-center gap-2 py-2 bg-slate-800 text-white rounded-lg text-xs font-bold transition hover:bg-slate-700">
-                                            <Download size={14} />
-                                            Tạo Script Đặt Lại Bản Quyền
-                                        </button>
-                                    </div>
+                                {isScanCompleted && (
+                                    <>
+                                        <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm mb-4">
+                                            <h4 className="font-bold text-slate-800">License Health</h4>
+                                            <p className="text-sm text-slate-600">Verdict: {winState.verdict}</p>
+                                        </div>
+                                        <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
+                                            <button onClick={handleGenerateResetScript} className="w-full flex items-center justify-center gap-2 py-2 bg-slate-800 text-white rounded-lg text-xs font-bold transition hover:bg-slate-700">
+                                                <Download size={14} />
+                                                Tạo Script Đặt Lại Bản Quyền
+                                            </button>
+                                        </div>
                                     </>
                                 )}
 
                                 {!isScanCompleted && !isScanning && (
-                                     <div className="p-6 text-center bg-white rounded-xl border border-slate-200 shadow-sm text-sm text-slate-500">
+                                    <div className="p-6 text-center bg-white rounded-xl border border-slate-200 shadow-sm text-sm text-slate-500">
                                         <Info className="mx-auto h-8 w-8 text-indigo-400 mb-2" />
                                         <p className="font-semibold text-slate-700">Sẵn sàng để quét</p>
                                         <p>Nhấn "Bắt Đầu Chẩn Đoán" để bắt đầu phân tích hệ thống của bạn.</p>
                                     </div>
                                 )}
 
-                                {isScanning && (
+                                {(isScanning || winState.timeline.length > 0) && (
                                     <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
-                                        <h4 className="font-bold text-sm text-slate-800 mb-2">Đang thực hiện...</h4>
+                                        <h4 className="font-bold text-sm text-slate-800 mb-2">Execution Trace</h4>
                                         <ExecutionTimeline events={winState.timeline} />
                                     </div>
                                 )}
-
                             </div>
 
                             {/* Center and Right Panels */}
                             <div className="col-span-12 xl:col-span-9 space-y-4">
-                               {isScanning && <DiagnosticStatusBar status={winState.statusText} progress={winState.progress} />}
+                                {isScanning && <DiagnosticStatusBar status={winState.statusText} progress={winState.progress} />}
 
-                               {isScanCompleted ? (
-                                     <>
+                                {isScanCompleted ? (
+                                    <>
                                         <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 mb-4">
                                             <h3 className="text-lg font-bold">Executive Summary</h3>
                                             <p className="text-sm">Risk Score: {winState.riskScore}</p>
+                                            <p className="text-sm">Verdict: {diagnosticData.verdict}</p>
+                                            <p className="text-sm">Findings: {diagnosticData.findings.length}</p>
                                         </div>
-                                     </>
-                               ) : (
-                                <div className="p-10 text-center bg-white rounded-xl border border-slate-200 shadow-sm h-full flex flex-col justify-center items-center">
-                                    <GanttChartSquare className="h-12 w-12 text-slate-300 mb-4" />
-                                    <h3 className="font-bold text-slate-700">Vùng Chờ Kết Quả Chẩn Đoán</h3>
-                                    <p className="text-sm text-slate-500 mt-1">Kết quả phân tích chi tiết sẽ được hiển thị ở đây sau khi quá trình quét hoàn tất.</p>
-                                </div>
-                               )}
+                                    </>
+                                ) : (
+                                    <div className="p-10 text-center bg-white rounded-xl border border-slate-200 shadow-sm h-full flex flex-col justify-center items-center">
+                                        <GanttChartSquare className="h-12 w-12 text-slate-300 mb-4" />
+                                        <h3 className="font-bold text-slate-700">Vùng Chờ Kết Quả Chẩn Đoán</h3>
+                                        <p className="text-sm text-slate-500 mt-1">Kết quả phân tích chi tiết sẽ được hiển thị ở đây sau khi quá trình quét hoàn tất.</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ) : (
