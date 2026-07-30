@@ -121,6 +121,7 @@ export const TaskManagerProvider: React.FC<{ children: ReactNode }> = ({ childre
       delete next[id];
       return next;
     });
+    notifyObservers();
   };
 
   const activeTasks = Object.values(tasks).filter((t: AppTask) => t.status === 'running');
