@@ -285,7 +285,7 @@ function runPowerShellScript(scriptContent) {
     const fileContent = Buffer.concat([bom, Buffer.from(scriptContent, 'utf8')]);
     fs.writeFile(tempFile, fileContent, (err) => {
       if (err) return reject(err);
-      exec(`powershell -NoProfile -NonInteractive -NoLogo -ExecutionPolicy Bypass -File "${tempFile}"`, { maxBuffer: 10 * 1024 * 1024 }, (execErr, stdout, stderr) => {
+      exec(`powershell -NoProfile -NonInteractive -NoLogo -ExecutionPolicy Bypass -File "${tempFile}"`, { maxBuffer: 10 * 1024 * 1024, timeout: 15000 }, (execErr, stdout, stderr) => {
         fs.unlink(tempFile, () => {});
         if (execErr) {
           reject(execErr || stderr);
@@ -323,7 +323,7 @@ ${scriptContent}
       // Use "-wait" to wait for the elevated process to exit
       const cmd = `"${elevatePath}" -wait powershell.exe -NoProfile -NonInteractive -NoLogo -ExecutionPolicy Bypass -File "${tempFile}"`;
       
-      exec(cmd, { maxBuffer: 10 * 1024 * 1024 }, (execErr, stdout, stderr) => {
+      exec(cmd, { maxBuffer: 10 * 1024 * 1024, timeout: 30000 }, (execErr, stdout, stderr) => {
         // Read the output file
         fs.readFile(outputFile, 'utf8', (readErr, data) => {
           // Clean up temp files
@@ -588,6 +588,18 @@ app.whenReady().then(() => {
     }
   });
 
+  ipcMain.handle('run-action-WINDOWS_LICENSE_SCAN', async (event, payload) => {
+    try {
+      const scriptPath = app.isPackaged ? path.join(process.resourcesPath, 'src/scripts/windows_license_scan.ps1') : path.join(__dirname, 'src/scripts/windows_license_scan.ps1');
+      const scriptContent = fs.readFileSync(scriptPath, 'utf8');
+      const output = await runPowerShellScript(scriptContent);
+      return JSON.parse(output.trim());
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
+  });
+
   ipcMain.handle('scan-activation', async (event, { type } = {}) => {
     try {
       const targetType = type || 'all';
@@ -759,7 +771,106 @@ try {
     }
 } catch {}
 
+# ============================================================
+# MasHistory: Detect MAS / HWID / AAct activation artifacts
+# ============================================================
+$result.System.MasHistory = $false
+try {
+    # 1. Check for known MAS registry keys left after HWID/MAS activation
+    $masRegPaths = @(
+        "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SoftwareProtectionPlatform\\Activation\\Manual",
+        "HKLM:\\SOFTWARE\\Classes\\CLSID\\{ADB880A6-D8FF-11CF-9377-00AA003B7A11}",
+        "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System"
+    )
+    foreach ($rp in $masRegPaths) {
+        if (Test-Path $rp) {
+            $props = Get-ItemProperty -Path $rp -ErrorAction SilentlyContinue
+            if ($props -and ($props.PSObject.Properties.Name -match "MAS|HWID|Activation")) {
+                $result.System.MasHistory = $true; break
+            }
+        }
+    }
+
+    # 2. Check for MAS/AAct tool artifacts in filesystem
+    $masArtifacts = @(
+        "$env:SystemRoot\\MAS",
+        "$env:TEMP\\MAS",
+        "$env:SystemRoot\\Temp\\MAS_AIO.cmd",
+        "$env:ProgramData\\AAct",
+        "$env:SystemRoot\\AAct_files",
+        "$env:ProgramFiles\\AAct"
+    )
+    foreach ($artifact in $masArtifacts) {
+        if (Test-Path $artifact) { $result.System.MasHistory = $true; break }
+    }
+
+    # 3. Check EventLog for MAS/HWID script execution traces (provider KMS_Server or script logs)
+    if (-not $result.System.MasHistory) {
+        $masEvents = Get-WinEvent -FilterHashtable @{LogName='Application'; Id=1} -MaxEvents 20 -ErrorAction SilentlyContinue |
+            Where-Object { $_.Message -match "MAS|HWID|AAct|KMS38|MAS_AIO|MAS_HWID" }
+        if ($masEvents -and $masEvents.Count -gt 0) { $result.System.MasHistory = $true }
+    }
+} catch {}
+
+# ============================================================
+# IsKMS38: Detect KMS38 activation (token with 2038 expiry)
+# ============================================================
+$result.System.IsKMS38 = $false
+try {
+    # 1. Check slmgr /xpr output for year 2038 (KMS38 signature)
+    $xprOutput = $result.Windows.Xpr
+    if ($xprOutput -and $xprOutput -match "2038") {
+        $result.System.IsKMS38 = $true
+    }
+
+    # 2. Check for KMS38 store directory (used by KMS38 tool)
+    $kms38StorePaths = @(
+        "$env:SystemRoot\\System32\\spp\\store_test",
+        "$env:SystemRoot\\System32\\spp\\store\\2.0\\tokens.dat"
+    )
+    if (-not $result.System.IsKMS38) {
+        foreach ($sp in $kms38StorePaths) {
+            if (Test-Path $sp) { $result.System.IsKMS38 = $true; break }
+        }
+    }
+
+    # 3. Check GracePeriodRemaining = 0 combined with VOLUME_KMSCLIENT and Xpr far future (heuristic)
+    if (-not $result.System.IsKMS38 -and $result.Windows.GracePeriodRemaining -eq 0 -and
+        $result.Windows.Channel -eq "VOLUME_KMSCLIENT" -and $xprOutput -match "203[0-9]") {
+        $result.System.IsKMS38 = $true
+    }
+} catch {}
+
+# ============================================================
+# IsFakeKMS: Detect pirated / localhost KMS host
+# ============================================================
+$result.System.IsFakeKMS = $false
+try {
+    $kmsHost = $result.Windows.KeyManagementServiceMachine
+    if ($kmsHost -and $kmsHost.Trim().Length -gt 0) {
+        $kmsHostLower = $kmsHost.Trim().ToLower()
+
+        # 1. Known fake/pirate KMS domain patterns
+        $fakePatterns = @("0.0.0.0","127.0.0.","localhost","loli","digiboy","msguides","zdf","kms.","kms8.","kms9.",
+                          "skms.","vlmcs.","kmsauto","aact","kms4dotnet","kms-activation","novaxm","xinso")
+        foreach ($pat in $fakePatterns) {
+            if ($kmsHostLower -match [regex]::Escape($pat)) { $result.System.IsFakeKMS = $true; break }
+        }
+
+        # 2. Try DNS resolution: if KMS host resolves to localhost IPs → fake
+        if (-not $result.System.IsFakeKMS) {
+            try {
+                $resolved = [System.Net.Dns]::GetHostAddresses($kmsHostLower) | Select-Object -ExpandProperty IPAddressToString
+                foreach ($ip in $resolved) {
+                    if ($ip -match "^127\.|^0\.0\.0\.|^::1$") { $result.System.IsFakeKMS = $true; break }
+                }
+            } catch {}
+        }
+    }
+} catch {}
+
 $result | ConvertTo-Json -Depth 5 -Compress
+
 `;
       const output = await runPowerShellScript(script);
       return JSON.parse(output.trim());
@@ -769,40 +880,94 @@ $result | ConvertTo-Json -Depth 5 -Compress
     }
   });
 
-  ipcMain.handle('execute-activation-action', async (event, { type, action }) => {
-    try {
-      let script = '';
-      if (type === 'windows') {
-        script = `
+  const performDeepCleanWindows = async () => {
+    const script = `
 $OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-cscript //nologo $env:windir\\system32\\slmgr.vbs /upk
-cscript //nologo $env:windir\\system32\\slmgr.vbs /cpky
-cscript //nologo $env:windir\\system32\\slmgr.vbs /ckms
-cscript //nologo $env:windir\\system32\\slmgr.vbs /rearm
-wevtutil cl Application
-wevtutil cl System
-sc config sppsvc start= auto
-net stop sppsvc /y
-net start sppsvc
+
+# 1. Uninstall key & reset KMS host
+cscript //nologo $env:windir\\system32\\slmgr.vbs /upk -ErrorAction SilentlyContinue
+cscript //nologo $env:windir\\system32\\slmgr.vbs /cpky -ErrorAction SilentlyContinue
+cscript //nologo $env:windir\\system32\\slmgr.vbs /ckms -ErrorAction SilentlyContinue
+cscript //nologo $env:windir\\system32\\slmgr.vbs /rearm -ErrorAction SilentlyContinue
+
+# 2. Clean Pirated Files & AutoKMS Artifacts
+$piratedPaths = @(
+  "C:\\Windows\\AutoKMS",
+  "C:\\Program Files\\AutoKMS",
+  "C:\\Windows\\SECOH-QAD.dll",
+  "C:\\Windows\\SECOH-QAD.exe",
+  "$env:TEMP\\MAS",
+  "$env:SystemRoot\\MAS"
+)
+foreach ($p in $piratedPaths) {
+  if (Test-Path $p) {
+    Remove-Item -Path $p -Recurse -Force -ErrorAction SilentlyContinue
+  }
+}
+
+# 3. Clean Suspicious Scheduled Tasks
+$tasks = Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object { $_.TaskName -match "KMS|MAS|AAct|HEU|KMSAuto|Activation-Renewal|Activation-Run_Once|R@1n" }
+foreach ($t in $tasks) {
+  Unregister-ScheduledTask -TaskName $t.TaskName -Confirm:$false -ErrorAction SilentlyContinue
+}
+
+# 4. Clean Suspicious Services
+$services = Get-Service -ErrorAction SilentlyContinue | Where-Object { $_.Name -match "KMS|MAS|AAct|HEU" }
+foreach ($s in $services) {
+  Stop-Service -Name $s.Name -Force -ErrorAction SilentlyContinue
+  sc.exe delete $s.Name | Out-Null
+}
+
+# 5. Clean Hosts file redirects
+$hostsPath = "$env:windir\\System32\\drivers\\etc\\hosts"
+if (Test-Path $hostsPath) {
+  $lines = Get-Content $hostsPath -ErrorAction SilentlyContinue
+  $cleanLines = $lines | Where-Object { $_.Trim() -and (-not ($_.Trim() -match "microsoft\\.com|office\\.com|kms")) }
+  Set-Content -Path $hostsPath -Value $cleanLines -ErrorAction SilentlyContinue
+}
+
+# 6. Clean Tampered Registry Keys & MAS Artifacts
+$masRegPaths = @(
+  "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SoftwareProtectionPlatform\\Activation\\Manual",
+  "HKLM:\\SOFTWARE\\Classes\\CLSID\\{ADB880A6-D8FF-11CF-9377-00AA003B7A11}"
+)
+foreach ($rp in $masRegPaths) {
+  if (Test-Path $rp) {
+    Remove-ItemProperty -Path $rp -Name "NoGenTicket" -ErrorAction SilentlyContinue
+    Remove-Item -Path $rp -Recurse -Force -ErrorAction SilentlyContinue
+  }
+}
+
+# 7. Clear event logs & restart sppsvc
+wevtutil cl Application -ErrorAction SilentlyContinue
+wevtutil cl System -ErrorAction SilentlyContinue
+sc.exe config sppsvc start= auto | Out-Null
+net stop sppsvc /y -ErrorAction SilentlyContinue
+net start sppsvc -ErrorAction SilentlyContinue
+
 echo "Done"
 `;
+    return await runPowerShellScriptElevated(script);
+  };
+
+  ipcMain.handle('deep-clean-activation', async (event, type) => {
+    try {
+      if (type === 'windows') {
+        return await performDeepCleanWindows();
       } else {
-        script = `
+        const script = `
 $OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$officePath = ""
 $officePaths = @(
     "$env:ProgramFiles\\Microsoft Office\\Office16",
     "$env:SystemDrive\\Program Files (x86)\\Microsoft Office\\Office16",
     "$env:ProgramFiles\\Microsoft Office\\Office15",
     "$env:SystemDrive\\Program Files (x86)\\Microsoft Office\\Office15"
 )
+$officePath = ""
 foreach ($p in $officePaths) {
-    if (Test-Path "$p\\ospp.vbs") {
-        $officePath = $p
-        break
-    }
+    if (Test-Path "$p\\ospp.vbs") { $officePath = $p; break }
 }
 if ($officePath -ne "") {
     cscript //nologo "$officePath\\ospp.vbs" /dstatus > $env:TEMP\\office_status.txt
@@ -821,9 +986,51 @@ if ($officePath -ne "") {
     echo "No Office installed"
 }
 `;
+        return await runPowerShellScriptElevated(script);
       }
-      const result = await runPowerShellScriptElevated(script);
-      return result;
+    } catch (err) {
+      console.error("Error in deep-clean-activation:", err);
+      return "Error: " + err.message;
+    }
+  });
+
+  ipcMain.handle('execute-activation-action', async (event, { type, action }) => {
+    try {
+      if (type === 'windows') {
+        return await performDeepCleanWindows();
+      } else {
+        const script = `
+$OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$officePaths = @(
+    "$env:ProgramFiles\\Microsoft Office\\Office16",
+    "$env:SystemDrive\\Program Files (x86)\\Microsoft Office\\Office16",
+    "$env:ProgramFiles\\Microsoft Office\\Office15",
+    "$env:SystemDrive\\Program Files (x86)\\Microsoft Office\\Office15"
+)
+$officePath = ""
+foreach ($p in $officePaths) {
+    if (Test-Path "$p\\ospp.vbs") { $officePath = $p; break }
+}
+if ($officePath -ne "") {
+    cscript //nologo "$officePath\\ospp.vbs" /dstatus > $env:TEMP\\office_status.txt
+    $keys = Select-String -Path $env:TEMP\\office_status.txt -Pattern "Last 5 characters of installed product key:"
+    if ($keys) {
+        foreach ($k in $keys) {
+            $keyPart = $k.Line.Split(":")[-1].Trim()
+            cscript //nologo "$officePath\\ospp.vbs" /unpkey:$keyPart
+        }
+    }
+    cscript //nologo "$officePath\\ospp.vbs" /remhst
+    cscript //nologo "$officePath\\ospp.vbs" /rearm
+    Remove-Item $env:TEMP\\office_status.txt -Force -ErrorAction SilentlyContinue
+    echo "Done"
+} else {
+    echo "No Office installed"
+}
+`;
+        return await runPowerShellScriptElevated(script);
+      }
     } catch (err) {
       console.error("Error executing activation action:", err);
       return "Error: " + err.message;
