@@ -357,14 +357,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             </div>
 
             <button
-              onClick={() => {
-                const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
-                if (isElectron) {
-                  window.open('https://www.facebook.com/ThangDG/', '_blank');
-                } else {
-                  window.open('https://www.facebook.com/ThangDG/', '_blank');
-                }
-              }}
+              onClick={() => window.open('https://www.facebook.com/ThangDG/', '_blank')}
               className="flex items-center gap-1.5 hover:bg-blue-50 px-2 py-1 -ml-2 rounded transition-colors cursor-pointer group"
             >
               <Facebook className="h-4 w-4 text-blue-600 group-hover:scale-110 transition-transform" />
