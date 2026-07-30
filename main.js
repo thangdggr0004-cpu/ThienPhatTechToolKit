@@ -191,10 +191,28 @@ ipcMain.handle('deep-clean-activation', async (event, type) => {
         let script = '';
         if (type === 'windows') {
             script = `
-            cscript //nologo C:\\Windows\\System32\\slmgr.vbs /upk
-            cscript //nologo C:\\Windows\\System32\\slmgr.vbs /cpky
-            cscript //nologo C:\\Windows\\System32\\slmgr.vbs /rearm
-            "Hoàn tất gỡ bản quyền Windows. Vui lòng khởi động lại máy."
+            $ErrorActionPreference = 'Stop'
+
+            function Invoke-SlmgrStep {
+                param(
+                    [string]$Arg
+                )
+                $out = & cscript //nologo C:\\Windows\\System32\\slmgr.vbs $Arg 2>&1
+                $code = $LASTEXITCODE
+                $text = ($out | Out-String).Trim()
+                if ($code -ne 0) {
+                    throw "slmgr $Arg failed (exit=$code). $text"
+                }
+                return "slmgr $Arg OK (exit=$code): $text"
+            }
+
+            $log = @()
+            $log += Invoke-SlmgrStep -Arg '/upk'
+            $log += Invoke-SlmgrStep -Arg '/cpky'
+            $log += Invoke-SlmgrStep -Arg '/rearm'
+            $log += "Hoàn tất gỡ bản quyền Windows. Vui lòng khởi động lại máy."
+
+            $log -join \`n
         `;
         } else if (type === 'office') {
             script = `
