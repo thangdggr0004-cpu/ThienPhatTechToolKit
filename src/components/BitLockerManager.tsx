@@ -57,8 +57,8 @@ export default function BitLockerManager() {
       } else {
         alert("Có lỗi xảy ra: " + res.error);
       }
-    } catch (e: any) {
-      alert("Lỗi Exception: " + e.message);
+    } catch (e: unknown) {
+      alert("Lỗi Exception: " + (e instanceof Error ? e.message : 'Unknown error'));
     } finally {
       setProcessingDrives(prev => ({ ...prev, [mountPoint]: false }));
     }

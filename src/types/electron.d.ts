@@ -6,9 +6,15 @@ declare namespace Electron {
   }
 }
 
+/**
+ * Type-safe interface for Electron IPC communication
+ */
 interface ElectronAPI {
+  /** Get BitLocker encryption status for all volumes */
   getBitlockerStatus: () => Promise<{ success: boolean; data: string }>;
+  /** Disable BitLocker encryption for a specific volume */
   disableBitlocker: (mountPoint: string) => Promise<{ success: boolean; error?: string }>;
+  /** Check if Windows Defender real-time protection is enabled */
   getDefenderStatus: () => Promise<{ enabled: boolean }>;
   toggleDefenderStatus: (enabled: boolean) => Promise<{ success: boolean; error?: string }>;
   listWifiProfiles: () => Promise<Array<{ name: string; password: string; auth: string }>>;
