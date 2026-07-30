@@ -7,7 +7,13 @@ interface GlobalTaskBarProps {
 }
 
 export default function GlobalTaskBar({ onNavigateTab }: GlobalTaskBarProps) {
-  const { tasks, activeTasks, dismissTask } = useTaskManager();
+  const { tasks, activeTasks, dismissTask, subscribe } = useTaskManager();
+  const [_, forceUpdate] = useState({});
+
+  useEffect(() => {
+    const unsubscribe = subscribe(() => forceUpdate({}));
+    return unsubscribe;
+  }, [subscribe]);
   const allTasksList: AppTask[] = Object.values(tasks);
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
 

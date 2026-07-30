@@ -22,12 +22,24 @@ interface TaskManagerContextType {
   getTask: (id: string) => AppTask | undefined;
   activeTasks: AppTask[];
   dismissTask: (id: string) => void;
+  subscribe: (callback: (tasks: AppTask[]) => void) => () => void;
 }
 
 const TaskManagerContext = createContext<TaskManagerContextType | undefined>(undefined);
 
 export const TaskManagerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [tasks, setTasks] = useState<Record<string, AppTask>>({});
+  const [observers] = useState<Set<(tasks: AppTask[]) => void>>(new Set());
+  
+  const notifyObservers = () => {
+    const taskList = Object.values(tasks);
+    observers.forEach(callback => callback(taskList));
+  };
+
+  const subscribe = (callback: (tasks: AppTask[]) => void) => {
+    observers.add(callback);
+    return () => observers.delete(callback);
+  };
 
   const startTask = (id: string, name: string, category: string, initialText = 'Đang khởi tạo...', tabId?: string, color?: string) => {
     setTasks(prev => ({
@@ -45,6 +57,7 @@ export const TaskManagerProvider: React.FC<{ children: ReactNode }> = ({ childre
         tabId
       }
     }));
+    notifyObservers();
   };
 
   const updateTask = (id: string, progress: number, progressText?: string, logLine?: string) => {
@@ -62,6 +75,7 @@ export const TaskManagerProvider: React.FC<{ children: ReactNode }> = ({ childre
         }
       };
     });
+    notifyObservers();
   };
 
   const completeTask = (id: string, successText = 'Hoàn tất thành công!') => {
