@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTaskManager, AppTask } from '../context/TaskManagerContext.js';
 import { Activity, CheckCircle2, AlertCircle, ChevronUp, ChevronDown, X, Terminal } from 'lucide-react';
 

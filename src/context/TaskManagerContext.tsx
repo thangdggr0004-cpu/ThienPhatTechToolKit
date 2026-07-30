@@ -132,7 +132,8 @@ export const TaskManagerProvider: React.FC<{ children: ReactNode }> = ({ childre
       failTask,
       getTask,
       activeTasks,
-      dismissTask
+      dismissTask,
+      subscribe
     }}>
       {children}
     </TaskManagerContext.Provider>
