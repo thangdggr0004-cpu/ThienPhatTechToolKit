@@ -18,7 +18,12 @@ function runPowerShell(script) {
 
     return new Promise((resolve, reject) => {
         exec(command, { encoding: 'utf8', maxBuffer: 1024 * 1024 * 5 }, (error, stdout, stderr) => {
-            fs.unlinkSync(scriptPath); // Clean up the script file
+            try {
+                if (fs.existsSync(scriptPath)) fs.unlinkSync(scriptPath); // Clean up the script file
+            } catch (cleanupErr) {
+                console.warn(`Failed to cleanup temp PowerShell script: ${cleanupErr.message}`);
+            }
+
             if (error) {
                 console.error(`PowerShell Error: ${error.message}`);
                 console.error(`PowerShell Stderr: ${stderr}`);
@@ -54,7 +59,7 @@ function createWindow() {
 
 // --- IPC Handlers ---
 
-ipcMain.handle('scan-activation', async () => {
+ipcMain.handle('scan-activation', async (event, payload) => {
     const script = `
         $ErrorActionPreference = 'SilentlyContinue'
         $result = @{
@@ -177,6 +182,24 @@ ipcMain.handle('deep-clean-activation', async (event, type) => {
     }
     if (script) return await runPowerShell(script);
     return "Loại không hợp lệ.";
+});
+
+ipcMain.handle('restore-oem-bios-key', async () => {
+    const script = `
+        $ErrorActionPreference = 'Stop'
+        $oa3 = (Get-CimInstance -ClassName SoftwareLicensingService).OA3xOriginalProductKey
+        if (-not $oa3) {
+            throw "Không tìm thấy OEM key trong BIOS."
+        }
+
+        cscript //nologo C:\\Windows\\System32\\slmgr.vbs /upk | Out-Null
+        cscript //nologo C:\\Windows\\System32\\slmgr.vbs /cpky | Out-Null
+        cscript //nologo C:\\Windows\\System32\\slmgr.vbs /ipk $oa3 | Out-Null
+        $ato = cscript //nologo C:\\Windows\\System32\\slmgr.vbs /ato
+
+        "Đã khôi phục OEM key thành công. Kết quả kích hoạt:`n$($ato -join \`n)"
+    `;
+    return await runPowerShell(script);
 });
 
 ipcMain.handle('show-confirm-dialog', async (event, options) => {
