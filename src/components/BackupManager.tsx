@@ -95,7 +95,7 @@ export default function BackupManager() {
     setMessage(null);
     showMessage('info', 'Đang sao lưu driver, vui lòng chờ... (có thể mất vài phút)');
     try {
-      const result = await (window as any).electronAPI.exportDrivers();
+      const result = await window.electronAPI.exportDrivers();
       if (result && result.success) {
         showMessage('success', `Đã sao lưu driver thành công vào: ${result.path}`);
       } else {

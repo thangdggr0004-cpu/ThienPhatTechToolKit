@@ -75,8 +75,8 @@ export default function AppSettings() {
     // Initial sync with backend
     const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
     if (isElectron) {
-      (window as any).electronAPI.setAutoStart(config.autoStart);
-      (window as any).electronAPI.setCloseToTray(config.closeToTray);
+      window.electronAPI.setAutoStart(config.autoStart);
+      window.electronAPI.setCloseToTray(config.closeToTray);
     }
   }, []);
 
