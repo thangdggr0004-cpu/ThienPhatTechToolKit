@@ -93,6 +93,7 @@ export const TaskManagerProvider: React.FC<{ children: ReactNode }> = ({ childre
         }
       };
     });
+    notifyObservers();
   };
 
   const failTask = (id: string, errorText = 'Thất bại!') => {
@@ -109,6 +110,7 @@ export const TaskManagerProvider: React.FC<{ children: ReactNode }> = ({ childre
         }
       };
     });
+    notifyObservers();
   };
 
   const getTask = (id: string) => tasks[id];
