@@ -3,7 +3,7 @@ import {
   Palette, Cpu, ShieldCheck, RefreshCw, Sliders, Monitor, Zap, 
   Volume2, Bell, Sparkles, Moon, Sun, Download, Upload, RotateCcw, Check, AlertTriangle, Layers
 } from 'lucide-react';
-import packageJson from '../../package.json';
+import packageJson from '../../package.json' with { type: 'json' };
 
 interface AppConfig {
   theme: 'dark' | 'light' | 'system';
