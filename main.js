@@ -197,7 +197,7 @@ ipcMain.handle('restore-oem-bios-key', async () => {
         cscript //nologo C:\\Windows\\System32\\slmgr.vbs /ipk $oa3 | Out-Null
         $ato = cscript //nologo C:\\Windows\\System32\\slmgr.vbs /ato
 
-        "Đã khôi phục OEM key thành công. Kết quả kích hoạt:`n$($ato -join \`n)"
+        "Đã khôi phục OEM key thành công. Kết quả kích hoạt:\`n$($ato -join \`n)"
     `;
     return await runPowerShell(script);
 });
