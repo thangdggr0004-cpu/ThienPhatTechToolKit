@@ -34,12 +34,12 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     }
 
     setTogglingDefender(true);
-    if (isElectron && (window as any).electronAPI.toggleDefenderStatus) {
+    if (isElectron && window.electronAPI.toggleDefenderStatus) {
       try {
         const res = await window.electronAPI.toggleDefenderStatus(targetState);
         if (res && res.success) {
           // Re-fetch live status
-          const check = await (window as any).electronAPI.getDefenderStatus();
+          const check = await window.electronAPI.getDefenderStatus();
           if (check && typeof check.enabled === 'boolean') {
             setDefenderEnabled(check.enabled);
           } else {
