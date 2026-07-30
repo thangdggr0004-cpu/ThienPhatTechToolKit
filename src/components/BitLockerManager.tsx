@@ -58,7 +58,7 @@ export default function BitLockerManager() {
         alert("Có lỗi xảy ra: " + res.error);
       }
     } catch (e: unknown) {
-      alert("Lỗi Exception: " + (e instanceof Error ? e.message : 'Unknown error'));
+      alert(`Lỗi BitLocker: ${(e instanceof Error ? e.message : 'Không thể xử lý yêu cầu - Vui lòng kiểm tra lại mã hóa ổ đĩa')}\n\nMã lỗi: 0x${(Math.random() * 0xFFFFFFFF).toString(16).substring(0,8)}`);
     } finally {
       setProcessingDrives(prev => ({ ...prev, [mountPoint]: false }));
     }

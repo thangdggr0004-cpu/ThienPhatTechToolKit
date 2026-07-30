@@ -46,7 +46,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             setDefenderEnabled(targetState);
           }
         } else {
-          alert("Không thể thay đổi trạng thái Windows Defender: " + (res?.error || "Lỗi không xác định"));
+          alert(`Không thể ${targetState ? 'bật' : 'tắt'} Windows Defender\n\nMã lỗi: DEFENDER_${targetState ? 'ENABLE' : 'DISABLE'}_FAIL\nChi tiết: ${res?.error || 'Nguyên nhân không xác định'}\n\nVui lòng thử lại hoặc liên hệ hỗ trợ kỹ thuật`);
         }
       } catch (err: any) {
         alert("Lỗi khi điều khiển Windows Defender: " + err.message);

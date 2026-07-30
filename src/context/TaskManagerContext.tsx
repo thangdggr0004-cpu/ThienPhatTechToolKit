@@ -1,5 +1,19 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
+/**
+ * Represents a background task in the application
+ * 
+ * @property {string} id - Unique identifier for the task
+ * @property {string} name - Display name for the task
+ * @property {string} category - Category for grouping related tasks
+ * @property {number} progress - Completion percentage (0-100)
+ * @property {string} progressText - Current status description
+ * @property {'running'|'completed'|'error'} status - Current task state
+ * @property {string[]} logs - Detailed operation log
+ * @property {number} startTime - Timestamp when task was started
+ * @property {string} [color] - Optional Tailwind gradient class for UI
+ * @property {string} [tabId] - Optional associated tab ID for navigation
+ */
 export interface AppTask {
   id: string;
   name: string;
