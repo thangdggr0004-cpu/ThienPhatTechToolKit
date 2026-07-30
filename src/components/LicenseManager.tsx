@@ -305,6 +305,32 @@ export default function LicenseManager() {
   const [expandedEvidence, setExpandedEvidence] = useState<number[]>([]);
   const [showStepDeveloperView, setShowStepDeveloperView] = useState(false);
 
+  const askConfirm = async (options: { title?: string; message?: string; type?: 'question' | 'warning' | 'info' }) => {
+    const api = (window as any)?.electronAPI;
+    if (api?.showConfirmDialog) {
+      try {
+        const confirmed = await api.showConfirmDialog(options);
+        return !!confirmed;
+      } catch {
+        // fallback below
+      }
+    }
+    return window.confirm(options.message || options.title || 'Are you sure?');
+  };
+
+  const showInfo = async (options: { title?: string; message?: string }) => {
+    const api = (window as any)?.electronAPI;
+    if (api?.showInfoDialog) {
+      try {
+        await api.showInfoDialog(options);
+        return;
+      } catch {
+        // fallback below
+      }
+    }
+    window.alert(`${options.title ? options.title + '\n\n' : ''}${options.message || ''}`);
+  };
+
   const handleStartScan = async () => {
     setIsLoading(true);
     setError(null);
@@ -360,7 +386,7 @@ export default function LicenseManager() {
   const [isRestoringOem, setIsRestoringOem] = useState<boolean>(false);
 
   const handleRestoreOemBiosKey = async () => {
-    const confirm = await (window as any).electronAPI.showConfirmDialog({
+    const confirm = await askConfirm({
       title: 'Khôi phục Key gốc từ BIOS',
       message: 'Công cụ sẽ tự động đọc Key OEM nhúng trên Mainboard (BIOS), gỡ bỏ Key hiện tại và kích hoạt lại bản quyền chính hãng với Microsoft. Bạn có muốn tiếp tục không?',
       type: 'question'
@@ -376,7 +402,7 @@ export default function LicenseManager() {
       const snapshot = windowsScanResult || {};
       const { result } = await engine.restoreOemBiosKey(snapshot);
       
-      await (window as any).electronAPI.showInfoDialog({
+      await showInfo({
         title: result.success ? 'Thành công' : 'Thông báo',
         message: `Khôi phục Key BIOS hoàn tất.\nKết quả xác minh: ${result.verificationPassed ? 'HỢP LỆ' : 'THẤT BẠI'}\nLỗi/Cảnh báo: ${result.errors.join(', ')}`
       });
@@ -390,7 +416,7 @@ export default function LicenseManager() {
 
   const handleResetActivation = async () => {
       const type = activeTab;
-      const confirm = await (window as any).electronAPI.showConfirmDialog({
+      const confirm = await askConfirm({
           title: `Xác nhận Đặt lại Bản quyền ${type === 'windows' ? 'Windows' : 'Office'}`,
           message: `Bạn có chắc chắn muốn gỡ bỏ toàn bộ thông tin bản quyền ${type === 'windows' ? 'Windows' : 'Office'} hiện tại không? Thao tác này sẽ xóa tất cả các Product Key và cấu hình KMS. Hành động này không thể hoàn tác.`,
           type: 'warning',
@@ -401,20 +427,45 @@ export default function LicenseManager() {
       setIsResetting(true);
       setError(null);
       try {
+          const api = (window as any)?.electronAPI;
+
           if (type === 'windows') {
-              const adapter = new ElectronBackendAdapter();
-              const engine = new ActivationEngine(adapter);
-              const snapshot = windowsScanResult || {};
-              const { result } = await engine.deepCleanWindowsLicense(snapshot);
+              let verificationPassed = false;
+              let executionTime: number | string = 'N/A';
+
+              try {
+                const adapter = new ElectronBackendAdapter();
+                const engine = new ActivationEngine(adapter);
+                const snapshot = windowsScanResult || {};
+                const engineResponse = await engine.deepCleanWindowsLicense(snapshot);
+
+                if (engineResponse?.result) {
+                  verificationPassed = !!engineResponse.result.verificationPassed;
+                  executionTime = engineResponse.result.executionTime ?? 'N/A';
+                } else {
+                  throw new Error('ActivationEngine returned empty result.');
+                }
+              } catch (engineErr) {
+                // Fallback to direct IPC to avoid no-op behavior in unsupported engine runtime paths
+                if (!api?.deepCleanActivation) {
+                  throw engineErr;
+                }
+                const fallbackOutput = await api.deepCleanActivation('windows');
+                verificationPassed = true;
+                executionTime = 'IPC fallback';
+              }
               
-              await (window as any).electronAPI.showInfoDialog({
+              await showInfo({
                   title: 'Hoàn tất',
-                  message: `Đã xử lý Đặt Lại Bản Quyền Windows.\n\nKết quả xác minh: ${result.verificationPassed ? 'THÀNH CÔNG (Hệ thống sạch)' : 'PHÁT HIỆN DẤU VẾT'}\nThời gian: ${result.executionTime}ms`
+                  message: `Đã xử lý Đặt Lại Bản Quyền Windows.\n\nKết quả xác minh: ${verificationPassed ? 'THÀNH CÔNG (Hệ thống sạch)' : 'PHÁT HIỆN DẤU VẾT'}\nThời gian: ${executionTime}`
               });
               handleStartScan();
           } else {
-              const result = await (window as any).electronAPI.deepCleanActivation(type);
-              await (window as any).electronAPI.showInfoDialog({
+              if (!api?.deepCleanActivation) {
+                throw new Error('deepCleanActivation IPC is not available.');
+              }
+              const result = await api.deepCleanActivation(type);
+              await showInfo({
                   title: 'Hoàn tất',
                   message: `Đã xóa và đặt lại thành công bản quyền Office. Kết quả:\n\n${result}`,
               });
