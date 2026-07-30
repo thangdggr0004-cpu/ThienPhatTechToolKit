@@ -82,38 +82,84 @@ const translateFieldValue = (str) => {
 
 // Normalize IPC scan payloads from different backend response shapes
 const normalizeScanActivationResult = (raw: any): any => {
-  if (!raw) return null;
+  if (raw === null || raw === undefined) return null;
 
-  // hard failures from backend
-  if (raw.Success === false) {
-    throw new Error(raw.Error || 'Backend scan failed.');
-  }
-  if (raw.success === false) {
-    throw new Error(raw.error || 'Backend scan failed.');
-  }
-
-  // direct object shape already expected by UI
-  if (raw.Windows || raw.Office || raw.System) return raw;
-
-  // common wrappers: { Data }, { data }
-  if (raw.Data) {
-    if (typeof raw.Data === 'string') {
-      try {
-        const parsed = JSON.parse(raw.Data);
-        if (parsed && (parsed.Windows || parsed.Office || parsed.System)) return parsed;
-      } catch {}
+  const parseIfJsonString = (value: any) => {
+    if (typeof value !== 'string') return value;
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
     }
-    if (raw.Data.Windows || raw.Data.Office || raw.Data.System) return raw.Data;
+  };
+
+  const hasActivationGroups = (value: any) => {
+    if (!value || typeof value !== 'object') return false;
+    return !!(
+      value.Windows || value.windows ||
+      value.Office || value.office ||
+      value.System || value.system
+    );
+  };
+
+  const normalizeGroupKeys = (value: any) => {
+    if (!value || typeof value !== 'object') return value;
+    const normalized = { ...value };
+    if (!normalized.Windows && normalized.windows) normalized.Windows = normalized.windows;
+    if (!normalized.Office && normalized.office) normalized.Office = normalized.office;
+    if (!normalized.System && normalized.system) normalized.System = normalized.system;
+    return normalized;
+  };
+
+  const throwIfBackendFailure = (value: any) => {
+    if (!value || typeof value !== 'object') return;
+    if (value.Success === false) {
+      throw new Error(value.Error || 'Backend scan failed.');
+    }
+    if (value.success === false) {
+      throw new Error(value.error || 'Backend scan failed.');
+    }
+  };
+
+  const unwrapCandidates = (value: any) => {
+    if (!value || typeof value !== 'object') return [];
+    return [
+      value.Data,
+      value.data,
+      value.output,
+      value.Output,
+      value.result,
+      value.Result,
+      value.payload,
+      value.Payload,
+    ];
+  };
+
+  let current = parseIfJsonString(raw);
+  throwIfBackendFailure(current);
+
+  if (hasActivationGroups(current)) {
+    return normalizeGroupKeys(current);
   }
 
-  if (raw.data) {
-    if (typeof raw.data === 'string') {
-      try {
-        const parsed = JSON.parse(raw.data);
-        if (parsed && (parsed.Windows || parsed.Office || parsed.System)) return parsed;
-      } catch {}
+  const queue: any[] = [...unwrapCandidates(current)];
+  const visited = new Set<any>();
+
+  while (queue.length > 0) {
+    const next = parseIfJsonString(queue.shift());
+    if (next === null || next === undefined) continue;
+    if (visited.has(next)) continue;
+    visited.add(next);
+
+    throwIfBackendFailure(next);
+
+    if (hasActivationGroups(next)) {
+      return normalizeGroupKeys(next);
     }
-    if (raw.data.Windows || raw.data.Office || raw.data.System) return raw.data;
+
+    if (typeof next === 'object') {
+      queue.push(...unwrapCandidates(next));
+    }
   }
 
   return null;
