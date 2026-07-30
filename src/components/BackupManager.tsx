@@ -63,7 +63,13 @@ export default function BackupManager() {
         showMessage('error', result?.error || 'Không thể sao lưu WiFi');
       }
     } catch (err: any) {
-      showMessage('error', 'Lỗi sao lưu WiFi: ' + (err?.message || err));
+      const shouldRetry = window.confirm(`${err?.message || 'Lỗi không xác định'}\n\nBạn có muốn thử lại không?`);
+      if (shouldRetry) {
+        setWifiExporting(false);
+        handleExportWifi();
+      } else {
+        showMessage('error', 'Lỗi sao lưu WiFi: ' + (err?.message || err));
+      }
     } finally {
       setWifiExporting(false);
     }
@@ -82,7 +88,13 @@ export default function BackupManager() {
         showMessage('error', result?.error || 'Không thể phục hồi WiFi');
       }
     } catch (err: any) {
-      showMessage('error', 'Lỗi phục hồi WiFi: ' + (err?.message || err));
+      const shouldRetry = window.confirm(`${err?.message || 'Lỗi không xác định'}\n\nBạn có muốn thử lại không?`);
+      if (shouldRetry) {
+        setWifiRestoring(false);
+        handleRestoreWifi();
+      } else {
+        showMessage('error', 'Lỗi phục hồi WiFi: ' + (err?.message || err));
+      }
     } finally {
       setWifiRestoring(false);
     }
@@ -102,7 +114,13 @@ export default function BackupManager() {
         showMessage('error', result?.error || 'Không thể sao lưu driver');
       }
     } catch (err: any) {
-      showMessage('error', 'Lỗi sao lưu driver: ' + (err?.message || err));
+      const shouldRetry = window.confirm(`${err?.message || 'Lỗi không xác định'}\n\nBạn có muốn thử lại không?`);
+      if (shouldRetry) {
+        setDriverExporting(false);
+        handleExportDrivers();
+      } else {
+        showMessage('error', 'Lỗi sao lưu driver: ' + (err?.message || err));
+      }
     } finally {
       setDriverExporting(false);
     }
@@ -122,7 +140,13 @@ export default function BackupManager() {
         showMessage('error', result?.error || 'Không thể phục hồi driver');
       }
     } catch (err: any) {
-      showMessage('error', 'Lỗi phục hồi driver: ' + (err?.message || err));
+      const shouldRetry = window.confirm(`${err?.message || 'Lỗi không xác định'}\n\nBạn có muốn thử lại không?`);
+      if (shouldRetry) {
+        setDriverRestoring(false);
+        handleRestoreDrivers();
+      } else {
+        showMessage('error', 'Lỗi phục hồi driver: ' + (err?.message || err));
+      }
     } finally {
       setDriverRestoring(false);
     }
