@@ -3,6 +3,7 @@ const path = require('path');
 const { exec } = require('child_process');
 const fs = require('fs');
 const os = require('os');
+const { runPipeline } = require('./diagnosticPipeline.js');
 
 let mainWindow;
 
@@ -133,20 +134,28 @@ ipcMain.handle('scan-activation', async () => {
         $result | ConvertTo-Json -Depth 5
     `;
     const jsonResult = await runPowerShell(script);
-    return JSON.parse(jsonResult);
+    const evidenceMatrix = JSON.parse(jsonResult);
+
+    // The Orchestrator's only job is to call the pipeline.
+    // All business logic is encapsulated within the pipeline.
+    const finalReport = runPipeline(evidenceMatrix);
+
+    // The Public Contract returns the final report from the pipeline,
+    // ensuring the frontend receives the processed assessment.
+    return finalReport;
 });
 
 ipcMain.handle('deep-clean-activation', async (event, type) => {
     let script = '';
     if (type === 'windows') {
-        script = \`
+        script = `
             cscript //nologo C:\\Windows\\System32\\slmgr.vbs /upk
             cscript //nologo C:\\Windows\\System32\\slmgr.vbs /cpky
             cscript //nologo C:\\Windows\\System32\\slmgr.vbs /rearm
             "Hoàn tất gỡ bản quyền Windows. Vui lòng khởi động lại máy."
-        \`;
+        `;
     } else if (type === 'office') {
-        script = \`
+        script = `
             $officePath = ""
             if (Test-Path "C:\\Program Files\\Microsoft Office\\Office16") { $officePath = "C:\\Program Files\\Microsoft Office\\Office16" }
             elseif (Test-Path "C:\\Program Files (x86)\\Microsoft Office\\Office16") { $officePath = "C:\\Program Files (x86)\\Microsoft Office\\Office16" }
@@ -154,7 +163,7 @@ ipcMain.handle('deep-clean-activation', async (event, type) => {
             if ($officePath -ne "" -and (Test-Path (Join-Path $officePath "ospp.vbs"))) {
                 $ospp = Join-Path $officePath "ospp.vbs"
                 $status = cscript //nologo $ospp /dstatus
-                $keys = $status | Select-String -Pattern "Last 5 characters of installed product key: " | ForEach-Object { $_.ToString().Split(':').Trim() }
+                $keys = $status | Select-String -Pattern "Last 5 characters of installed product key: " | ForEach-Object { $_.ToString().Split(':').Trim()[-1] }
                 
                 $log = @()
                 if ($keys.Length -gt 0) {
@@ -162,9 +171,9 @@ ipcMain.handle('deep-clean-activation', async (event, type) => {
                 } else {
                     $log += "Không tìm thấy Product Key nào của Office để gỡ bỏ."
                 }
-                $log -join \\\`n
+                $log -join \`n
             } else { "Không tìm thấy tệp ospp.vbs để reset bản quyền Office." }
-        \`;
+        `;
     }
     if (script) return await runPowerShell(script);
     return "Loại không hợp lệ.";
