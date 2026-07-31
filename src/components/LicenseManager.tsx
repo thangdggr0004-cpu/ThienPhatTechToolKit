@@ -317,10 +317,10 @@ export default function LicenseManager() {
     errorsCount: number;
   } | null>(null);
 
-  const addConsoleLog = (msg: string) => {
+  const addConsoleLog = React.useCallback((msg: string) => {
     const timeStr = new Date().toLocaleTimeString();
-    setConsoleLogs(prev => [...prev, `[${timeStr}] ${msg}`]);
-  };
+    setConsoleLogs(prev => [...prev.slice(-199), `[${timeStr}] ${msg}`]);
+  }, []);
 
   const copyConsoleLogs = () => {
     const text = consoleLogs.join('\n');

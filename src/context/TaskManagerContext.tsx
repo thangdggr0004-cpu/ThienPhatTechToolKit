@@ -45,17 +45,17 @@ export const TaskManagerProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [tasks, setTasks] = useState<Record<string, AppTask>>({});
   const [observers] = useState<Set<(tasks: AppTask[]) => void>>(new Set());
   
-  const notifyObservers = () => {
+  const notifyObservers = React.useCallback(() => {
     const taskList = Object.values(tasks);
     observers.forEach(callback => callback(taskList));
-  };
+  }, [tasks, observers]);
 
-  const subscribe = (callback: (tasks: AppTask[]) => void) => {
+  const subscribe = React.useCallback((callback: (tasks: AppTask[]) => void) => {
     observers.add(callback);
     return () => observers.delete(callback);
-  };
+  }, [observers]);
 
-  const startTask = (id: string, name: string, category: string, initialText = 'Đang khởi tạo...', tabId?: string, color?: string) => {
+  const startTask = React.useCallback((id: string, name: string, category: string, initialText = 'Đang khởi tạo...', tabId?: string, color?: string) => {
     setTasks(prev => ({
       ...prev,
       [id]: {
@@ -72,13 +72,13 @@ export const TaskManagerProvider: React.FC<{ children: ReactNode }> = ({ childre
       }
     }));
     notifyObservers();
-  };
+  }, [notifyObservers]);
 
-  const updateTask = (id: string, progress: number, progressText?: string, logLine?: string) => {
+  const updateTask = React.useCallback((id: string, progress: number, progressText?: string, logLine?: string) => {
     setTasks(prev => {
       const existing = prev[id];
       if (!existing) return prev;
-      const newLogs = logLine ? [...existing.logs, logLine] : existing.logs;
+      const newLogs = logLine ? [...existing.logs, logLine].slice(-200) : existing.logs;
       return {
         ...prev,
         [id]: {
@@ -90,9 +90,9 @@ export const TaskManagerProvider: React.FC<{ children: ReactNode }> = ({ childre
       };
     });
     notifyObservers();
-  };
+  }, [notifyObservers]);
 
-  const completeTask = (id: string, successText = 'Hoàn tất thành công!') => {
+  const completeTask = React.useCallback((id: string, successText = 'Hoàn tất thành công!') => {
     setTasks(prev => {
       const existing = prev[id];
       if (!existing) return prev;
@@ -103,14 +103,14 @@ export const TaskManagerProvider: React.FC<{ children: ReactNode }> = ({ childre
           progress: 100,
           progressText: successText,
           status: 'completed',
-          logs: [...existing.logs, `[+] ${successText}`]
+          logs: [...existing.logs, `[+] ${successText}`].slice(-200)
         }
       };
     });
     notifyObservers();
-  };
+  }, [notifyObservers]);
 
-  const failTask = (id: string, errorText = 'Thất bại!') => {
+  const failTask = React.useCallback((id: string, errorText = 'Thất bại!') => {
     setTasks(prev => {
       const existing = prev[id];
       if (!existing) return prev;
@@ -120,38 +120,40 @@ export const TaskManagerProvider: React.FC<{ children: ReactNode }> = ({ childre
           ...existing,
           status: 'error',
           progressText: errorText,
-          logs: [...existing.logs, `[x] Lỗi: ${errorText}`]
+          logs: [...existing.logs, `[x] Lỗi: ${errorText}`].slice(-200)
         }
       };
     });
     notifyObservers();
-  };
+  }, [notifyObservers]);
 
-  const getTask = (id: string) => tasks[id];
+  const getTask = React.useCallback((id: string) => tasks[id], [tasks]);
 
-  const dismissTask = (id: string) => {
+  const dismissTask = React.useCallback((id: string) => {
     setTasks(prev => {
       const next = { ...prev };
       delete next[id];
       return next;
     });
     notifyObservers();
-  };
+  }, [notifyObservers]);
 
-  const activeTasks = Object.values(tasks).filter((t: AppTask) => t.status === 'running');
+  const activeTasks = React.useMemo(() => Object.values(tasks).filter((t: AppTask) => t.status === 'running'), [tasks]);
+
+  const contextValue = React.useMemo(() => ({
+    tasks,
+    startTask,
+    updateTask,
+    completeTask,
+    failTask,
+    getTask,
+    activeTasks,
+    dismissTask,
+    subscribe
+  }), [tasks, startTask, updateTask, completeTask, failTask, getTask, activeTasks, dismissTask, subscribe]);
 
   return (
-    <TaskManagerContext.Provider value={{
-      tasks,
-      startTask,
-      updateTask,
-      completeTask,
-      failTask,
-      getTask,
-      activeTasks,
-      dismissTask,
-      subscribe
-    }}>
+    <TaskManagerContext.Provider value={contextValue}>
       {children}
     </TaskManagerContext.Provider>
   );
