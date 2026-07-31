@@ -52,7 +52,7 @@ export default function HardwareDetails() {
     const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
     if (isElectron) {
       setIsLoading(true);
-      (window as any).electronAPI.getHardwareInfo(true)
+      (window as any).electronAPI.getHardwareInfo(false)
         .then((realData: HardwareInfo) => {
           if (realData) {
             setData(realData);

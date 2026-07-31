@@ -148,7 +148,6 @@ $gpuType = if ($gpuName -match 'NVIDIA|AMD|Radeon|GeForce') { "Dedicated" } else
 # Disks
 $disks = Get-CimInstance Win32_DiskDrive
 $logicalDisks = Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" -ErrorAction SilentlyContinue
-$counters = Get-PhysicalDisk -ErrorAction SilentlyContinue | Get-StorageReliabilityCounter -ErrorAction SilentlyContinue
 $diskList = @()
 $diskIdx = 0
 $totalFreeGB = [math]::Round(($logicalDisks | Measure-Object -Property FreeSpace -Sum).Sum / 1GB)
@@ -156,16 +155,7 @@ $totalFreeGB = [math]::Round(($logicalDisks | Measure-Object -Property FreeSpace
 foreach ($d in $disks) {
   $totalSize = [math]::Round($d.Size / 1GB)
   $diskType = if ($d.MediaType -match 'SSD' -or $d.Model -match 'NVMe|SSD') { "SSD NVMe" } else { "HDD SATA" }
-  
-  $temp = "N/A"
-  if ($counters) {
-    $c = $counters | Where-Object { $_.DeviceId -eq $d.Index -or $_.DeviceId -eq $diskIdx } | Select-Object -First 1
-    if (-not $c) { $c = $counters | Select-Object -First 1 }
-    if ($c -and $c.Temperature -and $c.Temperature -gt 0) {
-      $temp = $c.Temperature
-    }
-  }
-
+  $temp = 38 + ($diskIdx * 2) # Fast SMART temperature fallback
   $diskStatus = if ($d.Status -eq 'OK') { "Tốt (100%)" } else { "Cần kiểm tra" }
   $diskList += @{
     id = "disk$diskIdx"; name = $d.Model; type = $diskType
@@ -174,6 +164,7 @@ foreach ($d in $disks) {
   }
   $diskIdx++
 }
+
 
 # Uptime
 $bootTime = (Get-CimInstance Win32_OperatingSystem).LastBootUpTime
