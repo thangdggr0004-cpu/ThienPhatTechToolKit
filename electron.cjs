@@ -561,30 +561,43 @@ app.whenReady().then(() => {
     }
   });
 
+  let prevCpuTimes = null;
   ipcMain.handle('get-realtime-metrics', async () => {
     try {
-      if (global.__realtimeCache && Date.now() - global.__realtimeCache.ts < 3000) {
-        return global.__realtimeCache.data;
+      const cpus = os.cpus();
+      let user = 0, nice = 0, sys = 0, idle = 0, irq = 0;
+      for (const cpu of cpus) {
+        user += cpu.times.user;
+        nice += cpu.times.nice;
+        sys += cpu.times.sys;
+        idle += cpu.times.idle;
+        irq += cpu.times.irq;
       }
+      const total = user + nice + sys + idle + irq;
       
-      const [currentLoad, mem] = await Promise.all([
-        si.currentLoad(),
-        si.mem()
-      ]);
+      let cpu = 0;
+      if (prevCpuTimes) {
+        const totalDiff = total - prevCpuTimes.total;
+        const idleDiff = idle - prevCpuTimes.idle;
+        if (totalDiff > 0) {
+          cpu = Math.round(((totalDiff - idleDiff) / totalDiff) * 100);
+        }
+      }
+      prevCpuTimes = { total, idle };
+      cpu = Math.max(0, Math.min(100, cpu));
 
-      const cpu = Math.round(currentLoad.currentLoad);
-      const ram = Math.round((mem.active / mem.total) * 100);
-      const speed = 2.4 + (cpu / 100) * 2.0;
-      const temp = 40 + Math.floor(cpu / 4);
-      
+      const totalMem = os.totalmem();
+      const freeMem = os.freemem();
+      const usedMem = totalMem - freeMem;
+      const ram = Math.round((usedMem / totalMem) * 100);
+
       const result = {
         cpu,
         ram,
         disk: 0,
-        speed,
-        temp: temp > 0 ? temp : 45
+        speed: 2.4,
+        temp: 45
       };
-      global.__realtimeCache = { ts: Date.now(), data: result };
       return result;
     } catch (e) {
       return { cpu: 0, ram: 0, disk: 0, speed: 0, temp: 40 };

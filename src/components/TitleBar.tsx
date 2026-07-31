@@ -51,7 +51,7 @@ export default function TitleBar() {
     };
     pullRealtime();
 
-    const timer = setInterval(pullRealtime, 30000);
+    const timer = setInterval(pullRealtime, 3000);
 
     return () => {
       cancelled = true;
