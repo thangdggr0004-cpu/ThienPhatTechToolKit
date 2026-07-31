@@ -722,8 +722,8 @@ export default function WindowsSettings() {
 
       {/* ADVANCED OPTIMIZATION MODAL */}
       {showAdvancedModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 ring-1 ring-slate-900/10 pointer-events-auto max-h-[90vh] flex flex-col">
             <div className="flex justify-between items-center pb-4 border-b border-slate-100">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-amber-100 text-amber-600 rounded-xl">
@@ -920,8 +920,8 @@ export default function WindowsSettings() {
       )}
       {/* SUCCESS NOTICE & REBOOT GUIDANCE MODAL */}
       {successNotice && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 pointer-events-none animate-fade-in">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 ring-1 ring-slate-900/10 pointer-events-auto space-y-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 bg-emerald-100 rounded-full shrink-0">
                 <CheckCircle className="w-6 h-6 text-emerald-600" />
