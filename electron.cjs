@@ -2440,20 +2440,78 @@ Write-Output "OK"
         $OutputEncoding = [System.Text.Encoding]::UTF8
         [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
       `;
+      // 1. Hibernate
       if (!settings.hibernate) script += `powercfg.exe /hibernate off\n`;
       else script += `powercfg.exe /hibernate on\n`;
 
+      // 2. SysMain (Superfetch)
       if (!settings.sysMain) script += `Stop-Service -Name "SysMain" -Force -ErrorAction SilentlyContinue; Set-Service -Name "SysMain" -StartupType Disabled\n`;
       else script += `Set-Service -Name "SysMain" -StartupType Automatic; Start-Service -Name "SysMain" -ErrorAction SilentlyContinue\n`;
 
+      // 3. Defender Policy
       if (!settings.defender) {
-        script += `Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender" -Name "DisableAntiSpyware" -Value 1 -Force -ErrorAction SilentlyContinue\n`;
+        script += `New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender" -Force -ErrorAction SilentlyContinue | Out-Null; Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender" -Name "DisableAntiSpyware" -Value 1 -Force -ErrorAction SilentlyContinue\n`;
       } else {
         script += `Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender" -Name "DisableAntiSpyware" -Force -ErrorAction SilentlyContinue\n`;
       }
       
+      // 4. Fast Startup
       if (!settings.fastStartup) script += `Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Power" -Name "HiberbootEnabled" -Value 0 -Force -ErrorAction SilentlyContinue\n`;
       else script += `Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Power" -Name "HiberbootEnabled" -Value 1 -Force -ErrorAction SilentlyContinue\n`;
+
+      // 5. Remote Desktop
+      if (!settings.remoteDesktop) script += `Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server" -Name "fDenyTSConnections" -Value 1 -Force -ErrorAction SilentlyContinue\n`;
+      else script += `Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server" -Name "fDenyTSConnections" -Value 0 -Force -ErrorAction SilentlyContinue\n`;
+
+      // 6. Error Reporting
+      if (!settings.errorReporting) {
+        script += `New-Item -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting" -Force -ErrorAction SilentlyContinue | Out-Null; Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting" -Name "Disabled" -Value 1 -Force -ErrorAction SilentlyContinue\n`;
+      } else {
+        script += `Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting" -Name "Disabled" -Value 0 -Force -ErrorAction SilentlyContinue\n`;
+      }
+
+      // 7. Telemetry
+      if (!settings.telemetry) {
+        script += `New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection" -Force -ErrorAction SilentlyContinue | Out-Null; Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection" -Name "AllowTelemetry" -Value 0 -Force -ErrorAction SilentlyContinue\n`;
+      } else {
+        script += `Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection" -Name "AllowTelemetry" -Value 1 -Force -ErrorAction SilentlyContinue\n`;
+      }
+
+      // 8. Prefetch
+      if (!settings.prefetch) {
+        script += `Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management\\PrefetchParameters" -Name "EnablePrefetcher" -Value 0 -Force -ErrorAction SilentlyContinue\n`;
+      } else {
+        script += `Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management\\PrefetchParameters" -Name "EnablePrefetcher" -Value 3 -Force -ErrorAction SilentlyContinue\n`;
+      }
+
+      // 9. Windows Search Indexing
+      if (!settings.searchIndexing) script += `Stop-Service -Name "WSearch" -Force -ErrorAction SilentlyContinue; Set-Service -Name "WSearch" -StartupType Disabled\n`;
+      else script += `Set-Service -Name "WSearch" -StartupType Automatic; Start-Service -Name "WSearch" -ErrorAction SilentlyContinue\n`;
+
+      // 10. Print Spooler
+      if (!settings.printSpooler) script += `Stop-Service -Name "Spooler" -Force -ErrorAction SilentlyContinue; Set-Service -Name "Spooler" -StartupType Disabled\n`;
+      else script += `Set-Service -Name "Spooler" -StartupType Automatic; Start-Service -Name "Spooler" -ErrorAction SilentlyContinue\n`;
+
+      // 11. Xbox Services
+      if (!settings.xboxServices) {
+        script += `
+          Get-Service -Name "XboxGipSvc", "XblAuthManager", "XblGameSave", "XboxNetApiSvc" -ErrorAction SilentlyContinue | ForEach-Object {
+            Stop-Service -Name $_.Name -Force -ErrorAction SilentlyContinue
+            Set-Service -Name $_.Name -StartupType Disabled -ErrorAction SilentlyContinue
+          }
+        \n`;
+      } else {
+        script += `
+          Get-Service -Name "XboxGipSvc", "XblAuthManager", "XblGameSave", "XboxNetApiSvc" -ErrorAction SilentlyContinue | ForEach-Object {
+            Set-Service -Name $_.Name -StartupType Manual -ErrorAction SilentlyContinue
+          }
+        \n`;
+      }
+
+      // 12. OneDrive Auto-start
+      if (!settings.oneDrive) {
+        script += `Remove-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" -Name "OneDrive" -Force -ErrorAction SilentlyContinue\n`;
+      }
 
       await runPowerShellScriptElevated(script);
       return { success: true };
@@ -2971,7 +3029,7 @@ Write-Output "OK"
         sfc /scannow
         DISM /Online /Cleanup-Image /RestoreHealth
       `;
-      await runPowerShellScript(script);
+      await runPowerShellScriptElevated(script);
       return true;
     } catch (err) {
       return false;
@@ -2986,7 +3044,7 @@ Write-Output "OK"
         Remove-Item "$env:windir\\system32\\catroot2" -Recurse -Force -ErrorAction SilentlyContinue
         Start-Service -Name BITS, wuauserv, appidsvc, cryptsvc -ErrorAction SilentlyContinue
       `;
-      await runPowerShellScript(script);
+      await runPowerShellScriptElevated(script);
       return true;
     } catch (err) {
       return false;
