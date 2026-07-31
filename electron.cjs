@@ -642,7 +642,15 @@ if ($targetType -eq 'all' -or $targetType -eq 'windows') {
     # ============================================================
     $slsService = Get-CimInstance -ClassName SoftwareLicensingService -ErrorAction SilentlyContinue
     $oa3Key = if ($slsService) { $slsService.OA3xOriginalProductKey } else { "" }
-    $result.Windows.OA3Key = if ($oa3Key) { $oa3Key.Substring($oa3Key.Length - 5) } else { "" }
+    $result.Windows.OA3Key = if ($oa3Key -and $oa3Key.Length -ge 5) { $oa3Key.Substring($oa3Key.Length - 5) } else { "" }
+
+    $sls = Get-CimInstance -ClassName SoftwareLicensingProduct -Filter "PartialProductKey IS NOT NULL AND ApplicationID = '55c92734-d682-4d71-983e-d6ec3f16059f'" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($sls) {
+        $result.Windows.Name = $sls.Name
+        $result.Windows.Description = $sls.Description
+        $result.Windows.LicenseStatus = $sls.LicenseStatus
+        $result.Windows.PartialProductKey = $sls.PartialProductKey
+        $result.Windows.KeyManagementServiceMachine = $sls.KeyManagementServiceMachine
         $result.Windows.KeyManagementServicePort = $sls.KeyManagementServicePort
         $result.Windows.GracePeriodRemaining = $sls.GracePeriodRemaining
         $result.Windows.ProductKeyChannel = $sls.ProductKeyChannel
