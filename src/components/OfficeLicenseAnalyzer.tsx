@@ -448,16 +448,16 @@ ${(report.matrix || []).map((m: any) => `| ${m.componentName} | **${m.status}** 
 
             {/* EVIDENCE TRACE CHAIN */}
             <div className="bg-slate-950 p-2 rounded border border-slate-800/80 text-[10px] text-slate-300 flex flex-wrap items-center gap-1.5 font-mono">
-              <span className="text-slate-400 font-bold">Evidence Trace:</span>
-              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-blue-300">Collectors ({report.matrix?.length || 8})</span>
+              <span className="text-slate-400 font-bold">Chuỗi Bằng Chứng:</span>
+              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-blue-300">Bộ Thu Thập ({report.matrix?.length || 8})</span>
               <span>➔</span>
-              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-emerald-300">Evidence Matrix</span>
+              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-emerald-300">Ma Trận Bằng Chứng</span>
               <span>➔</span>
-              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-amber-300">Weight ({systemConfidence}%)</span>
+              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-amber-300">Trọng Số Tin Cậy ({systemConfidence}%)</span>
               <span>➔</span>
-              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-purple-300">Assessment</span>
+              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-purple-300">Đánh Giá Chẩn Đoán</span>
               <span>➔</span>
-              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-teal-300">Recommendation</span>
+              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-teal-300">Khuyên Dùng</span>
             </div>
 
             <div className="text-[11px] text-slate-300 space-y-1 font-sans">
@@ -563,13 +563,13 @@ ${(report.matrix || []).map((m: any) => `| ${m.componentName} | **${m.status}** 
             <span className="text-slate-400 font-bold uppercase">Xuất / Sao chép Báo cáo Chẩn đoán:</span>
             <div className="flex flex-wrap items-center gap-1.5">
               <button onClick={() => copyReportFormat('TXT')} className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-bold border border-slate-200 flex items-center gap-1 cursor-pointer">
-                {copiedReportFormat === 'TXT' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />} Copy TXT
+                {copiedReportFormat === 'TXT' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />} Sao chép TXT
               </button>
               <button onClick={() => copyReportFormat('JSON')} className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-bold border border-slate-200 flex items-center gap-1 cursor-pointer">
-                {copiedReportFormat === 'JSON' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />} Copy JSON
+                {copiedReportFormat === 'JSON' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />} Sao chép JSON
               </button>
               <button onClick={() => copyReportFormat('MD')} className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-bold border border-slate-200 flex items-center gap-1 cursor-pointer">
-                {copiedReportFormat === 'MD' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />} Copy Markdown
+                {copiedReportFormat === 'MD' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />} Sao chép MD
               </button>
               <button onClick={() => exportReportFile('TXT')} className="px-2 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded font-bold flex items-center gap-1 cursor-pointer">
                 <Download className="w-3 h-3 text-blue-400" /> Tải TXT
