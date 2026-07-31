@@ -351,6 +351,7 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       webSecurity: false,
+      backgroundThrottling: true,
       preload: path.join(__dirname, 'preload.cjs')
     },
     frame: false,
@@ -590,21 +591,36 @@ app.whenReady().then(() => {
     }
   });
 
+  let __windowsLicenseScanCache = { ts: 0, data: null };
   ipcMain.handle('run-action-WINDOWS_LICENSE_SCAN', async (event, payload) => {
     try {
+      const now = Date.now();
+      if (payload?.forceRefresh !== true && __windowsLicenseScanCache.data && (now - __windowsLicenseScanCache.ts < 10000)) {
+        return __windowsLicenseScanCache.data;
+      }
       const scriptPath = app.isPackaged ? path.join(process.resourcesPath, 'src/scripts/windows_license_scan.ps1') : path.join(__dirname, 'src/scripts/windows_license_scan.ps1');
       const scriptContent = fs.readFileSync(scriptPath, 'utf8');
       const output = await runPowerShellScript(scriptContent);
-      return JSON.parse(output.trim());
+      const parsed = JSON.parse(output.trim());
+      __windowsLicenseScanCache = { ts: now, data: parsed };
+      return parsed;
     } catch (err) {
       console.error(err);
       throw err;
     }
   });
 
-  ipcMain.handle('scan-activation', async (event, { type } = {}) => {
+  let __activationScanCache = {};
+  ipcMain.handle('scan-activation', async (event, opts = {}) => {
     try {
+      const { type, forceRefresh } = (typeof opts === 'string' ? { type: opts } : opts) || {};
       const targetType = type || 'all';
+      const now = Date.now();
+      
+      if (!forceRefresh && __activationScanCache[targetType] && (now - __activationScanCache[targetType].ts < 10000)) {
+        return __activationScanCache[targetType].data;
+      }
+
       const script = `
 $OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -623,19 +639,6 @@ if ($targetType -eq 'all' -or $targetType -eq 'windows') {
     $slsService = Get-CimInstance -ClassName SoftwareLicensingService -ErrorAction SilentlyContinue
     $oa3Key = if ($slsService) { $slsService.OA3xOriginalProductKey } else { "" }
     $result.Windows.OA3Key = if ($oa3Key) { $oa3Key.Substring($oa3Key.Length - 5) } else { "" }
-    $result.Windows.HasOA3Key = [bool]$oa3Key
-
-    # ============================================================
-    # TIER 2: License Channel Analysis (WMI deep inspection)
-    # ============================================================
-    $sls = Get-CimInstance -ClassName SoftwareLicensingProduct -Filter "PartialProductKey IS NOT NULL AND ApplicationID = '55c92734-d682-4d71-983e-d6ec3f16059f'" -ErrorAction SilentlyContinue | Select-Object -First 1
-
-    if ($sls) {
-        $result.Windows.LicenseFamily = $sls.LicenseFamily
-        $result.Windows.Description = $sls.Description
-        $result.Windows.LicenseStatus = $sls.LicenseStatus
-        $result.Windows.PartialProductKey = $sls.PartialProductKey
-        $result.Windows.KeyManagementServiceMachine = $sls.KeyManagementServiceMachine
         $result.Windows.KeyManagementServicePort = $sls.KeyManagementServicePort
         $result.Windows.GracePeriodRemaining = $sls.GracePeriodRemaining
         $result.Windows.ProductKeyChannel = $sls.ProductKeyChannel
@@ -1790,11 +1793,19 @@ powercfg /setactive e9a42b02-d5df-448d-aa00-03f14749eb61
   });
 
   // Enterprise MS Office Diagnostic & Recovery Engine V3 IPC Handler
-  ipcMain.handle('scan-office-engine-v3', async () => {
+  let __officeEngineV3Cache = { ts: 0, data: null };
+  ipcMain.handle('scan-office-engine-v3', async (event, opts) => {
     try {
+      const forceRefresh = opts?.forceRefresh === true || opts === true;
+      const now = Date.now();
+      if (!forceRefresh && __officeEngineV3Cache.data && (now - __officeEngineV3Cache.ts < 10000)) {
+        return __officeEngineV3Cache.data;
+      }
       const engine = new OfficeDiagnosticEngineV3(runPowerShellScript);
       const report = await engine.runFullDiagnostics();
-      return { success: true, report };
+      const res = { success: true, report };
+      __officeEngineV3Cache = { ts: now, data: res };
+      return res;
     } catch (err) {
       return { success: false, error: "Lỗi thực thi Enterprise Engine V3: " + err.message };
     }
@@ -1802,6 +1813,7 @@ powercfg /setactive e9a42b02-d5df-448d-aa00-03f14749eb61
 
   ipcMain.handle('restore-office-engine-v3', async () => {
     try {
+      __officeEngineV3Cache = { ts: 0, data: null };
       const engine = new OfficeDiagnosticEngineV3(runPowerShellScript);
       const diagResult = await engine.runFullDiagnostics();
       const result = await SurgicalRecoveryExecutor.executeSurgicalPlan(diagResult, runPowerShellScript, engine);
@@ -2262,8 +2274,14 @@ Write-Output "OK"
   });
 
   // ========== WINDOWS SETTINGS ==========
-  ipcMain.handle('read-windows-settings', async () => {
+  let __windowsSettingsCache = { ts: 0, data: null };
+  ipcMain.handle('read-windows-settings', async (event, opts) => {
     try {
+      const forceRefresh = opts?.forceRefresh === true || opts === true;
+      const now = Date.now();
+      if (!forceRefresh && __windowsSettingsCache.data && (now - __windowsSettingsCache.ts < 10000)) {
+        return __windowsSettingsCache.data;
+      }
       const script = `
         $OutputEncoding = [System.Text.Encoding]::UTF8
         [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -2318,7 +2336,9 @@ Write-Output "OK"
         $state | ConvertTo-Json
       `;
       const output = await runPowerShellScript(script);
-      return { success: true, data: JSON.parse(output.trim() || '{}') };
+      const res = { success: true, data: JSON.parse(output.trim() || '{}') };
+      __windowsSettingsCache = { ts: now, data: res };
+      return res;
     } catch (err) {
       console.error('Error reading windows settings:', err);
       return { success: false, error: err.message };
@@ -2326,6 +2346,7 @@ Write-Output "OK"
   });
 
   ipcMain.handle('apply-windows-settings', async (event, settings) => {
+    __windowsSettingsCache = { ts: 0, data: null };
     try {
       let script = `
         $OutputEncoding = [System.Text.Encoding]::UTF8
