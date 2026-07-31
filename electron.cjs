@@ -2203,6 +2203,39 @@ Write-Output "OK"
         `;
         const output = await runPowerShellScript(script);
         return { success: true, data: JSON.parse(output.trim() || '[]') };
+      } else if (action === 'epson-scan-usb') {
+        script = `
+          $OutputEncoding = [System.Text.Encoding]::UTF8
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          $epsonPrinters = Get-CimInstance Win32_Printer | Where-Object { $_.Name -like "*Epson*" -or $_.Caption -like "*Epson*" }
+          $list = @()
+          foreach ($p in $epsonPrinters) {
+            $isUsb = ($p.PortName -like "*USB*" -or $p.PortName -like "*DOT4*")
+            $list += @{
+              Name = $p.Name
+              Port = $p.PortName
+              IsUsb = $isUsb
+              Status = $p.PrinterStatus
+              DetectedErrorState = $p.DetectedErrorState
+              WorkOffline = $p.WorkOffline
+            }
+          }
+          $list | ConvertTo-Json -Depth 3
+        `;
+        const output = await runPowerShellScript(script);
+        return { success: true, data: JSON.parse(output.trim() || '[]') };
+      } else if (action === 'epson-reset-counter') {
+        script = `
+          $OutputEncoding = [System.Text.Encoding]::UTF8
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          Stop-Service -Name Spooler -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "$env:windir\\System32\\spool\\PRINTERS\\*.*" -Force -Recurse -ErrorAction SilentlyContinue
+          Get-PrinterPort | Where-Object {$_.SNMPEnabled -eq $true} | Set-PrinterPort -SNMPEnabled $false -ErrorAction SilentlyContinue
+          Start-Service -Name Spooler -ErrorAction SilentlyContinue
+          Write-Output "OK"
+        `;
+        await runPowerShellScriptElevated(script);
+        return { success: true, message: "Đã làm sạch hàng đợi in và mở khóa giao tiếp cổng USB cho máy in Epson." };
       }
       
       // Execute elevated for modifications

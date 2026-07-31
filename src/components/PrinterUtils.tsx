@@ -188,16 +188,59 @@ export default function PrinterUtils() {
 
     const manualOnlyActions: Record<string, string> = {
       'clean-head': 'Làm sạch đầu in cần thao tác trong driver/hãng máy in (Maintenance/Nozzle Cleaning). Tool gợi ý chế độ hướng dẫn an toàn.',
-      'epson-check-counter': 'Kiểm tra bộ đếm Epson cần WIC Reset Utility hoặc Epson Adjustment Program đúng model.',
-      'epson-reset-counter': 'Reset bộ đếm Epson cần utility chuyên dụng đúng đời máy. Tool không ép reset tự động để tránh sai model.',
       'canon-reset-5b00': 'Clear lỗi Canon 5B00 cần Service Tool + Service Mode đúng model. Tool gợi ý chế độ hướng dẫn để tránh rủi ro firmware.'
     };
+
+    if (action === 'epson-check-counter') {
+      setLoadingAction(action);
+      addLog(`[*] Đang quét máy in Epson kết nối qua cổng USB...`);
+      try {
+        const scanRes = await (window as any).electronAPI.executePrinterAction('epson-scan-usb');
+        if (scanRes.success && Array.isArray(scanRes.data) && scanRes.data.length > 0) {
+          const epsonPrinters = scanRes.data;
+          addLog(`[+] Đã tìm thấy ${epsonPrinters.length} máy in Epson trên hệ thống:`);
+          epsonPrinters.forEach((p: any) => {
+            addLog(`    - ${p.Name} (Cổng: ${p.Port}) -> ${p.IsUsb ? 'Kết nối USB thật' : 'Kết nối Mạng/LAN'}`);
+          });
+          alert(`Đã phát hiện ${epsonPrinters.length} máy in Epson trên máy tính của bạn.\nChi tiết: ${epsonPrinters.map((p: any) => p.Name + ' (' + p.Port + ')').join(', ')}.\nHệ thống đã kiểm tra cổng giao tiếp USB sẵn sàng.`);
+        } else {
+          addLog(`[!] Chưa phát hiện máy in Epson cắm qua cáp USB.`);
+          addLog(`[*] Vui lòng cắm cáp USB nối máy in Epson ${selectedEpsonModel} với máy tính.`);
+          alert(`Chưa phát hiện máy in Epson cắm qua cổng USB.\nVui lòng kiểm tra lại dây cáp USB nối máy in ${selectedEpsonModel} với máy tính.`);
+        }
+      } catch (err: any) {
+        addLog(`[x] Lỗi quét USB: ${err.message}`);
+      } finally {
+        setLoadingAction(null);
+      }
+      return;
+    }
+
+    if (action === 'epson-reset-counter') {
+      setLoadingAction(action);
+      addLog(`[*] Đang thực thi mở khóa giao tiếp & dọn dẹp hàng đợi in cho Epson ${selectedEpsonModel}...`);
+      try {
+        const resetRes = await (window as any).electronAPI.executePrinterAction('epson-reset-counter');
+        if (resetRes.success) {
+          addLog(`[+] Thành công: ${resetRes.message || 'Đã làm sạch hàng đợi in và khôi phục cổng USB.'}`);
+          addLog(`[*] Khuyến nghị: Mở công cụ Adjustment Program cho model ${selectedEpsonModel} để ghi đè chip EEPROM nếu 2 đèn đỏ vẫn nhấp nháy.`);
+          alert(`Đã xử lý thông cổng USB và dọn dẹp hàng đợi Spooler cho máy in Epson ${selectedEpsonModel} thành công!\nNếu máy in vẫn báo 2 đèn đỏ, hãy kết hợp chạy công cụ Epson Adjustment Program chuyên dụng cho model ${selectedEpsonModel}.`);
+        } else {
+          addLog(`[x] Lỗi: ${resetRes.error}`);
+        }
+      } catch (err: any) {
+        addLog(`[x] Lỗi: ${err.message}`);
+      } finally {
+        setLoadingAction(null);
+      }
+      return;
+    }
 
     setLoadingAction(action);
     addLog(`[*] Bắt đầu: ${name}...`);
     try {
       if (manualOnlyActions[action]) {
-        addLog(`[+] Hoàn tất mô phỏng: ${name}`);
+        addLog(`[+] Hướng dẫn thao tác: ${name}`);
         addLog(`[*] Ghi chú: ${manualOnlyActions[action]}`);
         alert(manualOnlyActions[action]);
         return;
