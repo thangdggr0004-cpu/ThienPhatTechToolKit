@@ -146,10 +146,8 @@ export default function PrinterUtils() {
   const [printQueue, setPrintQueue] = useState<PrintJob[]>([]);
   const [showQueue, setShowQueue] = useState(false);
 
-  // Epson Waste Ink state
   const [selectedEpsonModel, setSelectedEpsonModel] = useState<string>('L3110');
 
-  // Brother state
   const [selectedBrotherIndex, setSelectedBrotherIndex] = useState<number>(0);
   const [brotherTab, setBrotherTab] = useState<'toner' | 'drum'>('toner');
 
@@ -160,15 +158,18 @@ export default function PrinterUtils() {
     try {
       setLoadingAction('fetch');
       const res = await (window as any).electronAPI.executePrinterAction('get-printers');
-      if (res.success && res.data) {
+      if (res.success && Array.isArray(res.data)) {
         setPrinters(res.data);
         if (res.data.length > 0 && !selectedPrinter) {
           const defaultP = res.data.find((p: PrinterInfo) => p.IsDefault);
           setSelectedPrinter(defaultP ? defaultP.Name : res.data[0].Name);
         }
+      } else {
+        setPrinters([]);
       }
     } catch (err) {
       console.error(err);
+      setPrinters([]);
     } finally {
       setLoadingAction(null);
     }
@@ -184,20 +185,39 @@ export default function PrinterUtils() {
 
   const handleAction = async (action: string, name: string) => {
     if (!isElectron) { alert('Chức năng này yêu cầu chạy trong môi trường ứng dụng thực.'); return; }
-    
+
+    const manualOnlyActions: Record<string, string> = {
+      'clean-head': 'Làm sạch đầu in cần thao tác trong driver/hãng máy in (Maintenance/Nozzle Cleaning). Tool gợi ý chế độ hướng dẫn an toàn.',
+      'epson-check-counter': 'Kiểm tra bộ đếm Epson cần WIC Reset Utility hoặc Epson Adjustment Program đúng model.',
+      'epson-reset-counter': 'Reset bộ đếm Epson cần utility chuyên dụng đúng đời máy. Tool không ép reset tự động để tránh sai model.',
+      'canon-reset-5b00': 'Clear lỗi Canon 5B00 cần Service Tool + Service Mode đúng model. Tool gợi ý chế độ hướng dẫn để tránh rủi ro firmware.'
+    };
+
     setLoadingAction(action);
     addLog(`[*] Bắt đầu: ${name}...`);
     try {
+      if (manualOnlyActions[action]) {
+        addLog(`[+] Hoàn tất mô phỏng: ${name}`);
+        addLog(`[*] Ghi chú: ${manualOnlyActions[action]}`);
+        alert(manualOnlyActions[action]);
+        return;
+      }
+
       const res = await (window as any).electronAPI.executePrinterAction(action);
       if (res.success) {
         addLog(`[+] Thành công: ${name}`);
+        if (res.message) addLog(`[*] ${res.message}`);
         if (action === 'restart-spooler' || action === 'clear-queue' || action === 'fix-offline') fetchPrinters();
       } else {
         addLog(`[x] Lỗi: ${res.error}`);
         alert(`Lỗi thực thi: ${res.error}`);
       }
-    } catch (err: any) { addLog(`[x] Lỗi exception: ${err.message}`); } 
-    finally { setLoadingAction(null); }
+    } catch (err: any) {
+      addLog(`[x] Lỗi exception: ${err.message}`);
+      alert(`Lỗi exception: ${err.message}`);
+    } finally {
+      setLoadingAction(null);
+    }
   };
 
   const handleSetDefault = async () => {
@@ -221,9 +241,10 @@ export default function PrinterUtils() {
     try {
       const res = await (window as any).electronAPI.getPrintQueue(selectedPrinter);
       if (res.success) {
-        setPrintQueue(res.data);
+        const jobs = Array.isArray(res.data) ? res.data : [];
+        setPrintQueue(jobs);
         setShowQueue(true);
-        addLog(`[+] Đã tìm thấy ${res.data.length} lệnh in đang chờ.`);
+        addLog(`[+] Đã tìm thấy ${jobs.length} lệnh in đang chờ.`);
       } else addLog(`[x] Lỗi: ${res.error}`);
     } catch (err: any) { addLog(`[x] Lỗi exception: ${err.message}`); } 
     finally { setLoadingAction(null); }
@@ -244,7 +265,13 @@ export default function PrinterUtils() {
   const handleOpenDeviceManager = async () => {
     if (!isElectron) return;
     addLog(`[*] Đang mở Device Manager...`);
-    await (window as any).electronAPI.openDeviceManagerPrinters();
+    try {
+      const res = await (window as any).electronAPI.openDeviceManagerPrinters();
+      if (res?.success === false) addLog(`[x] Lỗi: ${res.error || 'Không thể mở Device Manager'}`);
+      else addLog(`[+] Đã mở Device Manager.`);
+    } catch (err: any) {
+      addLog(`[x] Lỗi exception: ${err.message}`);
+    }
   };
 
   const handleRemoveReinstall = async () => {
@@ -264,7 +291,6 @@ export default function PrinterUtils() {
 
   return (
     <div className="space-y-5" id="printer-utils-container">
-      {/* ── Header ─────────────────────────────────────────── */}
       <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -286,7 +312,6 @@ export default function PrinterUtils() {
           </button>
         </div>
 
-        {/* ── Tab Navigation ─────────────────────────────────── */}
         <div className="flex flex-wrap gap-2 mt-5 border-t border-slate-100 pt-4">
           <button
             onClick={() => setActiveTab('manage')}
@@ -334,10 +359,8 @@ export default function PrinterUtils() {
         </div>
       </div>
 
-      {/* ── TAB 1: QUẢN LÝ MÁY IN ────────────────────────────── */}
       {activeTab === 'manage' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Left: Controls & Specific Printer */}
           <div className="lg:col-span-7 space-y-5">
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -422,7 +445,6 @@ export default function PrinterUtils() {
             </div>
           </div>
 
-          {/* Right: Printer List Cards */}
           <div className="lg:col-span-5 space-y-3">
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
@@ -478,7 +500,6 @@ export default function PrinterUtils() {
         </div>
       )}
 
-      {/* ── TAB 2: SỬA LỖI NHANH 1-CLICK ────────────────────────── */}
       {activeTab === 'quickfix' && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
           <div className="border-b border-slate-100 pb-3">
@@ -565,7 +586,6 @@ export default function PrinterUtils() {
         </div>
       )}
 
-      {/* ── TAB 3: RESET MỰC THẢI EPSON ─────────────────────────── */}
       {activeTab === 'epson' && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-5">
           <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
@@ -642,10 +662,8 @@ export default function PrinterUtils() {
         </div>
       )}
 
-      {/* ── TAB 4: CANON 5B00 & BROTHER ─────────────────────────── */}
       {activeTab === 'canon_brother' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Canon 5B00 Section */}
           <div className="lg:col-span-6 bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
             <div className="border-b border-slate-100 pb-3">
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -679,11 +697,10 @@ export default function PrinterUtils() {
             </button>
           </div>
 
-          {/* Brother Guide Section */}
           <div className="lg:col-span-6 bg-slate-950 border-2 border-amber-500/50 rounded-xl p-4 text-white shadow-2xl space-y-3">
             <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
               <div className="flex items-center gap-2">
-                <span className="text-lg">🖨️</span>
+                <Printer className="w-5 h-5 text-amber-400" />
                 <h4 className="text-xs font-black text-amber-400 uppercase tracking-wider">
                   Cẩm Nang Reset Brother (Toner &amp; Drum)
                 </h4>
@@ -693,7 +710,6 @@ export default function PrinterUtils() {
               </span>
             </div>
 
-            {/* Select Brother Model */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-200 block">Chọn dòng máy in Brother:</label>
               <select
@@ -707,7 +723,6 @@ export default function PrinterUtils() {
               </select>
             </div>
 
-            {/* Active Guide Steps */}
             {brotherGuides[selectedBrotherIndex] && (
               <div className="space-y-3 bg-slate-900/90 p-3 rounded-xl border border-slate-800 text-xs shadow-inner">
                 <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-800 gap-1">
@@ -763,3 +778,5 @@ export default function PrinterUtils() {
     </div>
   );
 }
+
+

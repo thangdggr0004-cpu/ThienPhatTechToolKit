@@ -1,0 +1,43 @@
+{
+  "name": "VirtualMachine",
+  "description": "Máy ảo VMware/Hyper-V/VirtualBox kích hoạt bằng Retail Key, BIOS không có OA3 key.",
+  "Windows": {
+    "LicenseStatus": 1,
+    "Channel": "RETAIL",
+    "Description": "Windows(R) Operating System, RETAIL channel",
+    "OA3Key": "",
+    "HasOA3Key": false,
+    "PartialProductKey": "3V66T",
+    "IsGenericKey": false
+  },
+  "System": {
+    "Files": [],
+    "Registry": [],
+    "Services": [],
+    "Tasks": [],
+    "Hosts": [],
+    "EventLogs": [],
+    "Processes": []
+  },
+  "structuredEvidences": [
+    {
+      "source": "license",
+      "confidence": 100,
+      "timestamp": 1770000000000,
+      "rawData": { "status": 1, "channel": "RETAIL" },
+      "productName": "Windows 11 VM Retail",
+      "status": 1,
+      "channel": "RETAIL",
+      "hasOA3Key": false,
+      "isGenericKey": false
+    }
+  ],
+  "Expected": {
+    "Verdict": "Genuine",
+    "OA3Status": "Not Applicable",
+    "Risk": "Low",
+    "Warnings": 0,
+    "Danger": 0,
+    "Evidence": []
+  }
+}

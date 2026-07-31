@@ -21,6 +21,7 @@ import {
   Cpu,
   Cog
 } from 'lucide-react';
+import { UiInlineLabel, UiSectionHeading } from './license/SharedPresentation.js';
 
 // Tooltip dictionary chuẩn ngắn gọn (Tối đa 2 câu)
 const TOOLTIPS: Record<string, string> = {
@@ -283,9 +284,9 @@ ${(report.matrix || []).map((m: any) => `| ${m.componentName} | **${m.status}** 
               <Layers className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+              <UiSectionHeading className="text-xs font-bold text-slate-900 uppercase tracking-wide">
                 CHẨN ĐOÁN &amp; KHÔI PHỤC BẢN QUYỀN MS OFFICE V3
-              </h3>
+              </UiSectionHeading>
               <p className="text-[10px] text-slate-500">
                 Phân tích đối soát đa nguồn • Giải thích nguồn gốc bằng chứng • Tự động khôi phục an toàn.
               </p>
@@ -377,7 +378,7 @@ ${(report.matrix || []).map((m: any) => `| ${m.componentName} | **${m.status}** 
 
           {/* Ô 2: Độ tin cậy hệ thống */}
           <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between space-y-1">
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+            <UiInlineLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
               <span className="flex items-center">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 mr-1" /> Độ tin cậy hệ thống
                 {renderTooltipIcon('SystemConfidence')}
@@ -385,7 +386,7 @@ ${(report.matrix || []).map((m: any) => `| ${m.componentName} | **${m.status}** 
               <button onClick={() => setShowConfidenceBreakdown(true)} className="text-[10px] text-blue-600 underline font-bold cursor-pointer">
                 Xem chi tiết (i)
               </button>
-            </div>
+            </UiInlineLabel>
             <div className="flex items-center gap-2">
               <div className={`text-lg font-black font-mono ${systemConfidence >= 95 ? 'text-emerald-600' : systemConfidence >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
                 {systemConfidence}%

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Cpu, Database, HardDrive, LayoutGrid, Monitor, RefreshCw, FileText, Download } from 'lucide-react';
-import { HardwareInfo } from '../types';
-import { generateHardwareInfoScript, downloadFile } from '../utils/scriptGenerator';
+import { HardwareInfo } from '../types.js';
+import { generateHardwareInfoScript, downloadFile } from '../utils/scriptGenerator.js';
 
 const mockHardwareData: HardwareInfo = {
   cpuName: 'Intel Core i7-12700H',

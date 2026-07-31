@@ -1,0 +1,8 @@
+export enum IpcEvents {
+  EXECUTE_ACTION = 'EXECUTE_ACTION',
+  SYSTEM_SCAN = 'SYSTEM_SCAN',
+  PING = 'PING',
+  BACKUP = 'BACKUP',
+  RESTORE = 'RESTORE',
+  LOG = 'LOG'
+}

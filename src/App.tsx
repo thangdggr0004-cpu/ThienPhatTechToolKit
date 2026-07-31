@@ -1,29 +1,52 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
-import packageJson from '../package.json';
-import TitleBar from './components/TitleBar';
-import Sidebar from './components/Sidebar';
+import React, { useState, useEffect, lazy, Suspense, useCallback } from 'react';
+import packageJson from '../package.json' with { type: 'json' };
+import TitleBar from './components/TitleBar.js';
+import Sidebar from './components/Sidebar.js';
+// Helper for safe lazy loading with retry on Vite HMR chunk load failures
+function safeLazy<T extends React.ComponentType<any>>(importFn: () => Promise<{ default: T }>) {
+  return lazy(async () => {
+    try {
+      return await importFn();
+    } catch (error) {
+      console.warn('[Vite HMR] Dynamic import failed, retrying module load...', error);
+      try {
+        return await new Promise<{ default: T }>((resolve, reject) => {
+          setTimeout(() => {
+            importFn().then(resolve).catch(reject);
+          }, 300);
+        });
+      } catch (retryErr) {
+        window.location.reload();
+        return new Promise<{ default: T }>(() => {});
+      }
+    }
+  });
+}
+
 // Lazy‑loaded components
-const Dashboard = lazy(() => import('./components/Dashboard'));
-const LicenseManager = lazy(() => import('./components/LicenseManager'));
-const HardwareDetails = lazy(() => import('./components/HardwareDetails'));
-const JunkCleaner = lazy(() => import('./components/JunkCleaner'));
-const NetworkConfig = lazy(() => import('./components/NetworkConfig'));
-const BitLockerManager = lazy(() => import('./components/BitLockerManager'));
-const OfficeStandardizer = lazy(() => import('./components/OfficeStandardizer'));
-const WindowsSettings = lazy(() => import('./components/WindowsSettings'));
-const BackupManager = lazy(() => import('./components/BackupManager'));
-const PrinterUtils = lazy(() => import('./components/PrinterUtils'));
-const LaptopTester = lazy(() => import('./components/LaptopTester'));
-const TouchScreenTester = lazy(() => import('./components/TouchScreenTester'));
-const AdvancedActivation = lazy(() => import('./components/AdvancedActivation'));
+const Dashboard = safeLazy(() => import('./components/Dashboard.js'));
+const LicenseManager = safeLazy(() => import('./components/LicenseManager.js'));
+const HardwareDetails = safeLazy(() => import('./components/HardwareDetails.js'));
+const JunkCleaner = safeLazy(() => import('./components/JunkCleaner.js'));
+const NetworkConfig = safeLazy(() => import('./components/NetworkConfig.js'));
+const BitLockerManager = safeLazy(() => import('./components/BitLockerManager.js'));
+const OfficeStandardizer = safeLazy(() => import('./components/OfficeStandardizer.js'));
+const WindowsSettings = safeLazy(() => import('./components/WindowsSettings.js'));
+const BackupManager = safeLazy(() => import('./components/BackupManager.js'));
+const PrinterUtils = safeLazy(() => import('./components/PrinterUtils.js'));
+const LaptopTester = safeLazy(() => import('./components/LaptopTester.js'));
+const TouchScreenTester = safeLazy(() => import('./components/TouchScreenTester.js'));
+const AdvancedActivation = safeLazy(() => import('./components/AdvancedActivation.js'));
 
 import { RefreshCw } from 'lucide-react';
-import AutoUpdater from './components/AutoUpdater';
-import { TaskManagerProvider } from './context/TaskManagerContext';
-import GlobalTaskBar from './components/GlobalTaskBar';
+import AutoUpdater from './components/AutoUpdater.js';
+import { TaskManagerProvider } from './context/TaskManagerContext.js';
+import GlobalTaskBar from './components/GlobalTaskBar.js';
+import { CoreProvider } from './context/CoreContext.js';
 
 // Skeleton fallback shown while lazy component loads
 function PageSkeleton() {
+
   return (
     <div className="space-y-4 animate-pulse">
       <div className="skeleton h-10 w-2/3 rounded-lg" />
@@ -47,10 +70,36 @@ function PageWrapper({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  const [activeSection, setActiveSection] = useState<string>('dashboard');
+  type SectionId =
+    | 'dashboard'
+    | 'activation'
+    | 'hardware'
+    | 'cleaner'
+    | 'network'
+    | 'bitlocker'
+    | 'standardizer'
+    | 'windows-settings'
+    | 'backup'
+    | 'printer'
+    | 'laptop-tester'
+    | 'touch-tester'
+    | 'advanced-activation';
+
+  const [activeSection, setActiveSection] = useState<SectionId>('dashboard');
+  const [mountedSections, setMountedSections] = useState<Set<SectionId>>(() => new Set<SectionId>(['dashboard']));
   // Sync active section to a global variable for IPC components
   useEffect(() => {
     (window as any).__activeSection = activeSection;
+  }, [activeSection]);
+
+
+  useEffect(() => {
+    setMountedSections(prev => {
+      if (prev.has(activeSection)) return prev;
+      const next = new Set(prev);
+      next.add(activeSection);
+      return next;
+    });
   }, [activeSection]);
   
   const [isUnlocked, setIsUnlocked] = useState<boolean>(false);
@@ -229,7 +278,31 @@ export default function App() {
     })();
   }, []);
 
+
+
+  useEffect(() => {
+    const payload = {
+      footerMetrics,
+      activeSection,
+      ts: Date.now(),
+    };
+    window.dispatchEvent(new CustomEvent('tp-live-metrics', { detail: payload }));
+    (window as any).__tpLiveMetrics = payload;
+  }, [footerMetrics, activeSection]);
+
+  const renderSection = useCallback((id: SectionId, node: React.ReactNode) => {
+    if (!mountedSections.has(id)) return null;
+    return (
+      <div style={{ display: activeSection === id ? 'block' : 'none' }}>
+        <Suspense fallback={<PageSkeleton />}>
+          <PageWrapper>{node}</PageWrapper>
+        </Suspense>
+      </div>
+    );
+  }, [activeSection, mountedSections]);
+
   return (
+    <CoreProvider>
     <TaskManagerProvider>
       <div className="h-screen w-screen bg-white text-slate-800 font-sans flex flex-col overflow-hidden select-none">
       <TitleBar />
@@ -244,71 +317,19 @@ export default function App() {
 
           {/* Right Main Panel Content */}
           <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-[#fafafa] relative">
-            <div style={{ display: activeSection === 'dashboard' ? 'block' : 'none' }}>
-              <Suspense fallback={<PageSkeleton />}>
-                <PageWrapper><Dashboard onNavigate={setActiveSection} /></PageWrapper>
-              </Suspense>
-            </div>
-            <div style={{ display: activeSection === 'activation' ? 'block' : 'none' }}>
-              <Suspense fallback={<PageSkeleton />}>
-                <PageWrapper><LicenseManager /></PageWrapper>
-              </Suspense>
-            </div>
-            <div style={{ display: activeSection === 'hardware' ? 'block' : 'none' }}>
-              <Suspense fallback={<PageSkeleton />}>
-                <PageWrapper><HardwareDetails /></PageWrapper>
-              </Suspense>
-            </div>
-            <div style={{ display: activeSection === 'cleaner' ? 'block' : 'none' }}>
-              <Suspense fallback={<PageSkeleton />}>
-                <PageWrapper><JunkCleaner /></PageWrapper>
-              </Suspense>
-            </div>
-            <div style={{ display: activeSection === 'network' ? 'block' : 'none' }}>
-              <Suspense fallback={<PageSkeleton />}>
-                <PageWrapper><NetworkConfig /></PageWrapper>
-              </Suspense>
-            </div>
-            <div style={{ display: activeSection === 'standardizer' ? 'block' : 'none' }}>
-              <Suspense fallback={<PageSkeleton />}>
-                <PageWrapper><OfficeStandardizer /></PageWrapper>
-              </Suspense>
-            </div>
-            <div style={{ display: activeSection === 'windows-settings' ? 'block' : 'none' }}>
-              <Suspense fallback={<PageSkeleton />}>
-                <PageWrapper><WindowsSettings /></PageWrapper>
-              </Suspense>
-            </div>
-            <div style={{ display: activeSection === 'backup' ? 'block' : 'none' }}>
-              <Suspense fallback={<PageSkeleton />}>
-                <PageWrapper><BackupManager /></PageWrapper>
-              </Suspense>
-            </div>
-            <div style={{ display: activeSection === 'printer' ? 'block' : 'none' }}>
-              <Suspense fallback={<PageSkeleton />}>
-                <PageWrapper><PrinterUtils /></PageWrapper>
-              </Suspense>
-            </div>
-            <div style={{ display: activeSection === 'bitlocker' ? 'block' : 'none' }}>
-              <Suspense fallback={<PageSkeleton />}>
-                <PageWrapper><BitLockerManager /></PageWrapper>
-              </Suspense>
-            </div>
-            <div style={{ display: activeSection === 'laptop-tester' ? 'block' : 'none' }}>
-              <Suspense fallback={<PageSkeleton />}>
-                <PageWrapper><LaptopTester /></PageWrapper>
-              </Suspense>
-            </div>
-            <div style={{ display: activeSection === 'advanced-activation' ? 'block' : 'none' }}>
-              <Suspense fallback={<PageSkeleton />}>
-                <PageWrapper><AdvancedActivation /></PageWrapper>
-              </Suspense>
-            </div>
-            <div style={{ display: activeSection === 'touch' ? 'block' : 'none' }}>
-              <Suspense fallback={<PageSkeleton />}>
-                <TouchScreenTester onBack={() => setActiveSection('dashboard')} />
-              </Suspense>
-            </div>
+            {renderSection('dashboard', <Dashboard onNavigate={setActiveSection} />)}
+            {renderSection('activation', <LicenseManager />)}
+            {renderSection('hardware', <HardwareDetails />)}
+            {renderSection('cleaner', <JunkCleaner />)}
+            {renderSection('network', <NetworkConfig />)}
+            {renderSection('bitlocker', <BitLockerManager />)}
+            {renderSection('standardizer', <OfficeStandardizer />)}
+            {renderSection('windows-settings', <WindowsSettings />)}
+            {renderSection('backup', <BackupManager />)}
+            {renderSection('printer', <PrinterUtils />)}
+            {renderSection('laptop-tester', <LaptopTester />)}
+            {renderSection('touch-tester', <TouchScreenTester />)}
+            {renderSection('advanced-activation', <AdvancedActivation />)}
           </main>
         </div>
 
@@ -388,6 +409,7 @@ export default function App() {
     <AutoUpdater />
     <GlobalTaskBar onNavigateTab={(tab) => setActiveSection(tab)} />
     </div>
-  </TaskManagerProvider>
+    </TaskManagerProvider>
+    </CoreProvider>
   );
 }

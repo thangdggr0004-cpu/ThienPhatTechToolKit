@@ -1,0 +1,34 @@
+{
+  "name": "Office_Genuine",
+  "description": "Microsoft Office 2021/365 bản quyền hợp lệ (Retail/Subscription).",
+  "Office": {
+    "Products": [
+      {
+        "Name": "Office 21 ProPlus2021XC2R_Retail",
+        "LicenseStatus": 1,
+        "Description": "Office21_ProPlus2021XC2R_Retail channel"
+      }
+    ],
+    "OhookFiles": []
+  },
+  "structuredEvidences": [
+    {
+      "source": "license",
+      "confidence": 100,
+      "timestamp": 1770000000000,
+      "rawData": { "status": 1 },
+      "productName": "Office 2021 Retail",
+      "status": 1,
+      "channel": "RETAIL",
+      "hasOA3Key": false,
+      "isGenericKey": false
+    }
+  ],
+  "Expected": {
+    "Verdict": "Genuine",
+    "Risk": "Low",
+    "Warnings": 0,
+    "Danger": 0,
+    "Evidence": []
+  }
+}

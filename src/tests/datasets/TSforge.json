@@ -1,0 +1,41 @@
+{
+  "name": "TSforge",
+  "description": "Máy chèn token giả TSforge trong Registry WPA.",
+  "Windows": {
+    "LicenseStatus": 1,
+    "Channel": "RETAIL",
+    "Description": "Windows(R) Operating System, RETAIL channel",
+    "OA3Key": "",
+    "HasOA3Key": false,
+    "PartialProductKey": "3V66T",
+    "IsGenericKey": false
+  },
+  "System": {
+    "Files": [],
+    "Registry": ["HKLM:\\SYSTEM\\WPA\\8DEC0AF1"],
+    "Services": [],
+    "Tasks": [],
+    "Hosts": [],
+    "EventLogs": [],
+    "Processes": []
+  },
+  "structuredEvidences": [
+    {
+      "source": "registry",
+      "confidence": 98,
+      "timestamp": 1770000000000,
+      "rawData": "TSforge Key",
+      "hive": "HKLM",
+      "key": "SYSTEM\\WPA\\8DEC0AF1",
+      "exists": true
+    }
+  ],
+  "Expected": {
+    "Verdict": "TAMPERED",
+    "OA3Status": "Not Applicable",
+    "Risk": "High",
+    "Warnings": 0,
+    "Danger": 1,
+    "Evidence": ["TSforge Registry Token"]
+  }
+}

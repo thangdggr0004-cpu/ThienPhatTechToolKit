@@ -1,0 +1,44 @@
+{
+  "name": "WindowsServer_KMS",
+  "description": "Windows Server kích hoạt qua KMS doanh nghiệp hợp lệ (Port 1688).",
+  "Windows": {
+    "LicenseStatus": 1,
+    "Channel": "VOLUME_KMSCLIENT",
+    "Description": "Windows(R) Operating System, VOLUME_KMSCLIENT channel",
+    "OA3Key": "",
+    "HasOA3Key": false,
+    "PartialProductKey": "T4DCG",
+    "IsGenericKey": true
+  },
+  "System": {
+    "Files": [],
+    "Registry": [],
+    "Services": [],
+    "Tasks": [],
+    "Hosts": [],
+    "EventLogs": [],
+    "Processes": []
+  },
+  "structuredEvidences": [
+    {
+      "source": "license",
+      "confidence": 100,
+      "timestamp": 1770000000000,
+      "rawData": { "status": 1, "channel": "VOLUME_KMSCLIENT" },
+      "productName": "Windows Server Volume KMS",
+      "status": 1,
+      "channel": "VOLUME_KMSCLIENT",
+      "kmsPort": 1688,
+      "hasOA3Key": false,
+      "isGenericKey": true
+    }
+  ],
+  "Expected": {
+    "Verdict": "Cảnh báo",
+    "OA3Status": "Not Applicable",
+    "Risk": "Medium",
+    "Warnings": 1,
+    "Danger": 0,
+    "Evidence": ["KMS Client Channel"]
+  }
+}

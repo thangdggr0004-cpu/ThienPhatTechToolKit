@@ -1,0 +1,43 @@
+{
+  "name": "GenericKey_NotActivated",
+  "description": "Máy cài đặt Generic Key mặc định nhưng chưa kích hoạt trực tuyến.",
+  "Windows": {
+    "LicenseStatus": 0,
+    "Channel": "RETAIL",
+    "Description": "Windows(R) Operating System, RETAIL channel",
+    "OA3Key": "",
+    "HasOA3Key": false,
+    "PartialProductKey": "3V66T",
+    "IsGenericKey": true
+  },
+  "System": {
+    "Files": [],
+    "Registry": [],
+    "Services": [],
+    "Tasks": [],
+    "Hosts": [],
+    "EventLogs": [],
+    "Processes": []
+  },
+  "structuredEvidences": [
+    {
+      "source": "license",
+      "confidence": 100,
+      "timestamp": 1770000000000,
+      "rawData": { "status": 0, "isGenericKey": true },
+      "productName": "Windows Retail Generic Key Unlicensed",
+      "status": 0,
+      "channel": "RETAIL",
+      "hasOA3Key": false,
+      "isGenericKey": true
+    }
+  ],
+  "Expected": {
+    "Verdict": "None",
+    "OA3Status": "Not Applicable",
+    "Risk": "Low",
+    "Warnings": 1,
+    "Danger": 0,
+    "Evidence": ["Generic Key Not Activated"]
+  }
+}

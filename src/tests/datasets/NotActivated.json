@@ -1,0 +1,43 @@
+{
+  "name": "NotActivated",
+  "description": "Máy Windows chưa kích hoạt bản quyền (LicenseStatus = 0).",
+  "Windows": {
+    "LicenseStatus": 0,
+    "Channel": "Unknown",
+    "Description": "Not Found",
+    "OA3Key": "",
+    "HasOA3Key": false,
+    "PartialProductKey": "",
+    "IsGenericKey": false
+  },
+  "System": {
+    "Files": [],
+    "Registry": [],
+    "Services": [],
+    "Tasks": [],
+    "Hosts": [],
+    "EventLogs": [],
+    "Processes": []
+  },
+  "structuredEvidences": [
+    {
+      "source": "license",
+      "confidence": 100,
+      "timestamp": 1770000000000,
+      "rawData": { "status": 0 },
+      "productName": "Windows Unlicensed",
+      "status": 0,
+      "channel": "Unknown",
+      "hasOA3Key": false,
+      "isGenericKey": false
+    }
+  ],
+  "Expected": {
+    "Verdict": "None",
+    "OA3Status": "Not Applicable",
+    "Risk": "Low",
+    "Warnings": 0,
+    "Danger": 0,
+    "Evidence": []
+  }
+}

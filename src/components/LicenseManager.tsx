@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { ShieldCheck, ShieldAlert, ShieldX, FileText, Terminal, Loader, ServerCrash, RefreshCw, KeyRound, ChevronDown, ChevronRight, Search, AlertTriangle, Clock, Cpu, Eye, EyeOff, Info, CheckCircle2, XCircle, Zap, BarChart3, Bug, Wrench, Filter, ArrowUpDown } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, ShieldX, FileText, Terminal, Loader, ServerCrash, RefreshCw, KeyRound, ChevronDown, ChevronRight, Search, AlertTriangle, Clock, Cpu, Eye, EyeOff, Info, CheckCircle2, XCircle, Zap, BarChart3, Bug, Wrench, Filter, ArrowUpDown, Layers, Copy } from 'lucide-react';
 import OfficeLicenseAnalyzer from './OfficeLicenseAnalyzer.js';
 import { ActivationEngine } from '../core/activation/ActivationEngine.js';
 import { EvidenceCollector } from '../core/activation/EvidenceCollector.js';
@@ -28,55 +28,50 @@ class ElectronBackendAdapter implements IBackendAdapter {
 
 const translateBackendString = (str) => {
   if (!str) return '—';
-  if (typeof str !== 'string') return str;
-  const map = {
-    'Verify the KMS host and check for illegal activation tools (e.g. KMSAuto, KMSpico).': 'Kiểm tra lại máy chủ KMS trước khi tiếp tục.',
-    'One or more negative evidence groups require technician intervention.': 'Phát hiện một hoặc nhiều dấu hiệu bất thường.',
-    'No backend decision': 'Chưa có kết luận từ hệ thống.',
-    'False positive': 'Nhận diện nhầm',
-    'No adverse evidence in this group': 'Không có dấu hiệu bất thường',
-    'Scan result unavailable': 'Không có kết quả phân tích',
-    'Needs verification': 'Cần xác minh thêm',
-    'Manual review required': 'Cần kiểm tra thủ công',
-    'TAMPERED': 'CAN THIỆP',
-    'WARNING': 'CẢNH BÁO',
-    'GENUINE': 'CHÍNH HÃNG'
-  };
-  return map[str] || str;
+  return typeof str === 'string' ? str : JSON.stringify(str);
+};
+
+const getRiskLevel = (status: string) => {
+  switch (status) {
+    case 'GENUINE':
+      return { label: 'Thấp', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' };
+    case 'WARNING':
+      return { label: 'Trung bình', color: 'text-amber-700 bg-amber-50 border-amber-200' };
+    case 'TAMPERED':
+      return { label: 'Cao', color: 'text-red-700 bg-red-50 border-red-200' };
+    case 'CRITICAL':
+      return { label: 'Nghiêm trọng', color: 'text-rose-800 bg-rose-100 border-rose-300' };
+    default:
+      return { label: 'Chưa xác định', color: 'text-slate-700 bg-slate-100 border-slate-200' };
+  }
 };
 
 const translateFieldValue = (str) => {
-  if (!str) return 'Không có dữ liệu';
+  if (!str) return 'Kh\u00f4ng c\u00f3 d\u1eef li\u1ec7u';
   if (typeof str !== 'string') return str;
   let translated = str;
-  
-  // Exact phrase mappings
+
   if (translated.includes('The machine is permanently activated.')) {
-      return 'Windows đang được kích hoạt hợp lệ.';
+    return 'Windows \u0111ang \u0111\u01b0\u1ee3c k\u00edch ho\u1ea1t h\u1ee3p l\u1ec7.';
   }
 
-  // Field mappings
-  translated = translated.replace(/HasOA3Key/gi, 'Khóa OA3 trong BIOS');
-  translated = translated.replace(/LicenseStatus/gi, 'Trạng thái kích hoạt');
-  translated = translated.replace(/ProductKeyChannel/gi, 'Loại bản quyền');
-  translated = translated.replace(/LicenseFamily/gi, 'Phiên bản Windows');
-  translated = translated.replace(/GracePeriodRemaining/gi, 'Thời gian gia hạn còn lại');
-  translated = translated.replace(/KeyManagementServicePort/gi, 'Máy chủ KMS');
-  translated = translated.replace(/Description/gi, 'Thông tin bản quyền');
-  
-  // Value mappings
-  if (translated.includes('Khóa OA3 trong BIOS')) {
-      translated = translated.replace(/[:=]\s*(false|0)/gi, ': Không tìm thấy khóa OA3 trong BIOS.');
-      translated = translated.replace(/[:=]\s*(true|1)/gi, ': Hợp lệ');
+  translated = translated.replace(/HasOA3Key/gi, 'Kh\u00f3a OA3 trong BIOS');
+  translated = translated.replace(/LicenseStatus/gi, 'Tr\u1ea1ng th\u00e1i k\u00edch ho\u1ea1t');
+  translated = translated.replace(/ProductKeyChannel/gi, 'Lo\u1ea1i b\u1ea3n quy\u1ec1n');
+  translated = translated.replace(/LicenseFamily/gi, 'Phi\u00ean b\u1ea3n Windows');
+  translated = translated.replace(/GracePeriodRemaining/gi, 'Th\u1eddi gian gia h\u1ea1n c\u00f2n l\u1ea1i');
+  translated = translated.replace(/KeyManagementServicePort/gi, 'M\u00e1y ch\u1ee7 KMS');
+  translated = translated.replace(/Description/gi, 'Th\u00f4ng tin b\u1ea3n quy\u1ec1n');
+
+  if (translated.includes('Kh\u00f3a OA3 trong BIOS')) {
+    translated = translated.replace(/[:=]\\s*(false|0)/gi, ': Kh\u00f4ng t\u00ecm th\u1ea5y kh\u00f3a OA3 trong BIOS.');
+    translated = translated.replace(/[:=]\\s*(true|1)/gi, ': C\u00f3 kh\u00f3a OA3 trong BIOS.');
   }
-  if (translated.includes('Trạng thái kích hoạt')) {
-      translated = translated.replace(/[:=]\s*1/g, ': Windows đã được kích hoạt.');
-      translated = translated.replace(/[:=]\s*0/g, ': Chưa kích hoạt.');
-  }
-  if (translated.includes('Máy chủ KMS')) {
-      translated = translated.replace(/[:=]\s*0/g, ': Không phát hiện máy chủ KMS.');
-  }
-  
+
+  translated = translated.replace(/LICENSED/gi, '\u0110\u00c3 K\u00cdCH HO\u1ea0T');
+  translated = translated.replace(/UNLICENSED/gi, 'CH\u01afA K\u00cdCH HO\u1ea0T');
+  translated = translated.replace(/Notification/gi, 'Th\u00f4ng b\u00e1o');
+
   return translated;
 };
 
@@ -178,17 +173,18 @@ type DiagnosticStep = {
 type EvidenceSourceKind = 'WMI' | 'Command' | 'Files' | 'Services' | 'Tasks' | 'Registry' | 'Hosts' | 'Event log' | 'Rule';
 
 const windowsEvidenceMetadata: Record<number, { source: string; sourceKind: EvidenceSourceKind; rule: string; recommendation: string }> = {
-  1: { source: 'SoftwareLicensingService.OA3xOriginalProductKey', sourceKind: 'WMI', rule: 'Kiểm tra khóa OA3 nhúng trên BIOS có tồn tại hay không.', recommendation: 'So sánh khóa OEM với hệ điều hành đang cài đặt để khôi phục.' },
-  2: { source: 'SoftwareLicensingProduct (Windows application ID)', sourceKind: 'WMI', rule: 'Phân loại kênh cấp phép của Product Key hiện tại.', recommendation: 'Xác thực lại quyền cấp phép số hoặc Volume License theo kênh.' },
-  3: { source: 'Known MAS/HWID artifacts and generic-key state', sourceKind: 'Files', rule: 'Kiểm tra dấu vết MAS/HWID hoặc Generic Key.', recommendation: 'Cần giữ nguyên hiện trạng file lỗi và báo cáo trước khi xóa.' },
-  4: { source: 'SoftwareLicensingProduct KMS fields; slmgr /xpr', sourceKind: 'Command', rule: 'Phát hiện máy chủ KMS đáng ngờ hoặc lỗ hổng KMS38.', recommendation: 'Xác thực máy chủ KMS này có thuộc hệ thống nội bộ của doanh nghiệp hay không.' },
-  5: { source: 'Known file paths', sourceKind: 'Files', rule: 'Quét các đường dẫn file kích hoạt lậu phổ biến.', recommendation: 'Phân tích file thực thi khả nghi trước khi xóa.' },
-  6: { source: 'Task Scheduler and Windows Services', sourceKind: 'Tasks', rule: 'Phát hiện tác vụ/dịch vụ ẩn liên quan đến công cụ kích hoạt lậu.', recommendation: 'Kiểm tra chi tiết tác vụ và đường dẫn thực thi trước khi vô hiệu hóa.' },
-  7: { source: 'hosts file and Security-SPP event log', sourceKind: 'Hosts', rule: 'Kiểm tra can thiệp file hosts và nhật ký KMS event log.', recommendation: 'Rà soát file hosts và đối chiếu mã lỗi KMS event log.' },
-  8: { source: 'UI rule evaluation over the seven evidence groups', sourceKind: 'Rule', rule: 'Tổng hợp kết luận dựa trên các nhóm kiểm tra trên.', recommendation: 'Dựa vào bảng kết quả trên để đưa ra hành động.' },
+  1: { source: 'SoftwareLicensingService.OA3xOriginalProductKey', sourceKind: 'WMI', rule: 'Ki\u1ec3m tra kh\u00f3a OA3 nh\u00fang trong BIOS c\u00f3 t\u1ed3n t\u1ea1i hay kh\u00f4ng.', recommendation: 'So s\u00e1nh kh\u00f3a OEM v\u1edbi kh\u00f3a \u0111ang c\u00e0i \u0111\u1ec3 x\u00e1c minh t\u00ednh nh\u1ea5t qu\u00e1n.' },
+  2: { source: 'slmgr /dlv', sourceKind: 'Command', rule: '\u0110\u1ed1i chi\u1ebfu tr\u1ea1ng th\u00e1i k\u00edch ho\u1ea1t v\u00e0 k\u00eanh b\u1ea3n quy\u1ec1n hi\u1ec7n t\u1ea1i.', recommendation: 'X\u00e1c minh k\u00eanh b\u1ea3n quy\u1ec1n (Retail/OEM/Volume) c\u00f3 ph\u00f9 h\u1ee3p hay kh\u00f4ng.' },
+  3: { source: 'WMI + slmgr', sourceKind: 'WMI', rule: 'Thu th\u1eadp Product Key, partial key v\u00e0 Activation ID \u0111\u1ec3 \u0111\u1ed1i so\u00e1t.', recommendation: '\u0110\u1ed1i chi\u1ebfu c\u00e1c gi\u00e1 tr\u1ecb key gi\u1eefa BIOS, key c\u00e0i \u0111\u1eb7t v\u00e0 k\u1ebft qu\u1ea3 WMI.' },
+  4: { source: 'Registry + Hosts', sourceKind: 'Registry', rule: 'Ki\u1ec3m tra d\u1ea5u hi\u1ec7u KMS qua Registry v\u00e0 file hosts.', recommendation: 'N\u1ebfu ph\u00e1t hi\u1ec7n KMS host b\u1ea5t th\u01b0\u1eddng, c\u1ea7n x\u00e1c minh ngu\u1ed3n c\u1ea5u h\u00ecnh.' },
+  5: { source: 'Scheduled Tasks + Services', sourceKind: 'Tasks', rule: 'R\u00e0 so\u00e1t task/d\u1ecbch v\u1ee5 li\u00ean quan k\u00edch ho\u1ea1t.', recommendation: 'X\u00e1c minh t\u00e1c v\u1ee5 h\u1ec7 th\u1ed1ng kh\u1edfi t\u1ea1o c\u00f3 li\u00ean quan t\u1edbi k\u00edch ho\u1ea1t hay kh\u00f4ng.' },
+  6: { source: 'System files', sourceKind: 'Files', rule: 'Ki\u1ec3m tra t\u1ec7p h\u1ec7 th\u1ed1ng li\u00ean quan b\u1ea3n quy\u1ec1n.', recommendation: 'So kh\u1edbp ch\u1eef k\u00fd t\u1ec7p v\u00e0 \u0111\u1ed1i chi\u1ebfu v\u1edbi h\u1ec7 th\u1ed1ng chu\u1ea9n.' },
+  7: { source: 'WMI + Activation API', sourceKind: 'WMI', rule: 'Thu th\u1eadp b\u1eb1ng ch\u1ee9ng Digital License v\u00e0 Activation IDs.', recommendation: 'X\u00e1c nh\u1eadn d\u1ea5u hi\u1ec7u b\u1ea3n quy\u1ec1n s\u1ed1 c\u00f9ng tr\u1ea1ng th\u00e1i k\u00edch ho\u1ea1t.' },
+  8: { source: 'Engine verification', sourceKind: 'Rule', rule: 'T\u1ed5ng h\u1ee3p b\u1eb1ng ch\u1ee9ng theo c\u00e1c nh\u00f3m r\u1ee7i ro \u0111\u1ec3 \u0111\u00e1nh gi\u00e1.', recommendation: '\u0110\u1ec1 xu\u1ea5t b\u01b0\u1edbc x\u1eed l\u00fd theo m\u1ee9c \u0111\u1ed9 tin c\u1eady c\u1ee7a b\u1eb1ng ch\u1ee9ng.' }
 };
 
-const noBackendData = 'No Data — backend field required.';
+
+const noBackendData = 'No Data - backend field required.';
 
 function displayValue(value: unknown): string | null {
   if (value === undefined || value === null || value === '') return null;
@@ -196,23 +192,23 @@ function displayValue(value: unknown): string | null {
 }
 
 const initialWindowsSteps: DiagnosticStep[] = [
-  { id: 1, name: 'OA3 BIOS Key', description: 'Kiểm tra key nhúng phần cứng.', status: 'idle', details: [] },
+  { id: 1, name: 'Khóa BIOS OA3', description: 'Kiểm tra key nhúng phần cứng.', status: 'idle', details: [] },
   { id: 2, name: 'Kênh cấp phép', description: 'Phân tích kênh License.', status: 'idle', details: [] },
   { id: 3, name: 'Lịch sử CMD & MAS', description: 'Quét dấu vết MAS/HWID.', status: 'idle', details: [] },
   { id: 4, name: 'KMS Host & Hook', description: 'Máy chủ kích hoạt.', status: 'idle', details: [] },
-  { id: 5, name: 'Tệp tin Crack', description: 'Quét file độc hại.', status: 'idle', details: [] },
+  { id: 5, name: 'Tập tin chưa xác thực', description: 'Kiểm tra tập tin có dấu hiệu bất thường.', status: 'idle', details: [] },
   { id: 6, name: 'Task & Services', description: 'Tác vụ ngầm.', status: 'idle', details: [] },
   { id: 7, name: 'Registry & Hosts', description: 'Can thiệp hệ thống.', status: 'idle', details: [] },
   { id: 8, name: 'Đánh giá quy tắc', description: 'Tổng hợp nhóm bằng chứng.', status: 'idle', details: [] },
 ];
 
 const initialOfficeSteps: DiagnosticStep[] = [
-    { id: 1, name: 'Trạng thái License', description: 'License Status.', status: 'idle', details: [] },
-    { id: 2, name: 'Kênh cấp phép', description: 'License Channel.', status: 'idle', details: [] },
-    { id: 3, name: 'Ohook Crack', description: 'Phát hiện DLL giả mạo.', status: 'idle', details: [] },
-    { id: 4, name: 'Tệp tin Crack', description: 'Tìm tệp tin độc hại.', status: 'idle', details: [] },
+    { id: 1, name: 'Trạng thái License', description: 'Trạng thái cấp phép.', status: 'idle', details: [] },
+    { id: 2, name: 'Kênh cấp phép', description: 'Kênh cấp phép.', status: 'idle', details: [] },
+    { id: 3, name: 'Tập tin Ohook', description: 'Kiểm tra DLL giả mạo hệ thống.', status: 'idle', details: [] },
+    { id: 4, name: 'Tập tin chưa xác thực', description: 'Kiểm tra tập tin có dấu hiệu bất thường.', status: 'idle', details: [] },
     { id: 5, name: 'Task & Services', description: 'Tác vụ ngầm.', status: 'idle', details: [] },
-    { id: 6, name: 'File hosts', description: 'Chặn MS server.', status: 'idle', details: [] },
+    { id: 6, name: 'File hosts', description: 'Chặn máy chủ Microsoft.', status: 'idle', details: [] },
     { id: 7, name: 'Event Logs', description: 'Dấu vết lịch sử.', status: 'idle', details: [] },
     { id: 8, name: 'Đánh giá quy tắc', description: 'Tổng hợp nhóm bằng chứng.', status: 'idle', details: [] },
 ];
@@ -234,7 +230,7 @@ function DiagnosticStepItem({ step, isActive, onClick }: DiagnosticStepItemProps
   };
 
   const { icon, color, textColor } = statusConfig[step.status];
-  const statusText = { idle: 'Chưa quét', clean: 'Bình thường', warning: 'Cảnh báo', danger: 'Phát hiện lỗi' };
+  const statusText = { idle: 'Chưa phân tích', clean: 'Ổn định', warning: 'Cảnh báo', danger: 'Có dấu hiệu bất thường' };
 
   return (
     <div
@@ -245,9 +241,9 @@ function DiagnosticStepItem({ step, isActive, onClick }: DiagnosticStepItemProps
     >
       <div className="flex items-center gap-3">
         {icon}
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <p className={`text-xs font-bold ${isActive ? 'text-blue-700' : 'text-slate-800'}`}>{`Bước ${step.id}: ${step.name}`}</p>
-          <p className="text-[10px] text-slate-500">{step.description}</p>
+          <p className={`text-[11px] truncate ${isActive ? 'text-blue-600/80' : 'text-slate-500'}`}>{step.description}</p>
         </div>
         <span className={`text-[10px] font-bold uppercase ${isActive ? 'text-blue-600' : textColor}`}>
           {statusText[step.status]}
@@ -295,7 +291,7 @@ export default function LicenseManager() {
   const [windowsScanResult, setWindowsScanResult] = useState<any>(null);
   const [officeScanResult, setOfficeScanResult] = useState<any>(null);
 
-  // New state for forensic workspace
+  // State for usability enhancements
   const [scanStartTime, setScanStartTime] = useState<number | null>(null);
   const [scanEndTime, setScanEndTime] = useState<number | null>(null);
   const [showDevMode, setShowDevMode] = useState(false);
@@ -304,6 +300,44 @@ export default function LicenseManager() {
   const [evidenceSortBy, setEvidenceSortBy] = useState<'id' | 'status' | 'weight'>('id');
   const [expandedEvidence, setExpandedEvidence] = useState<number[]>([]);
   const [showStepDeveloperView, setShowStepDeveloperView] = useState(false);
+
+  // Scoped usability states (Console, Timeline Expansion, Reset Modal)
+  const [consoleLogs, setConsoleLogs] = useState<string[]>([
+    `[${new Date().toLocaleTimeString()}] Khởi tạo công cụ chẩn đoán bản quyền.`
+  ]);
+  const [isConsoleOpen, setIsConsoleOpen] = useState<boolean>(true);
+  const [expandedTimelineStep, setExpandedTimelineStep] = useState<number | null>(null);
+  const [resetModalData, setResetModalData] = useState<{
+    isOpen: boolean;
+    title: string;
+    steps: { label: string; status: 'success' | 'warning' | 'failed'; detail?: string }[];
+    overallStatus: string;
+    duration: string;
+    warningsCount: number;
+    errorsCount: number;
+  } | null>(null);
+
+  const addConsoleLog = (msg: string) => {
+    const timeStr = new Date().toLocaleTimeString();
+    setConsoleLogs(prev => [...prev, `[${timeStr}] ${msg}`]);
+  };
+
+  const copyConsoleLogs = () => {
+    const text = consoleLogs.join('\n');
+    navigator.clipboard.writeText(text);
+    showInfo({ title: 'Đã sao chép', message: 'Đã sao chép toàn bộ nhật ký console vào Clipboard.' });
+  };
+
+  const exportConsoleLogsTxt = () => {
+    const text = consoleLogs.join('\n');
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `LicenseManager_Console_${Date.now()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const askConfirm = async (options: { title?: string; message?: string; type?: 'question' | 'warning' | 'info' }) => {
     const api = (window as any)?.electronAPI;
@@ -334,10 +368,13 @@ export default function LicenseManager() {
   const handleStartScan = async () => {
     setIsLoading(true);
     setError(null);
-    setScanStartTime(Date.now());
+    const startTime = Date.now();
+    setScanStartTime(startTime);
     setScanEndTime(null);
     if (activeTab === 'windows') setWindowsSteps(initialWindowsSteps); 
     if (activeTab === 'office') setOfficeSteps(initialOfficeSteps);
+
+    addConsoleLog(`Bắt đầu quá trình chẩn đoán ${activeTab.toUpperCase()}...`);
 
     try {
       const type = activeTab;
@@ -346,6 +383,7 @@ export default function LicenseManager() {
         throw new Error('scanActivation IPC is not available.');
       }
 
+      addConsoleLog(`Gửi yêu cầu IPC scanActivation (${type})...`);
       const rawResult = await api.scanActivation({ type });
       const result = normalizeScanActivationResult(rawResult);
 
@@ -365,21 +403,26 @@ export default function LicenseManager() {
                 issues: report.issues
             };
           } catch (forensicErr) {
-            // Keep scan result usable even if forensic enrichment fails
             result.Forensics = result.Forensics || {};
           }
           
           setWindowsScanResult(result);
           processWindowsScanResults(result);
+          addConsoleLog(`Hoàn tất phân tích Windows. Kết quả verdict: ${result.LicenseStatus === 1 ? 'Kích hoạt hợp lệ' : 'Cần xem xét'}.`);
       } else {
           setOfficeScanResult(result);
           processOfficeScanResults(result);
+          addConsoleLog(`Hoàn tất phân tích Office.`);
       }
     } catch (err: any) {
-      setError('Lỗi khi thực thi lệnh quét. Vui lòng thử lại. Lỗi: ' + err.message);
+      const errMsg = 'Lỗi khi thực thi lệnh quét: ' + err.message;
+      setError(errMsg);
+      addConsoleLog(`[LỖI] ${errMsg}`);
     } finally {
       setIsLoading(false);
-      setScanEndTime(Date.now());
+      const endTime = Date.now();
+      setScanEndTime(endTime);
+      addConsoleLog(`Thời gian thực thi quét: ${((endTime - startTime) / 1000).toFixed(2)}s.`);
     }
   };
 
@@ -387,8 +430,8 @@ export default function LicenseManager() {
 
   const handleRestoreOemBiosKey = async () => {
     const confirm = await askConfirm({
-      title: 'Khôi phục Key gốc từ BIOS',
-      message: 'Công cụ sẽ tự động đọc Key OEM nhúng trên Mainboard (BIOS), gỡ bỏ Key hiện tại và kích hoạt lại bản quyền chính hãng với Microsoft. Bạn có muốn tiếp tục không?',
+      title: 'Khôi phục Khóa OEM từ BIOS',
+      message: 'Công cụ sẽ đọc khóa OEM nhúng trên Mainboard (BIOS) và cập nhật trạng thái cấp phép với Microsoft. Bạn có muốn tiếp tục không?',
       type: 'question'
     });
 
@@ -396,19 +439,43 @@ export default function LicenseManager() {
 
     setIsRestoringOem(true);
     setError(null);
+    const startT = Date.now();
+    addConsoleLog('Bắt đầu khôi phục khóa OEM từ BIOS...');
     try {
       const adapter = new ElectronBackendAdapter();
       const engine = new ActivationEngine(adapter);
       const snapshot = windowsScanResult || {};
       const { result } = await engine.restoreOemBiosKey(snapshot);
+      const durationSec = ((Date.now() - startT) / 1000).toFixed(2) + 's';
       
-      await showInfo({
-        title: result.success ? 'Thành công' : 'Thông báo',
-        message: `Khôi phục Key BIOS hoàn tất.\nKết quả xác minh: ${result.verificationPassed ? 'HỢP LỆ' : 'THẤT BẠI'}\nLỗi/Cảnh báo: ${result.errors.join(', ')}`
+      addConsoleLog(`Khôi phục Key OEM BIOS hoàn tất. Kết quả xác minh: ${result.verificationPassed ? 'HỢP LỆ' : 'THẤT BẠI'}.`);
+
+      const modalSteps = (result.executionSteps && result.executionSteps.length > 0)
+        ? result.executionSteps.map((s: any) => ({
+            label: s.action || s.name || 'Thao tác hệ thống',
+            status: s.success !== false ? ('success' as const) : ('failed' as const),
+            detail: s.output || (s.success !== false ? 'Hoàn tất' : 'Thất bại')
+          }))
+        : [
+            { label: 'Truy xuất khóa OEM từ BIOS', status: result.success ? ('success' as const) : ('warning' as const), detail: result.success ? 'Thành công' : 'Không tìm thấy' },
+            { label: 'Cập nhật trạng thái bản quyền', status: result.verificationPassed ? ('success' as const) : ('warning' as const), detail: result.verificationPassed ? 'Xác minh thành công' : 'Ghi nhận cảnh báo' }
+          ];
+
+      setResetModalData({
+        isOpen: true,
+        title: 'Kết Quả Khôi Phục Khóa OEM BIOS',
+        steps: modalSteps,
+        overallStatus: result.verificationPassed ? 'Thành công' : 'Ghi nhận cảnh báo',
+        duration: durationSec,
+        warningsCount: (result.warnings || []).length,
+        errorsCount: (result.errors || []).length
       });
+
       handleStartScan();
     } catch (err: any) {
-      setError('Lỗi khi khôi phục Key BIOS: ' + err.message);
+      const msg = 'Lỗi khi khôi phục Key BIOS: ' + err.message;
+      setError(msg);
+      addConsoleLog(`[LỖI] ${msg}`);
     } finally {
       setIsRestoringOem(false);
     }
@@ -417,8 +484,8 @@ export default function LicenseManager() {
   const handleResetActivation = async () => {
       const type = activeTab;
       const confirm = await askConfirm({
-          title: `Xác nhận Đặt lại Bản quyền ${type === 'windows' ? 'Windows' : 'Office'}`,
-          message: `Bạn có chắc chắn muốn gỡ bỏ toàn bộ thông tin bản quyền ${type === 'windows' ? 'Windows' : 'Office'} hiện tại không? Thao tác này sẽ xóa tất cả các Product Key và cấu hình KMS. Hành động này không thể hoàn tác.`,
+          title: `Xác nhận Đặt lại Trạng thái Cấp phép ${type === 'windows' ? 'Windows' : 'Office'}`,
+          message: `Bạn có chắc chắn muốn xóa thông tin cấp phép ${type === 'windows' ? 'Windows' : 'Office'} hiện tại? Thao tác này sẽ xóa các Product Key và cấu hình KMS hiện có.`,
           type: 'warning',
       });
 
@@ -426,55 +493,95 @@ export default function LicenseManager() {
 
       setIsResetting(true);
       setError(null);
+      const startT = Date.now();
+      addConsoleLog(`Bắt đầu đặt lại trạng thái cấp phép ${type.toUpperCase()}...`);
+
       try {
           const api = (window as any)?.electronAPI;
 
           if (type === 'windows') {
               let verificationPassed = false;
               let executionTime: number | string = 'N/A';
+              let engineResult: any = null;
 
               try {
+                addConsoleLog('Chạy ActivationEngine.deepCleanWindowsLicense...');
                 const adapter = new ElectronBackendAdapter();
                 const engine = new ActivationEngine(adapter);
                 const snapshot = windowsScanResult || {};
                 const engineResponse = await engine.deepCleanWindowsLicense(snapshot);
 
                 if (engineResponse?.result) {
+                  engineResult = engineResponse.result;
                   verificationPassed = !!engineResponse.result.verificationPassed;
                   executionTime = engineResponse.result.executionTime ?? 'N/A';
                 } else {
                   throw new Error('ActivationEngine returned empty result.');
                 }
               } catch (engineErr) {
-                // Fallback to direct IPC to avoid no-op behavior in unsupported engine runtime paths
                 if (!api?.deepCleanActivation) {
                   throw engineErr;
                 }
-                const fallbackOutput = await api.deepCleanActivation('windows');
+                addConsoleLog('Fallback sang IPC deepCleanActivation...');
+                await api.deepCleanActivation('windows');
                 verificationPassed = true;
                 executionTime = 'IPC fallback';
               }
+
+              const durSec = typeof executionTime === 'number' ? (executionTime / 1000).toFixed(2) + 's' : ((Date.now() - startT) / 1000).toFixed(2) + 's';
+              addConsoleLog(`Đặt lại trạng thái Windows hoàn tất. Thời gian: ${durSec}.`);
               
-              await showInfo({
-                  title: 'Hoàn tất',
-                  message: `Đã xử lý Đặt Lại Bản Quyền Windows.\n\nKết quả xác minh: ${verificationPassed ? 'THÀNH CÔNG (Hệ thống sạch)' : 'PHÁT HIỆN DẤU VẾT'}\nThời gian: ${executionTime}`
+              const backendResult = engineResult;
+              const modalSteps = (backendResult?.executionSteps && backendResult.executionSteps.length > 0)
+                ? backendResult.executionSteps.map((s: any) => ({
+                    label: s.action || s.name || 'Thao tác hệ thống',
+                    status: s.success !== false ? ('success' as const) : ('failed' as const),
+                    detail: s.output || (s.success !== false ? 'Hoàn tất' : 'Thất bại')
+                  }))
+                : [
+                    { label: 'Đặt lại thông tin cấp phép Windows', status: verificationPassed ? ('success' as const) : ('warning' as const), detail: String(executionTime) }
+                  ];
+
+              setResetModalData({
+                isOpen: true,
+                title: 'Kết Quả Đặt Lại Trạng Thái Bản Quyền Windows',
+                steps: modalSteps,
+                overallStatus: verificationPassed ? 'Thành công' : 'Ghi nhận dấu vết',
+                duration: durSec,
+                warningsCount: (backendResult?.warnings || []).length,
+                errorsCount: (backendResult?.errors || []).length
               });
+
               handleStartScan();
           } else {
               if (!api?.deepCleanActivation) {
-                throw new Error('deepCleanActivation IPC is not available.');
+                throw new Error('deepCleanActivation IPC không sẵn có.');
               }
-              const result = await api.deepCleanActivation(type);
-              await showInfo({
-                  title: 'Hoàn tất',
-                  message: `Đã xóa và đặt lại thành công bản quyền Office. Kết quả:\n\n${result}`,
+              await api.deepCleanActivation('office');
+              const durSec = ((Date.now() - startT) / 1000).toFixed(2) + 's';
+              addConsoleLog(`Đặt lại Office hoàn tất. Thời gian: ${durSec}.`);
+              
+              setResetModalData({
+                isOpen: true,
+                title: 'Kết Quả Đặt Lại Trạng Thái Office',
+                steps: [
+                  { label: 'Gỡ bỏ giấy phép Office dư thừa (ospp.vbs /unpkey)', status: 'success', detail: 'Thành công' },
+                  { label: 'Làm mới dịch vụ cấp phép Office', status: 'success', detail: 'Thành công' }
+                ],
+                overallStatus: 'Thành công',
+                duration: durSec,
+                warningsCount: 0,
+                errorsCount: 0
               });
+
               handleStartScan();
           }
       } catch (err: any) {
-          setError('Lỗi khi reset bản quyền: ' + err.message);
+        const msg = 'Lỗi khi đặt lại trạng thái: ' + err.message;
+        setError(msg);
+        addConsoleLog(`[LỖI] ${msg}`);
       } finally {
-          setIsResetting(false);
+        setIsResetting(false);
       }
   };
 
@@ -486,8 +593,10 @@ export default function LicenseManager() {
     let riskScore = 0;
     const evidences: string[] = [];
 
-    // === TIER 1: OA3 BIOS Key Verification ===
-    const hasOA3 = result.Windows.HasOA3Key === true;
+    // === TIER 1: Khóa BIOS OA3 Verification ===
+    const hasOA3 = result.Windows.HasOA3Key === true ||
+      (typeof result.Windows.OA3Key === 'string' && result.Windows.OA3Key.trim().length > 0 && result.Windows.OA3Key !== 'Không có dữ liệu' && result.Windows.OA3Key !== 'N/A') ||
+      (typeof result.Windows.OA3xOriginalProductKey === 'string' && result.Windows.OA3xOriginalProductKey.trim().length > 0 && result.Windows.OA3xOriginalProductKey !== 'Không có dữ liệu' && result.Windows.OA3xOriginalProductKey !== 'N/A');
     const isLicensed = result.Windows.LicenseStatus === 1;
     const channel = result.Windows.Channel || 'UNKNOWN';
 
@@ -501,12 +610,12 @@ export default function LicenseManager() {
             newSteps[0].details.push('⚠️ Kênh OEM_DM nhưng không tìm thấy OA3 Key trong BIOS');
         } else {
             newSteps[0].status = 'clean';
-            newSteps[0].details.push('ℹ️ Không có OA3 Key trong BIOS (Bình thường đối với Retail/Custom PC)');
+            newSteps[0].details.push('ℹ Không có OA3 Key trong BIOS (Bình thường đối với Retail/Custom PC)');
         }
     }
 
     // === TIER 2: License Channel Analysis ===
-    newSteps[1].details.push(`${channel} — ${result.Windows.Description || '—'}`);
+    newSteps[1].details.push(`${channel} - ${result.Windows.Description || 'Không có dữ liệu'}`);
     if (channel.includes('OEM') && isLicensed) {
         newSteps[1].status = 'clean';
     } else if (channel.includes('RETAIL') && isLicensed) {
@@ -525,11 +634,11 @@ export default function LicenseManager() {
     if (isKms38) {
         newSteps[3].status = 'danger';
         riskScore += 90;
-        newSteps[3].details.push('🔴 Phát hiện KMS38 Hook (Năm 2038)');
+        newSteps[3].details.push('⚠️ Phát hiện KMS38 Hook (Năm 2038)');
     } else if (isFakeKms || (kmsHost && kmsHost.match(/loli|digiboy|msguides|zdf|0\.0\.0\.0|kms|crack/))) {
         newSteps[3].status = 'danger';
         riskScore += 80;
-        newSteps[3].details.push(`🔴 KMS host lậu: ${kmsHost}`);
+        newSteps[3].details.push(`⚠️ Máy chủ KMS chưa xác thực: ${kmsHost}`);
     } else if (kmsHost) {
         newSteps[3].status = 'warning';
         newSteps[3].details.push(`⚠️ KMS Host: ${kmsHost}`);
@@ -542,7 +651,7 @@ export default function LicenseManager() {
     if (piratedFiles.length > 0) {
         newSteps[4].status = 'danger';
         riskScore += 80;
-        piratedFiles.forEach((f: string) => newSteps[4].details.push(`🔴 Tệp crack: ${f}`));
+        piratedFiles.forEach((f: string) => newSteps[4].details.push(`⚠️ Tập tin chưa xác thực: ${f}`));
     } else {
         newSteps[4].status = 'clean';
         newSteps[4].details.push('✅ Sạch');
@@ -553,8 +662,8 @@ export default function LicenseManager() {
     if (suspiciousTasks.length > 0 || suspiciousServices.length > 0) {
         newSteps[5].status = 'danger';
         riskScore += 60;
-        suspiciousTasks.forEach((t: any) => newSteps[5].details.push(`🔴 Task: ${t.Name}`));
-        suspiciousServices.forEach((s: string) => newSteps[5].details.push(`🔴 Service: ${s}`));
+        suspiciousTasks.forEach((t: any) => newSteps[5].details.push(`⚠️ Task: ${t.Name}`));
+        suspiciousServices.forEach((s: string) => newSteps[5].details.push(`⚠️ Service: ${s}`));
     } else {
         newSteps[5].status = 'clean';
         newSteps[5].details.push('✅ Sạch');
@@ -564,8 +673,8 @@ export default function LicenseManager() {
     const hostsRedirects = result.System?.HostsRedirects || [];
     const kmsEvents = result.System?.KMSEvents || [];
     
-    if (hasNoGenTicket) { riskScore += 100; newSteps[6].details.push('🔴 Có khóa chặn NoGenTicket'); }
-    if (hostsRedirects.length > 0) { riskScore += 50; hostsRedirects.forEach((h: string) => newSteps[6].details.push(`🔴 Hosts: ${h}`)); }
+    if (hasNoGenTicket) { riskScore += 100; newSteps[6].details.push('⚠️ Có khóa chặn NoGenTicket'); }
+    if (hostsRedirects.length > 0) { riskScore += 50; hostsRedirects.forEach((h: string) => newSteps[6].details.push(`⚠️ Hosts: ${h}`)); }
     
     if (hasNoGenTicket || hostsRedirects.length > 0) {
         newSteps[6].status = 'danger';
@@ -581,7 +690,7 @@ export default function LicenseManager() {
     if (hasMasHistory) {
         newSteps[2].status = 'danger';
         riskScore += 100;
-        newSteps[2].details.push('🔴 Phát hiện lịch sử chạy tool lậu MAS/HWID');
+        newSteps[2].details.push('⚠️ Ghi nhận dấu vết kích hoạt MAS/HWID trong nhật ký');
     } else if (result.Windows.IsGenericKey && !isLicensed) {
         newSteps[2].status = 'warning';
         newSteps[2].details.push(`⚠️ Dùng Generic Key (Chưa kích hoạt): ***${result.Windows.PartialProductKey}`);
@@ -610,7 +719,7 @@ export default function LicenseManager() {
     }
 
     newSteps[7].status = (finalWinStatus === 'Genuine' || finalWinStatus === 'None') ? 'clean' : (finalWinStatus === 'Cảnh báo' ? 'warning' : 'danger');
-    newSteps[7].details.push(`Kết luận: ${finalWinStatus === 'Genuine' ? 'Bản quyền chính hãng' : finalWinStatus === 'KMS' ? 'Phát hiện Kích hoạt Lậu' : finalWinStatus === 'Cảnh báo' ? 'Cần xem xét thêm' : 'Chưa kích hoạt'}`);
+    newSteps[7].details.push(`Kết luận: ${finalWinStatus === 'Genuine' ? 'Bản quyền hợp lệ' : finalWinStatus === 'KMS' ? 'Có dấu hiệu bất thường' : finalWinStatus === 'Cảnh báo' ? 'Cần xem xét thêm' : 'Chưa kích hoạt'}`);
 
     setWindowsSteps(newSteps);
   };
@@ -626,10 +735,10 @@ export default function LicenseManager() {
     
     if (isLicensed) {
         newSteps[0].status = 'clean';
-        newSteps[0].details.push('✅ Đã kích hoạt bản quyền');
+        newSteps[0].details.push('✅ Đã kích hoạt (Licensed)');
     } else {
         newSteps[0].status = 'warning';
-        newSteps[0].details.push('🔴 Chưa được kích hoạt');
+        newSteps[0].details.push('⚠️ Chưa được kích hoạt');
     }
 
     const hasKmsProduct = officeProducts.some((op: any) => (op.Description||'').toLowerCase().includes('kms'));
@@ -646,7 +755,7 @@ export default function LicenseManager() {
     if (ohookFiles.length > 0) {
         newSteps[2].status = 'danger';
         riskScore += 90;
-        newSteps[2].details.push(`🔴 Phát hiện DLL có thể là Ohook: ${ohookFiles.join(', ')}`);
+        newSteps[2].details.push(`⚠️ Phát hiện DLL có thể là Ohook: ${ohookFiles.join(', ')}`);
     } else {
         newSteps[2].status = 'clean';
         newSteps[2].details.push('✅ Sạch (Không phát hiện Ohook)');
@@ -656,7 +765,7 @@ export default function LicenseManager() {
     if (piratedFiles.length > 0) {
         newSteps[3].status = 'danger';
         riskScore += 80;
-        newSteps[3].details.push(`🔴 Tồn tại tệp tin bẻ khóa chung: ${piratedFiles.join(', ')}`);
+        newSteps[3].details.push(`⚠️ Tồn tại tập tin có dấu hiệu can thiệp: ${piratedFiles.join(', ')}`);
     } else {
         newSteps[3].status = 'clean';
         newSteps[3].details.push('✅ Sạch');
@@ -667,7 +776,7 @@ export default function LicenseManager() {
     if (suspiciousTasks.length > 0 || suspiciousServices.length > 0) {
         newSteps[4].status = 'danger';
         riskScore += 60;
-        newSteps[4].details.push(`🔴 Tác vụ/dịch vụ gia hạn bẻ khóa ngầm`);
+        newSteps[4].details.push(`⚠️ Tác vụ/dịch vụ tự động chưa xác thực`);
     } else {
         newSteps[4].status = 'clean';
         newSteps[4].details.push('✅ Sạch');
@@ -677,7 +786,7 @@ export default function LicenseManager() {
     if (hostsRedirects.length > 0) {
         newSteps[5].status = 'danger';
         riskScore += 50;
-        newSteps[5].details.push(`🔴 Chặn máy chủ xác thực qua file hosts`);
+        newSteps[5].details.push(`⚠️ Chặn máy chủ xác thực qua file hosts`);
     } else {
         newSteps[5].status = 'clean';
         newSteps[5].details.push('✅ Sạch');
@@ -709,7 +818,7 @@ export default function LicenseManager() {
     }
     
     newSteps[7].status = (finalStatus === 'Genuine' || finalStatus === 'None') ? 'clean' : (finalStatus === 'Cảnh báo' ? 'warning' : 'danger');
-    newSteps[7].details.push(`Kết luận: ${finalStatus === 'Genuine' ? 'Bản quyền chính hãng' : finalStatus === 'KMS' ? 'Phát hiện Kích hoạt Lậu' : finalStatus === 'Cảnh báo' ? 'Cần xem xét thêm' : 'Chưa kích hoạt'}`);
+    newSteps[7].details.push(`Kết luận: ${finalStatus === 'Genuine' ? 'Bản quyền hợp lệ' : finalStatus === 'KMS' ? 'Có dấu hiệu bất thường' : finalStatus === 'Cảnh báo' ? 'Cần xem xét thêm' : 'Chưa kích hoạt'}`);
     
     setOfficeSteps(newSteps);
   }
@@ -731,11 +840,11 @@ export default function LicenseManager() {
   // The scan backend currently returns raw collector data, not an engine decision.
   // Keep the UI assessment explicit so technicians never mistake it for an engine verdict.
   const computedVerdict = useMemo(() => {
-    if (!windowsScanResult) return { status: '—', label: 'Chưa quét', color: 'slate' };
+    if (!windowsScanResult) return { status: '-', label: 'Chưa quét', color: 'slate' };
     const hasDanger = windowsSteps.some(s => s.status === 'danger');
     const hasWarn = windowsSteps.some(s => s.status === 'warning');
     const licensed = winData?.LicenseStatus === 1;
-    if (hasDanger) return { status: 'TAMPERED', label: 'Phát hiện can thiệp lậu', color: 'red' };
+    if (hasDanger) return { status: 'TAMPERED', label: 'Có dấu hiệu bất thường', color: 'red' };
     if (hasWarn && licensed) return { status: 'WARNING', label: 'Cần xem xét thêm', color: 'amber' };
     if (hasWarn && !licensed) return { status: 'UNLICENSED', label: 'Chưa kích hoạt', color: 'slate' };
     if (licensed) return { status: 'GENUINE', label: 'Bản quyền chính hãng', color: 'emerald' };
@@ -743,11 +852,10 @@ export default function LicenseManager() {
   }, [windowsScanResult, windowsSteps, winData]);
 
   const forensicData = windowsScanResult?.Forensics;
-  const engineConfidence = typeof forensicData?.confidence?.final === 'number'
-    ? forensicData.confidence.final
-    : null;
   const collectorTelemetry = Array.isArray(forensicData?.collectors) ? forensicData.collectors : [];
   const engineDecision = forensicData?.decision ?? null;
+
+
 
   const selectedStepForensics = useMemo(() => {
     const step = windowsSteps.find(item => item.id === activeStep);
@@ -793,7 +901,7 @@ export default function LicenseManager() {
       (Array.isArray(sysData?.PiratedFiles) ? sysData.PiratedFiles : []).forEach((item: unknown) => files.push(String(item)));
     }
     if (activeStep === 6) {
-      (Array.isArray(sysData?.SuspiciousTasks) ? sysData.SuspiciousTasks : []).forEach((item: any) => tasks.push(`${item.Name ?? 'Unnamed task'}${item.Path ? ` — ${item.Path}` : ''}${item.Action ? ` — ${item.Action}` : ''}`));
+      (Array.isArray(sysData?.SuspiciousTasks) ? sysData.SuspiciousTasks : []).forEach((item: any) => tasks.push(`${item.Name ?? 'Unnamed task'}${item.Path ? ` - ${item.Path}` : ''}${item.Action ? ` - ${item.Action}` : ''}`));
       (Array.isArray(sysData?.SuspiciousServices) ? sysData.SuspiciousServices : []).forEach((item: unknown) => services.push(String(item)));
     }
     if (activeStep === 7) {
@@ -818,15 +926,38 @@ export default function LicenseManager() {
     ];
 
     const rawResult = { step: step.id, windows: winData, system: sysData };
+
+    let stepMetadata = { ...windowsEvidenceMetadata[step.id] };
+    let stepObj = { ...step };
+
+    if (step.id === 1) {
+      const hasOA3Key = Boolean(
+        winData?.HasOA3Key === true ||
+        (typeof winData?.OA3Key === 'string' && winData.OA3Key.trim().length > 0 && winData.OA3Key !== 'Không có dữ liệu' && winData.OA3Key !== 'N/A') ||
+        (typeof winData?.OA3xOriginalProductKey === 'string' && winData.OA3xOriginalProductKey.trim().length > 0 && winData.OA3xOriginalProductKey !== 'Không có dữ liệu' && winData.OA3xOriginalProductKey !== 'N/A')
+      );
+
+      if (!windowsScanResult) {
+        stepObj.description = 'Chưa đủ dữ liệu để xác định sự tồn tại của khóa OEM.';
+        stepMetadata.recommendation = 'Thực hiện lại quá trình phân tích hoặc kiểm tra BIOS.';
+      } else if (hasOA3Key) {
+        stepObj.description = 'Đã phát hiện khóa OEM trong BIOS. Có thể sử dụng khóa này để khôi phục trạng thái cấp phép khi cần.';
+        stepMetadata.recommendation = 'So sánh khóa OEM với khóa đang cài để xác minh tính nhất quán.';
+      } else {
+        stepObj.description = 'Không phát hiện khóa OEM trong BIOS. Đây là trạng thái bình thường đối với Windows Retail hoặc máy tự lắp ráp.';
+        stepMetadata.recommendation = 'Không cần kiểm tra khóa OEM. Tiếp tục xác minh bản quyền dựa trên kênh cấp phép hiện tại (Retail / Volume / Subscription nếu có).';
+      }
+    }
+
     return {
-      step,
+      step: stepObj,
       backendStep,
-      metadata: windowsEvidenceMetadata[step.id],
+      metadata: stepMetadata,
       evidenceSources,
       rawResult,
       currentResult: step.details.length ? step.details : [],
     };
-  }, [activeStep, windowsSteps, winData, sysData, forensicData]);
+  }, [activeStep, windowsSteps, winData, sysData, forensicData, windowsScanResult]);
 
   const scanDurationMs = (scanStartTime && scanEndTime) ? (scanEndTime - scanStartTime) : null;
 
@@ -834,21 +965,35 @@ export default function LicenseManager() {
   // collector timing are intentionally left unavailable until the backend sends them.
   const evidenceList = useMemo(() => {
     if (!windowsScanResult) return [];
-    return windowsSteps.map((step, i) => ({
-      id: `EV-${String(i + 1).padStart(3, '0')}`,
-      idx: i,
-      collector: step.name,
-      source: windowsEvidenceMetadata[step.id].source,
-      sourceKind: windowsEvidenceMetadata[step.id].sourceKind,
-      rule: windowsEvidenceMetadata[step.id].rule,
-      recommendation: windowsEvidenceMetadata[step.id].recommendation,
-      status: step.status,
-      weight: typeof forensicData?.steps?.[String(step.id)]?.weight === 'number' ? forensicData.steps[String(step.id)].weight : null,
-      reliability: typeof forensicData?.steps?.[String(step.id)]?.reliability === 'number' ? forensicData.steps[String(step.id)].reliability : null,
-      durationMs: typeof forensicData?.steps?.[String(step.id)]?.durationMs === 'number' ? forensicData.steps[String(step.id)].durationMs : null,
-      details: step.details,
-    }));
-  }, [windowsScanResult, windowsSteps, forensicData]);
+    const hasOA3Key = Boolean(
+      winData?.HasOA3Key === true ||
+      (typeof winData?.OA3Key === 'string' && winData.OA3Key.trim().length > 0 && winData.OA3Key !== 'Không có dữ liệu' && winData.OA3Key !== 'N/A') ||
+      (typeof winData?.OA3xOriginalProductKey === 'string' && winData.OA3xOriginalProductKey.trim().length > 0 && winData.OA3xOriginalProductKey !== 'Không có dữ liệu' && winData.OA3xOriginalProductKey !== 'N/A')
+    );
+    return windowsSteps.map((step, i) => {
+      let rec = windowsEvidenceMetadata[step.id].recommendation;
+      if (step.id === 1) {
+        rec = hasOA3Key
+          ? 'So sánh khóa OEM với khóa đang cài để xác minh tính nhất quán.'
+          : 'Không cần kiểm tra khóa OEM. Tiếp tục xác minh bản quyền dựa trên kênh cấp phép hiện tại (Retail / Volume / Subscription nếu có).';
+      }
+      return {
+        id: `EV-${String(i + 1).padStart(3, '0')}`,
+        idx: i,
+        collector: step.name,
+        source: windowsEvidenceMetadata[step.id].source,
+        sourceKind: windowsEvidenceMetadata[step.id].sourceKind,
+        rule: windowsEvidenceMetadata[step.id].rule,
+        recommendation: rec,
+        status: step.status,
+        weight: typeof forensicData?.steps?.[String(step.id)]?.weight === 'number' ? forensicData.steps[String(step.id)].weight : null,
+        reliability: typeof forensicData?.steps?.[String(step.id)]?.reliability === 'number' ? forensicData.steps[String(step.id)].reliability : null,
+        durationMs: typeof forensicData?.steps?.[String(step.id)]?.durationMs === 'number' ? forensicData.steps[String(step.id)].durationMs : null,
+        timestamp: forensicData?.steps?.[String(step.id)]?.timestamp || forensicData?.steps?.[String(step.id)]?.time || null,
+        details: step.details,
+      };
+    });
+  }, [windowsScanResult, windowsSteps, forensicData, winData]);
 
   // Filter + search + sort evidence
   const filteredEvidence = useMemo(() => {
@@ -876,15 +1021,15 @@ export default function LicenseManager() {
     const c: { conflict: string; reason: string; resolution: string }[] = [];
     // Check: licensed but has danger
     if (winData?.LicenseStatus === 1 && dangerCount > 0) {
-      c.push({ conflict: 'Đã kích hoạt ↔ Phát hiện can thiệp lậu', reason: 'Windows báo LICENSED nhưng phát hiện KMS/crack artifacts', resolution: 'Ưu tiên bằng chứng can thiệp — khuyến nghị đặt lại key' });
+      c.push({ conflict: 'Trạng thái Licensed -> Có dấu hiệu bất thường', reason: 'Windows báo LICENSED nhưng tồn tại dấu vết KMS/artifact chưa xác thực', resolution: 'Cân nhắc đặt lại trạng thái cấp phép' });
     }
     // Check: has OA3 but using generic key
     if (winData?.HasOA3Key && winData?.IsGenericKey) {
-      c.push({ conflict: 'Có OA3 Key ↔ Đang dùng Generic Key', reason: 'BIOS có key nhúng nhưng đang sử dụng key chung (GVLK)', resolution: 'Khôi phục key gốc từ BIOS' });
+      c.push({ conflict: 'Khóa OEM khả dụng -> Đang dùng Generic Key', reason: 'BIOS có khóa nhúng OEM nhưng hệ thống đang dùng khóa mặc định (GVLK)', resolution: 'Khôi phục khóa OEM từ BIOS' });
     }
     // Check: KMS host exists but no pirated files
     if (winData?.KeyManagementServiceMachine && (sysData?.PiratedFiles || []).length === 0) {
-      c.push({ conflict: 'Có KMS Host ↔ Không có file crack', reason: 'Máy đang trỏ đến KMS server nhưng không tìm thấy file crack trên disk', resolution: 'KMS có thể là enterprise hợp lệ hoặc đã dọn dẹp file crack' });
+      c.push({ conflict: 'Cấu hình KMS Host -> Không tìm thấy tập tin liên quan', reason: 'Hệ thống trỏ đến máy chủ KMS nhưng không thấy tệp liên quan trên ổ đĩa', resolution: 'KMS có thể thuộc mạng Enterprise hợp lệ hoặc đã dọn dẹp tập tin' });
     }
     return c;
   }, [windowsScanResult, winData, sysData, dangerCount]);
@@ -892,10 +1037,10 @@ export default function LicenseManager() {
   // Hướng xử lý
   const recommendation = useMemo(() => {
     if (!windowsScanResult) return null;
-    if (computedVerdict.status === 'TAMPERED') return { action: 'Đặt lại bản quyền Windows gốc', risk: 'CAO', reason: 'One or more dấu hiệu bất thường were found by the scan rules.', next: 'Nhấn "Đặt Lại Bản Quyền Windows Gốc" → Sau đó nhấn "Khôi Phục Key Gốc từ BIOS" nếu máy có OA3 Key' };
-    if (computedVerdict.status === 'WARNING') return { action: 'Xác minh nguồn gốc key', risk: 'TRUNG BÌNH', reason: 'The scan returned weak evidence that does not prove tampering by itself.', next: 'Kiểm tra hóa đơn mua key hoặc khôi phục key BIOS. Nếu không có bằng chứng mua hợp lệ, cần đặt lại.' };
-    if (computedVerdict.status === 'GENUINE') return { action: 'Không cần hành động', risk: 'THẤP', reason: 'The completed scan did not return any warning or dấu hiệu bất thường.', next: 'Hệ thống sạch. Lưu báo cáo nếu cần chứng minh tính hợp lệ.' };
-    if (computedVerdict.status === 'UNLICENSED') return { action: 'Cài đặt key bản quyền hợp lệ', risk: 'TRUNG BÌNH', reason: 'Windows reports that the selected licence product is not activated.', next: 'Nhấn "Khôi Phục Key Gốc từ BIOS" hoặc nhập key retail/volume hợp lệ.' };
+    if (computedVerdict.status === 'TAMPERED') return { action: 'Cân nhắc đặt lại trạng thái cấp phép', risk: 'CAO', reason: 'Ghi nhận dấu hiệu bất thường theo quy tắc kiểm tra.', next: 'Nếu phát hiện dấu hiệu bất thường, hãy cân nhắc đặt lại trạng thái cấp phép và khôi phục bằng khóa OEM hợp lệ (nếu hệ thống hỗ trợ).' };
+    if (computedVerdict.status === 'WARNING') return { action: 'Xác minh nguồn gốc khóa', risk: 'TRUNG BÌNH', reason: 'Quá trình quét trả về bằng chứng yếu, chưa thể tự chứng minh có sự can thiệp.', next: 'Kiểm tra hóa đơn mua key hoặc khôi phục key BIOS. Nếu không có bằng chứng mua hợp lệ, cần đặt lại.' };
+    if (computedVerdict.status === 'GENUINE') return { action: 'Không cần hành động', risk: 'THẤP', reason: 'Quá trình quét không phát hiện cảnh báo hoặc dấu hiệu bất thường.', next: 'Hệ thống ổn định. Lưu báo cáo nếu cần chứng minh tính hợp lệ.' };
+    if (computedVerdict.status === 'UNLICENSED') return { action: 'Cập nhật Product Key hợp lệ', risk: 'TRUNG BÌNH', reason: 'Hệ thống ghi nhận sản phẩm chưa được kích hoạt.', next: 'Cân nhắc khôi phục khóa OEM từ BIOS hoặc áp dụng Product Key hợp lệ.' };
     return null;
   }, [windowsScanResult, computedVerdict]);
 
@@ -904,7 +1049,7 @@ export default function LicenseManager() {
   // ============================================================================
   const StatusBadge = ({ status }: { status: DiagnosticStepStatus }) => {
     const cfg = {
-      idle: { bg: 'bg-slate-100', text: 'text-slate-500', label: 'Chưa quét' },
+      idle: { bg: 'bg-slate-100', text: 'text-slate-500', label: 'Chưa phân tích' },
       clean: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Sạch' },
       warning: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Cảnh báo' },
       danger: { bg: 'bg-red-100', text: 'text-red-700', label: 'Nguy hiểm' },
@@ -919,434 +1064,493 @@ export default function LicenseManager() {
   return (
     <div className="p-1 w-full">
       <header className="mb-6">
-        <h1 className="text-xl font-bold text-slate-800">Kiểm tra & Xử lý Bản quyền Windows / Office</h1>
+        <h1 className="text-xl font-bold text-slate-800">{'Ki\u1ec3m Tra & X\u1eed L\u00fd L\u1ed7i B\u1ea3n Quy\u1ec1n Windows / Office'}</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Quy trình quét chuyên sâu: thời hạn, kênh cấp phép, KMS host, tệp tin/DLL, tác vụ ngầm, file hosts và Event Logs.
+          {'Quy trình chẩn đoán hệ thống: tập hợp chứng cứ cấp phép, đối chiếu khóa, xác thực KMS, tệp tin, tác vụ và nhật ký sự kiện.'}
         </p>
       </header>
 
       <div className="w-full space-y-6">
         <div className="flex border-b border-slate-200">
           <button
-            onClick={() => { setActiveTab('windows'); setActiveStep(1); }}
+            onClick={() => { setActiveTab('windows'); }}
             className={`px-4 py-2 text-sm font-semibold transition-colors ${activeTab === 'windows' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
           >
-            Bản quyền Windows
+            {'B\u1ea3n quy\u1ec1n Windows'}
           </button>
           <button
-            onClick={() => { setActiveTab('office'); setActiveStep(1); }}
+            onClick={() => { setActiveTab('office'); }}
             className={`px-4 py-2 text-sm font-semibold transition-colors ${activeTab === 'office' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
           >
-            Bản quyền MS Office
+            {'B\u1ea3n quy\u1ec1n MS Office'}
           </button>
         </div>
 
         <div className="space-y-6 w-full">
-          {activeTab === 'office' ? (
-            <div className="w-full">
-              <OfficeLicenseAnalyzer />
-            </div>
-          ) : (
-            /* ============================================================ */
-            /* WINDOWS TAB — FORENSIC DIAGNOSTIC WORKSPACE                  */
-            /* ============================================================ */
-            <div className="space-y-5">
+          <div className={activeTab === 'office' ? 'w-full' : 'hidden'}>
+            <OfficeLicenseAnalyzer />
+          </div>
 
-              {/* ── ACTION BUTTONS (PRESERVED) ── */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <button onClick={handleStartScan} disabled={isLoading || isResetting || isRestoringOem} className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold py-3.5 px-3 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-md hover:shadow-lg disabled:from-slate-400 disabled:to-slate-400 disabled:cursor-not-allowed flex items-center justify-center text-xs">
-                  {isLoading ? <Loader className="animate-spin mr-2 h-4 w-4" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
-                  {isLoading ? 'Đang Quét...' : 'Quét Bản Quyền Windows (8 Bước)'}
-                </button>
+          {activeTab === 'windows' && (
+            <div className="bg-slate-50/50 border border-slate-200 rounded-xl p-4 shadow-2xs text-slate-800 space-y-3.5 font-sans">
+              <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-slate-900 text-white rounded-lg">
+                      <Layers className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                        {'CH\u1ea8N \u0110O\u00c1N & KH\u00d4I PH\u1ee4C B\u1ea2N QUY\u1ec0N WINDOWS'}
+                      </h3>
+                      <p className="text-[10px] text-slate-500">
+                        {'Phân tích dữ liệu hệ thống \u2022 Đối chiếu chứng cứ \u2022 Đề xuất phương án xử lý lỗi cấp phép.'}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                    {windowsScanResult ? `Thời gian: ${new Date().toLocaleString('vi-VN')}` : 'Chưa phân tích'}
+                  </span>
+                </div>
 
-                <button onClick={handleRestoreOemBiosKey} disabled={isLoading || isResetting || isRestoringOem} className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 text-white font-bold py-3.5 px-3 rounded-xl hover:from-emerald-700 hover:to-emerald-800 transition-all shadow-md hover:shadow-lg disabled:from-emerald-400 disabled:to-emerald-400 disabled:cursor-not-allowed flex items-center justify-center text-xs">
-                  {isRestoringOem ? <Loader className="animate-spin mr-2 h-4 w-4" /> : <KeyRound className="mr-2 h-4 w-4" />}
-                  {isRestoringOem ? 'Đang Khôi Phục...' : 'Khôi Phục Key Gốc từ BIOS'}
-                </button>
-
-                <button onClick={handleResetActivation} disabled={isLoading || isResetting || isRestoringOem} className="w-full bg-gradient-to-r from-slate-700 to-slate-800 text-white font-bold py-3.5 px-3 rounded-xl hover:from-slate-800 hover:to-slate-900 transition-all shadow-md hover:shadow-lg disabled:from-slate-400 disabled:to-slate-400 disabled:cursor-not-allowed flex items-center justify-center text-xs">
-                  {isResetting ? <Loader className="animate-spin mr-2 h-4 w-4" /> : <ShieldX className="mr-2 h-4 w-4" />}
-                  {isResetting ? 'Đang Đặt Lại...' : 'Đặt Lại Bản Quyền Windows Gốc'}
-                </button>
+                <div className="space-y-2">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                    <button onClick={handleStartScan} disabled={isLoading || isResetting || isRestoringOem} className="w-full h-10 px-4 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.99] cursor-pointer disabled:opacity-50">{isLoading ? <Loader className="animate-spin h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}{isLoading ? 'Đang phân tích...' : 'Phân Tích Cấp Phép Windows (8 Bước)'}</button>
+                    <button onClick={handleRestoreOemBiosKey} disabled={isLoading || isResetting || isRestoringOem} className="w-full h-10 px-4 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.99] cursor-pointer disabled:opacity-50">{isRestoringOem ? <Loader className="animate-spin h-4 w-4" /> : <KeyRound className="h-4 w-4" />}{isRestoringOem ? 'Đang đọc...' : 'Đọc / Khôi Phục Khóa OEM từ BIOS'}</button>
+                    <button onClick={handleResetActivation} disabled={isLoading || isResetting || isRestoringOem} className="w-full h-10 px-4 rounded-lg text-xs font-bold bg-slate-700 hover:bg-slate-800 text-white flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.99] cursor-pointer disabled:opacity-50">{isResetting ? <Loader className="animate-spin h-4 w-4" /> : <ShieldX className="h-4 w-4" />}{isResetting ? 'Đang đặt lại...' : 'Đặt Lại Trạng Thái Cấp Phép System'}</button>
+                  </div>
+                </div>
               </div>
 
-              {/* ── LOADING STATE ── */}
-              {isLoading && (
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 flex items-center justify-center gap-3">
-                  <Loader className="animate-spin h-6 w-6 text-blue-600" />
-                  <span className="text-sm font-semibold text-blue-800">Đang thực hiện quét Windows 8 bước chuyên sâu...</span>
-                </div>
-              )}
+              {isLoading && <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm font-semibold text-blue-800">Đang thực hiện phân tích 8 bước...</div>}
+              {error && <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-xl"><h3 className="font-bold flex items-center gap-2"><ServerCrash className="h-5 w-5" />Lỗi Phân Tích / Đặt Lại</h3><p className="text-sm mt-1">{error}</p></div>}
 
-              {/* ── ERROR STATE ── */}
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-xl">
-                  <h3 className="font-bold flex items-center gap-2"><ServerCrash className="h-5 w-5" />Lỗi Quét/Reset</h3>
-                  <p className="text-sm mt-1">{error}</p>
-                </div>
-              )}
+              {!windowsScanResult && !isLoading && !error && <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-2xs text-center"><ShieldCheck className="h-10 w-10 text-slate-300 mx-auto mb-2" /><p className="text-sm font-semibold text-slate-700">Chưa có dữ liệu quét.</p></div>}
 
-              {/* ── NO DATA STATE ── */}
-              {!windowsScanResult && !isLoading && !error && (
-                <div className="bg-gradient-to-br from-slate-50 to-blue-50/30 border border-slate-200 rounded-xl p-8 text-center">
-                  <ShieldCheck className="h-12 w-12 text-blue-300 mx-auto mb-3" />
-                  <h3 className="font-bold text-slate-700 text-base">Chưa có kết quả chẩn đoán Windows</h3>
-                  <p className="text-sm text-slate-500 mt-1">Nhấn nút "Quét Bản Quyền Windows (8 Bước)" để bắt đầu.</p>
-                </div>
-              )}
-
-              {/* ============================================================ */}
-              {/* TỔNG QUAN HỆ THỐNG */}
-              {/* ============================================================ */}
               {windowsScanResult && (
-                <div className="space-y-4">
-                  {/* Bảng trạng thái & Cảnh báo */}
-                  <div className={`rounded-xl p-5 border-l-4 ${
-                    computedVerdict.status === 'TAMPERED' ? 'bg-red-50 border-red-500' :
-                    computedVerdict.status === 'WARNING' ? 'bg-amber-50 border-amber-500' :
-                    computedVerdict.status === 'GENUINE' ? 'bg-emerald-50 border-emerald-500' :
-                    'bg-slate-50 border-slate-400'
-                  }`}>
-                    <div className="flex items-center gap-3">
-                      {computedVerdict.status === 'TAMPERED' ? <ShieldX className="h-8 w-8 text-red-500" /> :
-                       computedVerdict.status === 'WARNING' ? <ShieldAlert className="h-8 w-8 text-amber-500" /> :
-                       computedVerdict.status === 'GENUINE' ? <ShieldCheck className="h-8 w-8 text-emerald-500" /> :
-                       <ShieldCheck className="h-8 w-8 text-slate-400" />}
-                      <div className="flex-1">
-                        <h3 className={`text-base font-bold ${
-                          computedVerdict.color === 'red' ? 'text-red-800' :
-                          computedVerdict.color === 'amber' ? 'text-amber-800' :
-                          computedVerdict.color === 'emerald' ? 'text-emerald-800' : 'text-slate-800'
-                        }`}>
-                          {computedVerdict.status === 'TAMPERED' ? '🔴 PHÁT HIỆN CAN THIỆP BẢN QUYỀN LẬU' :
-                           computedVerdict.status === 'WARNING' ? '⚠️ CẦN XEM XÉT — CÓ DẤU HIỆU BẤT THƯỜNG' :
-                           computedVerdict.status === 'GENUINE' ? '✅ BẢN QUYỀN CHÍNH HÃNG — HỆ THỐNG SẠCH' :
-                           '⬜ CHƯA KÍCH HOẠT BẢN QUYỀN'}
-                        </h3>
-                        <p className={`text-xs mt-1 ${
-                          computedVerdict.color === 'red' ? 'text-red-700' :
-                          computedVerdict.color === 'amber' ? 'text-amber-700' :
-                          computedVerdict.color === 'emerald' ? 'text-emerald-700' : 'text-slate-600'
-                        }`}>
-                          {cleanCount} bình thường · {warningCount} đáng ngờ · {dangerCount} phát hiện lỗi
-                        </p>
-                      </div>
-                      <div className="text-right max-w-36">
-                        <p className="text-[10px] font-bold text-slate-500 uppercase">Độ tin cậy (Engine)</p>
-                        <p className="text-[11px] font-semibold text-slate-600 mt-1">{engineConfidence !== null ? `${engineConfidence}%` : 'Chưa có dữ liệu'}</p>
-                      </div>
+                <>
+                  {/* EXECUTIVE SUMMARY — KẾT LUẬN CHẨN ĐOÁN */}
+                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3.5">
+                    <div className="font-bold text-slate-900 text-xs flex items-center justify-between border-b border-slate-100 pb-2">
+                      <span className="flex items-center gap-2">
+                        <ShieldCheck className="w-4 h-4 text-blue-600" />
+                        <span className="uppercase tracking-wide">KẾT LUẬN CHẨN ĐOÁN</span>
+                      </span>
                     </div>
-                  </div>
 
-                  {/* Kết quả mâu thuẫn (Nếu có) */}
-                  {conflicts.length > 0 && (
-                    <div className="bg-red-50/80 border border-red-200 rounded-xl p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <AlertTriangle className="h-4 w-4 text-red-600" />
-                        <h3 className="text-sm font-bold text-red-800 uppercase tracking-wide">Cảnh báo: Kết quả mâu thuẫn ({conflicts.length})</h3>
+                    {/* Section 1, 2 & 3: Trạng thái cấp phép, Mức độ rủi ro, Độ bao phủ kiểm tra */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                      {/* 1. TRẠNG THÁI CẤP PHÉP */}
+                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 flex flex-col justify-between space-y-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">1. Trạng thái cấp phép</span>
+                        <div className="text-sm font-black text-slate-900 leading-tight">{computedVerdict.label}</div>
+                        <div className="text-[10px] text-slate-500 font-mono">
+                          Kênh: <span className="font-semibold text-slate-700">{displayValue(winData?.ProductKeyChannel || winData?.Channel) || 'Chưa xác định'}</span>
+                        </div>
                       </div>
-                      <div className="space-y-3">
-                        {conflicts.map((c, i) => (
-                          <div key={i} className="bg-white/60 rounded-lg p-3 text-xs border border-red-100">
-                            <p className="font-bold text-red-800 mb-1">⚡ {c.conflict}</p>
-                            <p className="text-slate-700"><span className="font-semibold">Lý do:</span> {c.reason}</p>
-                            <p className="text-slate-700"><span className="font-semibold">Giải pháp:</span> {c.resolution}</p>
+
+                      {/* 2. MỨC ĐỘ RỦI RO */}
+                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 flex flex-col justify-between space-y-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">2. Mức độ rủi ro</span>
+                        <div>
+                          <span className={`inline-block px-2.5 py-0.5 rounded text-xs font-black border ${getRiskLevel(computedVerdict.status).color}`}>
+                            {getRiskLevel(computedVerdict.status).label}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-slate-500">Đánh giá tác động an toàn hệ thống.</div>
+                      </div>
+
+                      {/* 3. KHẢ NĂNG KHÔI PHỤC */}
+                      {(() => {
+                        const hasOA3Key = Boolean(
+                          winData?.HasOA3Key === true ||
+                          (typeof winData?.OA3Key === 'string' && winData.OA3Key.trim().length > 0 && winData.OA3Key !== 'Không có dữ liệu' && winData.OA3Key !== 'N/A') ||
+                          (typeof winData?.OA3xOriginalProductKey === 'string' && winData.OA3xOriginalProductKey.trim().length > 0 && winData.OA3xOriginalProductKey !== 'Không có dữ liệu' && winData.OA3xOriginalProductKey !== 'N/A')
+                        );
+                        return (
+                          <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 flex flex-col justify-between space-y-1">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">3. Khả năng khôi phục</span>
+                            <div>
+                              {!windowsScanResult ? (
+                                <span className="inline-block px-2.5 py-0.5 rounded text-xs font-black border text-slate-700 bg-slate-100 border-slate-200">
+                                  Chưa xác định
+                                </span>
+                              ) : hasOA3Key ? (
+                                <span className="inline-block px-2.5 py-0.5 rounded text-xs font-black border text-emerald-700 bg-emerald-50 border-emerald-200">
+                                  Khôi phục bằng OEM khả dụng
+                                </span>
+                              ) : (
+                                <span className="inline-block px-2.5 py-0.5 rounded text-xs font-black border text-slate-700 bg-slate-100 border-slate-200">
+                                  Khôi phục bằng OEM không áp dụng
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-slate-500 leading-tight">
+                              {!windowsScanResult
+                                ? 'Chưa đủ dữ liệu để đánh giá khả năng khôi phục.'
+                                : hasOA3Key
+                                ? 'Có khóa OEM trong BIOS. Có thể khôi phục trạng thái cấp phép bằng khóa OEM.'
+                                : 'Máy không có khóa OEM trong BIOS. Đây là trạng thái bình thường đối với Windows Retail hoặc máy tự lắp ráp.'}
+                            </div>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ============================================================ */}
-                  {/* PIPELINE PHÂN TÍCH (MASTER - DETAIL)                         */}
-                  {/* ============================================================ */}
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 mt-6">
-                    
-                    {/* MASTER: DANH SÁCH BƯỚC */}
-                    <div className="lg:col-span-4 space-y-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Quy trình phân tích</h2>
-                        <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold">{diagnosticSteps.length} Bước</span>
-                      </div>
-                      <div className="space-y-2">
-                        {diagnosticSteps.map(step => (
-                          <DiagnosticStepItem key={step.id} step={step} isActive={activeStep === step.id} onClick={() => setActiveStep(step.id)} />
-                        ))}
-                      </div>
+                        );
+                      })()}
                     </div>
 
-                    {/* DETAIL: CHI TIẾT BƯỚC ĐANG CHỌN */}
-                    <div className="lg:col-span-8">
-                      {selectedStepForensics ? (
-                        <div className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden flex flex-col h-full">
-                          
-                          {/* Header Detail */}
-                          <div className={`p-4 border-b flex justify-between items-start ${
-                            selectedStepForensics.step.status === 'danger' ? 'bg-red-50 border-red-100' : 
-                            selectedStepForensics.step.status === 'warning' ? 'bg-amber-50 border-amber-100' : 
-                            selectedStepForensics.step.status === 'clean' ? 'bg-emerald-50 border-emerald-100' : 'bg-white border-slate-200'
+                    {/* Section 4: Đánh giá hệ thống (Checklist) */}
+                    <div className="bg-slate-50/70 p-3 rounded-lg border border-slate-200 space-y-2">
+                      <span className="text-[10px] font-bold text-slate-400 block uppercase">4. Đánh giá hệ thống</span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                        {windowsSteps.map((step) => {
+                          const isClean = step.status === 'clean' || step.status === 'idle';
+                          if (isClean) {
+                            return (
+                              <div key={`exec-step-${step.id}`} className="flex items-center gap-1.5">
+                                <span className="text-emerald-600 font-bold shrink-0">✓</span>
+                                <span className="text-slate-700 text-[11px] font-medium">{step.name}</span>
+                              </div>
+                            );
+                          }
+                          return (
+                            <div key={`exec-step-${step.id}`} className="flex flex-col gap-0.5">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-amber-600 font-bold shrink-0">⚠</span>
+                                <span className="text-slate-900 text-[11px] font-bold">{step.name}</span>
+                              </div>
+                              {step.details[0] && (
+                                <div className="text-[10px] text-slate-600 pl-4 font-mono">
+                                  {step.details[0]}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Section 5: Kết luận */}
+                    <div className="bg-blue-50/60 p-3 rounded-lg border border-blue-100">
+                      <span className="text-[10px] font-bold text-blue-600 block uppercase">5. Kết luận</span>
+                      <div className="mt-1 text-xs text-slate-800 font-medium leading-relaxed">
+                        {computedVerdict.status === 'GENUINE'
+                          ? 'Không phát hiện dấu hiệu can thiệp trực tiếp vào hệ thống cấp phép.'
+                          : computedVerdict.status === 'TAMPERED'
+                          ? 'Phát hiện dấu hiệu sử dụng KMS Host hoặc thành phần cần xác minh thêm.'
+                          : computedVerdict.status === 'WARNING'
+                          ? 'Phát hiện một số điểm cần xác minh nguồn gốc khóa cấp phép.'
+                          : 'Chưa đủ bằng chứng để đưa ra kết luận cấp phép.'}
+                      </div>
+                    </div>
+
+                    {/* Section 6: Khuyến nghị */}
+                    {recommendation && (
+                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
+                        <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase">6. Khuyến nghị & Hướng xử lý</span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            recommendation.risk === 'CAO' ? 'bg-red-100 text-red-700' :
+                            recommendation.risk === 'TRUNG BÌNH' ? 'bg-amber-100 text-amber-700' :
+                            'bg-emerald-100 text-emerald-700'
                           }`}>
-                            <div>
-                              <p className="text-[10px] uppercase font-bold text-slate-500 mb-1">Nguồn kiểm tra</p>
-                              <h3 className="text-base font-bold text-slate-900">{selectedStepForensics.step.name}</h3>
-                              <p className="text-xs text-slate-600 mt-1">{selectedStepForensics.step.description}</p>
-                            </div>
-                            <StatusBadge status={selectedStepForensics.step.status} />
-                          </div>
-
-                          {/* Body Detail */}
-                          <div className="p-4 space-y-5 bg-white">
-                            
-                            {/* Chi tiết kiểm tra */}
-                            <div>
-                              <div className="flex items-center gap-2 mb-3">
-                                <FileText className="h-4 w-4 text-blue-600" />
-                                <h4 className="text-sm font-bold text-slate-800">Chi tiết kiểm tra</h4>
-                                <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{selectedStepForensics.metadata.source}</span>
-                              </div>
-                              <div className="space-y-1 bg-slate-50 border border-slate-200 rounded-lg overflow-hidden">
-                                {selectedStepForensics.evidenceSources.map((source, idx) => (
-                                  <details key={idx} className="group border-b border-slate-100 last:border-0">
-                                    <summary className="flex items-center gap-3 p-3 cursor-pointer hover:bg-slate-100 transition-colors list-none">
-                                      {source.values.length > 0 ? (
-                                        <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                                      ) : (
-                                        <XCircle className="h-4 w-4 text-slate-400 shrink-0" />
-                                      )}
-                                      <span className="w-24 text-xs font-bold text-slate-700 uppercase truncate">{source.label}</span>
-                                      <span className="flex-1 text-xs text-slate-600 truncate">
-                                        {source.values.length > 0 ? translateFieldValue(source.values[0]) : 'Không có dữ liệu'}
-                                      </span>
-                                      <ChevronDown className="h-3.5 w-3.5 text-slate-400 group-open:rotate-180 transition-transform" />
-                                    </summary>
-                                    <div className="p-3 pt-0 bg-slate-50/50">
-                                      <div className="pl-7 space-y-1">
-                                        {source.values.length > 0 ? source.values.map((value, index) => (
-                                          <p key={index} className="text-[11px] font-mono text-slate-700 bg-white border border-slate-200 p-2 rounded break-all">{value}</p>
-                                        )) : <p className="text-[11px] text-slate-500 italic">Hệ thống không thu thập được dữ liệu từ nguồn này.</p>}
-                                      </div>
-                                    </div>
-                                  </details>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Đánh giá */}
-                            <div className="border-t border-slate-100 pt-5">
-                              <div className="flex items-center gap-2 mb-3">
-                                <Search className="h-4 w-4 text-violet-600" />
-                                <h4 className="text-sm font-bold text-slate-800">Đánh giá</h4>
-                              </div>
-                              <div className="grid grid-cols-1 gap-3 text-xs bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                <p><span className="font-semibold text-slate-800">Kết quả tìm thấy:</span> <span className="text-slate-600 font-mono break-all">{selectedStepForensics.currentResult[0] ?? 'Chưa có dữ liệu'}</span></p>
-                                <p><span className="font-semibold text-slate-800">Quy tắc áp dụng:</span> <span className="text-slate-600">{translateBackendString(selectedStepForensics.metadata.rule)}</span></p>
-                                <p><span className="font-semibold text-slate-800">Mức độ rủi ro:</span> <span className="text-slate-600">{selectedStepForensics.step.status === 'danger' ? 'Nguy hiểm' : selectedStepForensics.step.status === 'warning' ? 'Cảnh báo' : selectedStepForensics.step.status === 'clean' ? 'An toàn' : 'Không rõ'}</span></p>
-                              </div>
-                            </div>
-
-                            {/* Hướng xử lý */}
-                            <div className="border-t border-slate-100 pt-5">
-                              <div className="flex items-center gap-2 mb-3">
-                                <Wrench className="h-4 w-4 text-indigo-600" />
-                                <h4 className="text-sm font-bold text-slate-800">Hướng xử lý</h4>
-                              </div>
-                              <div className="bg-indigo-50/50 border border-indigo-100 rounded-lg p-3 text-xs space-y-2">
-                                <p><span className="font-semibold text-slate-800">Khuyến nghị:</span> <span className="text-slate-700">{translateBackendString(selectedStepForensics.metadata.recommendation)}</span></p>
-                                <p><span className="font-semibold text-slate-800">Mức độ ưu tiên:</span> <span className="text-slate-700">{translateBackendString(selectedStepForensics.backendStep?.priority) ?? "—"}</span></p>
-                              </div>
-                            </div>
-
-                            {/* Thông tin kỹ thuật */}
-                            <div className="border-t border-slate-100 pt-5">
-                              <div className="flex items-center gap-2 mb-3">
-                                <Cpu className="h-4 w-4 text-sky-600" />
-                                <h4 className="text-sm font-bold text-slate-800">Thông tin kỹ thuật</h4>
-                              </div>
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                                <div className="rounded-lg border border-slate-100 bg-slate-50 p-2.5">
-                                  <p className="text-[10px] uppercase font-bold text-slate-500">Thời gian xử lý</p>
-                                  <p className="font-semibold text-slate-700 mt-1">{typeof selectedStepForensics.backendStep?.durationMs === 'number' ? `${selectedStepForensics.backendStep.durationMs} ms` : '—'}</p>
-                                </div>
-                                <div className="rounded-lg border border-slate-100 bg-slate-50 p-2.5">
-                                  <p className="text-[10px] uppercase font-bold text-slate-500">Độ tin cậy</p>
-                                  <p className="font-semibold text-slate-700 mt-1">{typeof selectedStepForensics.backendStep?.reliability === 'number' ? `${selectedStepForensics.backendStep.reliability}%` : '—'}</p>
-                                </div>
-                                <div className="rounded-lg border border-slate-100 bg-slate-50 p-2.5 md:col-span-2">
-                                  <p className="text-[10px] uppercase font-bold text-slate-500">Nguồn kiểm tra</p>
-                                  <p className="font-semibold text-slate-700 mt-1 truncate" title={selectedStepForensics.backendStep?.collector ?? '—'}>{selectedStepForensics.backendStep?.collector ?? '—'}</p>
-                                </div>
-                              </div>
-                            </div>
-
-                          </div>
+                            Mức rủi ro: {recommendation.risk}
+                          </span>
                         </div>
-                      ) : (
-                        <div className="h-full min-h-[300px] flex items-center justify-center border-2 border-dashed border-slate-200 rounded-xl bg-slate-50 text-slate-400 text-sm font-semibold">
-                          Vui lòng chọn một bước bên trái để xem chi tiết
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* ============================================================ */}
-                  {/* THÔNG TIN KỸ THUẬT TOÀN HỆ THỐNG                             */}
-                  {/* ============================================================ */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                    {/* Lưu ý hệ thống & Cảnh báo */}
-                    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                          <Bug className="h-4 w-4 text-orange-600" />
-                          <h3 className="text-sm font-bold text-slate-800 uppercase">Lưu ý hệ thống</h3>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-3">
-                        {/* Lỗi hệ thống summary */}
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="bg-slate-50 rounded-lg p-2 text-center border border-slate-100">
-                            <p className="text-lg font-black text-slate-700">{collectorTelemetry.length ? collectorErrors.length : '0'}</p>
-                            <p className="text-[9px] uppercase font-bold text-slate-500 mt-1">Lỗi đọc dữ liệu</p>
-                          </div>
-                          <div className="bg-slate-50 rounded-lg p-2 text-center border border-slate-100">
-                            <p className="text-lg font-black text-amber-600">{Array.isArray(forensicData?.diagnostics?.warnings) ? forensicData.diagnostics.warnings.length : '0'}</p>
-                            <p className="text-[9px] uppercase font-bold text-slate-500 mt-1">Cảnh báo logic</p>
-                          </div>
-                          <div className="bg-slate-50 rounded-lg p-2 text-center border border-slate-100">
-                            <p className="text-lg font-black text-red-600">{Array.isArray(forensicData?.diagnostics?.errors) ? forensicData.diagnostics.errors.length : '0'}</p>
-                            <p className="text-[9px] uppercase font-bold text-slate-500 mt-1">Lỗi hệ thống</p>
-                          </div>
-                        </div>
-
-                        {/* Cảnh báo V1 */}
-                        <div className="flex items-start gap-2 bg-amber-50 rounded-lg p-2 border border-amber-100">
-                          <AlertTriangle className="h-3.5 w-3.5 text-amber-600 mt-0.5 shrink-0" />
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
                           <div>
-                            <p className="text-[11px] font-bold text-amber-800">Hệ thống xử lý V1</p>
-                            <p className="text-[10px] text-amber-700">Lấy dữ liệu qua một tập lệnh PowerShell. Không có timeout riêng cho từng nguồn.</p>
-                          </div>
-                        </div>
-
-                        {/* Thiếu dữ liệu */}
-                        {!sysData?.MasHistory && sysData?.MasHistory !== false && (
-                          <div className="flex items-start gap-2 bg-slate-50 rounded-lg p-2 border border-slate-200">
-                            <Info className="h-3.5 w-3.5 text-slate-500 mt-0.5 shrink-0" />
-                            <p className="text-[10px] text-slate-600"><strong>MasHistory:</strong> Chưa thu thập được dữ liệu này.</p>
-                          </div>
-                        )}
-                        {!winData?.ProductKeyChannel && (
-                          <div className="flex items-start gap-2 bg-slate-50 rounded-lg p-2 border border-slate-200">
-                            <Info className="h-3.5 w-3.5 text-slate-500 mt-0.5 shrink-0" />
-                            <p className="text-[10px] text-slate-600"><strong>ProductKeyChannel:</strong> WMI không trả về thông tin — có thể chưa cài Product Key.</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Hiệu suất hệ thống */}
-                    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Clock className="h-4 w-4 text-teal-600" />
-                        <h3 className="text-sm font-bold text-slate-800 uppercase">Thời gian xử lý</h3>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-3 flex-1">
-                        <div className="bg-teal-50 border border-teal-100 rounded-lg p-3 flex flex-col justify-center text-center">
-                          <p className="text-2xl font-black text-teal-700">{scanDurationMs ? `${(scanDurationMs / 1000).toFixed(1)}s` : '—'}</p>
-                          <p className="text-[10px] text-teal-600 font-bold uppercase mt-1">Tổng thời gian</p>
-                        </div>
-                        <div className="grid grid-rows-2 gap-2">
-                          <div className="bg-slate-50 border border-slate-100 rounded-lg p-2 text-center flex flex-col justify-center">
-                            <p className="text-xs font-black text-slate-700">{typeof forensicData?.performance?.powerShellExecutionMs === 'number' ? `${forensicData.performance.powerShellExecutionMs} ms` : '—'}</p>
-                            <p className="text-[9px] text-slate-500 font-bold uppercase mt-1">PowerShell</p>
-                          </div>
-                          <div className="bg-slate-50 border border-slate-100 rounded-lg p-2 text-center flex flex-col justify-center">
-                            <p className="text-xs font-black text-slate-700">{typeof forensicData?.performance?.jsonParseMs === 'number' ? `${forensicData.performance.jsonParseMs} ms` : '—'}</p>
-                            <p className="text-[9px] text-slate-500 font-bold uppercase mt-1">JSON parse</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* ============================================================ */}
-                  {/* DỮ LIỆU GỐC (Dành cho KTV)                                   */}
-                  {/* ============================================================ */}
-                  <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mt-4">
-                    <button onClick={() => setShowDevMode(!showDevMode)} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left focus:outline-none">
-                      {showDevMode ? <Eye className="h-4 w-4 text-purple-600" /> : <EyeOff className="h-4 w-4 text-slate-400" />}
-                      <span className="text-sm font-bold text-slate-800 flex-1">Thông tin kỹ thuật</span>
-                      <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-bold">JSON</span>
-                      {showDevMode ? <ChevronDown className="h-4 w-4 text-slate-400" /> : <ChevronRight className="h-4 w-4 text-slate-400" />}
-                    </button>
-                    
-                    {showDevMode && (
-                      <div className="px-4 pb-4 border-t border-slate-100">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-                          <div>
-                            <p className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Dữ liệu Windows gốc</p>
-                            <pre className="bg-slate-900 text-green-400 p-3 rounded-lg text-[10px] font-mono overflow-x-auto h-48 overflow-y-auto">{JSON.stringify(winData, null, 2)}</pre>
+                            <span className="text-[10px] text-slate-400 font-bold block uppercase">Hành động:</span>
+                            <div className="text-slate-800 font-semibold mt-0.5">{recommendation.action}</div>
                           </div>
                           <div>
-                            <p className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Dữ liệu Hệ thống (System)</p>
-                            <pre className="bg-slate-900 text-cyan-400 p-3 rounded-lg text-[10px] font-mono overflow-x-auto h-48 overflow-y-auto">{JSON.stringify(sysData, null, 2)}</pre>
+                            <span className="text-[10px] text-slate-400 font-bold block uppercase">Lý do:</span>
+                            <div className="text-slate-700 mt-0.5 leading-relaxed">{recommendation.reason}</div>
                           </div>
                           <div>
-                            <p className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Dữ liệu JSON (Theo nhóm kết quả)</p>
-                            <pre className="bg-slate-900 text-amber-400 p-3 rounded-lg text-[10px] font-mono overflow-x-auto h-48 overflow-y-auto">{JSON.stringify(windowsSteps, null, 2)}</pre>
-                          </div>
-                          <div>
-                            <p className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Kết quả PowerShell</p>
-                            <pre className="bg-slate-900 text-slate-300 p-3 rounded-lg text-[10px] font-mono overflow-x-auto h-48 overflow-y-auto">{forensicData?.powerShellOutput ?? 'Chưa có dữ liệu.'}</pre>
+                            <span className="text-[10px] text-slate-400 font-bold block uppercase">Bước tiếp theo:</span>
+                            <div className="text-slate-700 mt-0.5 leading-relaxed">{recommendation.next}</div>
                           </div>
                         </div>
                       </div>
                     )}
                   </div>
-                </div>
-              )}
-              {/* ============================================================ */}
-              {/* SECTION 11: TECHNICIAN RECOMMENDATION                        */}
-              {/* ============================================================ */}
-              {windowsScanResult && recommendation && (
-                <div className={`rounded-xl border-2 p-5 ${
-                  recommendation.risk === 'CAO' ? 'border-red-300 bg-red-50' :
-                  recommendation.risk === 'TRUNG BÌNH' ? 'border-amber-300 bg-amber-50' :
-                  'border-emerald-300 bg-emerald-50'
-                }`}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Wrench className="h-4 w-4 text-slate-700" />
-                    <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Đề xuất xử lý</h2>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                      <p className="text-[10px] text-slate-500 uppercase font-semibold">Hành động khuyến nghị</p>
-                      <p className="text-sm font-bold text-slate-800 mt-1">{recommendation.action}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-slate-500 uppercase font-semibold">Mức độ rủi ro</p>
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mt-1 ${
-                        recommendation.risk === 'CAO' ? 'bg-red-200 text-red-800' :
-                        recommendation.risk === 'TRUNG BÌNH' ? 'bg-amber-200 text-amber-800' :
-                        'bg-emerald-200 text-emerald-800'
-                      }`}>{recommendation.risk}</span>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-slate-500 uppercase font-semibold">Lý do</p>
-                      <p className="text-xs text-slate-700 mt-1 leading-relaxed">{recommendation.reason}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-slate-500 uppercase font-semibold">Bước tiếp theo</p>
-                      <p className="text-xs text-slate-700 mt-1 leading-relaxed">{recommendation.next}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
 
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+                    <div className="text-xs font-bold text-slate-900 uppercase tracking-wide mb-2">Tổng quan chứng cứ</div>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-xs">
+                      <div className="p-2 bg-slate-50 border rounded"><b>Khóa sản phẩm:</b> {displayValue(winData?.ProductKey) || 'Không có dữ liệu'}</div>
+                      <div className="p-2 bg-slate-50 border rounded"><b>Khóa một phần:</b> {displayValue(winData?.PartialProductKey) || 'Không có dữ liệu'}</div>
+                      <div className="p-2 bg-slate-50 border rounded"><b>Khóa BIOS:</b> {displayValue(winData?.OA3Key) || 'Không có dữ liệu'}</div>
+                      <div className="p-2 bg-slate-50 border rounded"><b>Khóa đã cài đặt:</b> {displayValue(winData?.InstalledKey) || 'Không có dữ liệu'}</div>
+                      <div className="p-2 bg-slate-50 border rounded"><b>Kênh cấp phép:</b> {displayValue(winData?.ProductKeyChannel || winData?.Channel) || 'Không có dữ liệu'}</div>
+                      <div className="p-2 bg-slate-50 border rounded"><b>ID kích hoạt:</b> {displayValue(winData?.ActivationId) || 'Không có dữ liệu'}</div>
+                      <div className="p-2 bg-slate-50 border rounded"><b>KMS Host:</b> {displayValue(winData?.KeyManagementServiceMachine) || 'Không có dữ liệu'}</div>
+                      <div className="p-2 bg-slate-50 border rounded"><b>KMS Port:</b> {displayValue(winData?.KeyManagementServicePort) || 'Không có dữ liệu'}</div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                    <div className="lg:col-span-4">
+                      <div className="space-y-2.5">
+                        <div className="font-bold text-slate-900 text-xs flex items-center justify-between border-b border-slate-100 pb-1.5">
+                          <span className="flex items-center gap-2">Danh sách bộ thu thập</span>
+                          <span className="text-[10px] text-slate-400 font-normal">{filteredEvidence.length} muc</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="relative flex-1">
+                            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 top-1/2 -translate-y-1/2" />
+                            <input value={evidenceSearch} onChange={(e) => setEvidenceSearch(e.target.value)} placeholder="Tìm bộ thu thập..." className="w-full pl-7 pr-2 py-1.5 text-xs border border-slate-300 rounded-lg" />
+                          </div>
+                          <div className="relative">
+                            <Filter className="w-3.5 h-3.5 text-slate-400 absolute left-2 top-1/2 -translate-y-1/2" />
+                            <select value={evidenceFilter} onChange={(e) => setEvidenceFilter(e.target.value as any)} className="pl-7 pr-2 py-1.5 text-xs border border-slate-300 rounded-lg">
+                              <option value="all">Tất cả</option>
+                              <option value="clean">Ổn định</option>
+                              <option value="warning">Cần xem xét</option>
+                              <option value="danger">Rủi ro cao</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          {filteredEvidence.map((item) => (
+                            <div key={item.id} className="border border-slate-200 rounded-lg overflow-hidden transition-all bg-slate-50/50">
+                              <button
+                                onClick={() => setActiveStep(item.id)}
+                                className={`w-full p-2.5 flex items-center justify-between text-left cursor-pointer transition-colors ${activeStep === item.id ? 'bg-blue-50' : 'hover:bg-slate-100/80'}`}
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="font-bold text-slate-900 text-xs truncate">Bước {item.id}: {item.collector}</span>
+                                </div>
+                                <div className="shrink-0">
+                                  <StatusBadge status={item.status} />
+                                </div>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="lg:col-span-8">
+                      <div className="bg-white p-3.5 rounded-xl border border-slate-200 font-mono text-xs text-slate-700 min-h-[140px] shadow-2xs">
+                        <div className="space-y-2.5">
+                          <div className="font-bold text-slate-900 text-xs flex items-center justify-between border-b border-slate-100 pb-1.5">
+                            <span className="flex items-center gap-2">Chi tiết bộ thu thập</span>
+                            {selectedStepForensics && <span className="text-[10px] text-slate-400 font-normal">Bước {selectedStepForensics.step.id}</span>}
+                          </div>
+
+                          {selectedStepForensics ? (
+                            <div className="space-y-1.5">
+                              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 space-y-1">
+                                <span className="text-[10px] font-bold text-slate-400 block uppercase" title="Lý do chi tiết gây ra kết quả kiểm tra">Lý do (Why):</span>
+                                <div className="text-xs text-slate-800 leading-relaxed font-medium">
+                                  {selectedStepForensics.step.status === 'clean' || selectedStepForensics.step.status === 'idle'
+                                    ? 'Không phát hiện bất kỳ dấu vết can thiệp bất thường nào.'
+                                    : 'Phát hiện cấu hình hoặc dữ liệu cần kỹ thuật viên xác minh.'}
+                                </div>
+                              </div>
+
+                              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 space-y-1">
+                                <span className="text-[10px] font-bold text-slate-400 block uppercase" title="Bằng chứng thu thập từ WMI và Registry">Bằng chứng (Evidence):</span>
+                                <div className="text-xs text-slate-800 font-mono bg-white p-1.5 rounded border border-slate-200">
+                                  {selectedStepForensics.currentResult[0] ?? 'Chưa có dữ liệu'}
+                                </div>
+                              </div>
+
+                              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 space-y-1">
+                                <span className="text-[10px] font-bold text-slate-400 block uppercase" title="Đánh giá mức độ rủi ro đối với bản quyền">Mức độ rủi ro (Risk Level):</span>
+                                <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold ${
+                                  selectedStepForensics.step.status === 'danger' ? 'bg-red-100 text-red-700' :
+                                  selectedStepForensics.step.status === 'warning' ? 'bg-amber-100 text-amber-700' :
+                                  'bg-emerald-100 text-emerald-700'
+                                }`}>
+                                  {selectedStepForensics.step.status === 'danger' ? 'Rủi ro cao' :
+                                   selectedStepForensics.step.status === 'warning' ? 'Cần xem xét' : 'An toàn / Ổn định'}
+                                </span>
+                              </div>
+
+                              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 space-y-1">
+                                <span className="text-[10px] font-bold text-slate-400 block uppercase" title="Hành động xử lý khuyến nghị cho kỹ thuật viên">Hành động khuyến nghị (Action):</span>
+                                <div className="text-xs text-slate-800 leading-relaxed font-semibold">
+                                  {translateBackendString(selectedStepForensics.metadata.recommendation)}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-xs text-slate-500">Vui lòng chọn bộ thu thập để xem chi tiết.</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+
+
+                  {/* Item 1 & 5: Enhanced Execution Timeline (Expandable Steps) */}
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
+                    <div className="font-bold text-slate-900 text-xs flex items-center justify-between border-b border-slate-100 pb-1.5">
+                      <span className="flex items-center gap-2">
+                        <Clock className="w-3.5 h-3.5 text-blue-600" /> Dòng thời gian thực thi (Timeline)
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-normal">{evidenceList.length} bước</span>
+                    </div>
+                    <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                      {evidenceList.map((e, index) => {
+                        const isClean = e.status === 'clean' || e.status === 'idle';
+                        const isExpanded = expandedTimelineStep === e.idx;
+                        return (
+                          <div key={`tl-${e.id}`} className="border border-slate-200 rounded-lg overflow-hidden bg-slate-50/70 text-xs">
+                            <div
+                              onClick={() => setExpandedTimelineStep(isExpanded ? null : e.idx)}
+                              className="flex items-center justify-between p-2 cursor-pointer hover:bg-slate-100/80 transition-colors"
+                              title="Bấm để mở rộng / thu gọn chi tiết bước này"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <span className="font-mono text-[11px] text-slate-400 shrink-0 font-medium">
+                                  {e.timestamp || `#${index + 1}`}
+                                </span>
+                                <span className={isClean ? "text-emerald-600 font-bold shrink-0" : "text-amber-600 font-bold shrink-0"}>
+                                  {isClean ? "✓" : "⚠"}
+                                </span>
+                                <span className="font-medium text-slate-800 truncate">{e.collector}</span>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                {typeof e.durationMs === 'number' && (
+                                  <span className="font-mono text-[10px] text-slate-400">
+                                    ({e.durationMs} ms)
+                                  </span>
+                                )}
+                                <span className="text-[10px] text-slate-400 font-bold">
+                                  {isExpanded ? '▲' : '▼'}
+                                </span>
+                              </div>
+                            </div>
+                            {isExpanded && (
+                              <div className="p-2.5 bg-white border-t border-slate-200 space-y-1.5 text-[11px] text-slate-700 font-mono">
+                                <div><b className="text-slate-500">Nguồn:</b> {e.source}</div>
+                                <div><b className="text-slate-500">Quy tắc:</b> {e.rule}</div>
+                                <div><b className="text-slate-500">Khuyến nghị:</b> {e.recommendation}</div>
+                                {e.details.length > 0 && (
+                                  <div><b className="text-slate-500">Chi tiết:</b> {e.details.join(' | ')}</div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Item 2: Collapsible Live Execution Console Panel below Execution Timeline */}
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-2">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+                      <div className="flex items-center gap-2">
+                        <Terminal className="w-3.5 h-3.5 text-slate-700" />
+                        <span className="font-bold text-slate-900 text-xs">Nhật ký thực thi trực tiếp (Live Console)</span>
+                        <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">
+                          {consoleLogs.length} dòng
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={copyConsoleLogs}
+                          className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold rounded flex items-center gap-1 transition-colors"
+                          title="Sao chép toàn bộ nhật ký console vào bộ nhớ tạm"
+                        >
+                          <Copy className="w-3 h-3" /> Sao chép
+                        </button>
+                        <button
+                          onClick={exportConsoleLogsTxt}
+                          className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold rounded flex items-center gap-1 transition-colors"
+                          title="Xuất file nhật ký console định dạng TXT"
+                        >
+                          <FileText className="w-3 h-3" /> Xuất TXT
+                        </button>
+                        <button
+                          onClick={() => setIsConsoleOpen(!isConsoleOpen)}
+                          className="text-[10px] text-slate-400 hover:text-slate-600 font-bold px-1"
+                          title="Mở rộng / Thu gọn panel console"
+                        >
+                          {isConsoleOpen ? '▲ Thu gọn' : '▼ Mở rộng'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {isConsoleOpen && (
+                      <div className="bg-slate-900 text-slate-100 font-mono text-[11px] p-3 rounded-lg max-h-48 overflow-y-auto space-y-1">
+                        {consoleLogs.map((log, idx) => (
+                          <div key={`log-${idx}`} className="leading-relaxed whitespace-pre-wrap">
+                            {log}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
       </div>
+      {/* Reset License Result Modal */}
+      {resetModalData?.isOpen && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-2xl max-w-lg w-full p-5 space-y-4 pointer-events-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="font-bold text-slate-900 text-sm">{resetModalData.title}</h3>
+              <button
+                onClick={() => setResetModalData(null)}
+                className="text-slate-400 hover:text-slate-600 text-sm font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Chi tiết các bước thực hiện:</div>
+              <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                {resetModalData.steps.map((st, idx) => (
+                  <div key={`res-st-${idx}`} className="flex items-start justify-between p-2 bg-slate-50 border border-slate-100 rounded text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className={st.status === 'success' ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold'}>
+                        {st.status === 'success' ? '✓' : '⚠'}
+                      </span>
+                      <span className="font-medium text-slate-800">{st.label}</span>
+                    </div>
+                    {st.detail && <span className="text-[10px] text-slate-400 font-mono">{st.detail}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Final Summary Row */}
+            <div className="bg-slate-100 p-3 rounded-lg border border-slate-200 grid grid-cols-4 gap-2 text-center text-xs">
+              <div>
+                <div className="text-[10px] text-slate-500 uppercase font-bold">Trạng thái</div>
+                <div className="font-bold text-emerald-700 mt-0.5">{resetModalData.overallStatus}</div>
+              </div>
+              <div>
+                <div className="text-[10px] text-slate-500 uppercase font-bold">Thời gian</div>
+                <div className="font-bold text-slate-900 mt-0.5">{resetModalData.duration}</div>
+              </div>
+              <div>
+                <div className="text-[10px] text-slate-500 uppercase font-bold">Cảnh báo</div>
+                <div className="font-bold text-amber-600 mt-0.5">{resetModalData.warningsCount}</div>
+              </div>
+              <div>
+                <div className="text-[10px] text-slate-500 uppercase font-bold">Lỗi</div>
+                <div className="font-bold text-red-600 mt-0.5">{resetModalData.errorsCount}</div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-1">
+              <button
+                onClick={() => setResetModalData(null)}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

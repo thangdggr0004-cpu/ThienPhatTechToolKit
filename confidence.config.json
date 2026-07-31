@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "1.0",
+  "baseConfidence": 0.75,
+  "factors": [
+    {
+      "factorId": "F-EVIDENCE-SOURCE-RELIABILITY",
+      "description": "Adjusts confidence based on the reliability of the evidence source.",
+      "adjustments": [
+        { "if": { "decisionType": "OEM_DM_CHANNEL_MATCHED" }, "then": { "weight": 1.2, "boost": 0.1 } },
+        { "if": { "evidenceSource": "WMI" }, "then": { "weight": 1.1 } },
+        { "if": { "evidenceSource": "FIRMWARE" }, "then": { "weight": 1.25, "boost": 0.05 } },
+        { "if": { "evidenceSource": "REGISTRY" }, "then": { "weight": 1.0 } },
+        { "if": { "evidenceSource": "MANUAL_INPUT" }, "then": { "weight": 0.8 } }
+      ]
+    },
+    {
+      "factorId": "F-EVIDENCE-CORRELATION",
+      "description": "Boosts confidence when multiple, correlated pieces of evidence support a decision.",
+      "adjustments": [
+        { "if": { "matchedEvidenceCount": { "gt": 1 } }, "then": { "boost": 0.05, "weight": 1.15 } },
+        { "if": { "matchedRelationshipCount": { "gt": 0 } }, "then": { "boost": 0.1, "weight": 1.2 } }
+      ]
+    },
+    {
+      "factorId": "F-DECISION-IMPLICATION",
+      "description": "Adjusts confidence based on the severity or implication of the decision itself.",
+      "adjustments": [
+        { "if": { "decisionType": "PIRACY_TOOL_DETECTED" }, "then": { "weight": 1.5, "boost": 0.2 } },
+        { "if": { "decisionType": "AUTHENTICODE_DLL_SIGNATURES_VERIFIED" }, "then": { "weight": 1.1 } }
+      ]
+    }
+  ],
+  "levels": [
+    { "level": "VERY_LOW", "threshold": 0.2 },
+    { "level": "LOW", "threshold": 0.4 },
+    { "level": "MEDIUM", "threshold": 0.6 },
+    { "level": "HIGH", "threshold": 0.8 },
+    { "level": "VERY_HIGH", "threshold": 0.95 }
+  ]
+}

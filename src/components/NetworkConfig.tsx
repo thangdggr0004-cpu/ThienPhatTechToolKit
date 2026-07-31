@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Wifi, Search, CheckCircle, RotateCw, ExternalLink, Download, HelpCircle, AlertTriangle } from 'lucide-react';
-import { DnsPreset, NetworkDiagnosisResult } from '../types';
-import { generateDnsChangerScript, downloadFile } from '../utils/scriptGenerator';
+import { DnsPreset, NetworkDiagnosisResult } from '../types.js';
+import { generateDnsChangerScript, downloadFile } from '../utils/scriptGenerator.js';
 
 const dnsPresets: DnsPreset[] = [
   { name: 'Google Public DNS', primary: '8.8.8.8', secondary: '8.8.4.4', provider: 'Google Inc.', isVietnam: false, logoColor: 'text-rose-400' },

@@ -1,0 +1,46 @@
+{
+    "schemaVersion": "1.0",
+    "packId": "sample-activation-pack",
+    "packVersion": "1.0.0",
+    "description": "Sample rule pack for basic Windows activation diagnostics.",
+    "rules": [
+        {
+            "ruleId": "RULE-SAMPLE-WIN-001",
+            "ruleVersion": "1.0.0",
+            "rulePriority": 5,
+            "ruleCategory": "LICENSING",
+            "description": "Checks if Windows License Status is 'LICENSED' (Status = 1)",
+            "decisionType": "WINDOWS_IS_LICENSED",
+            "enabled": true,
+            "condition": {
+                "type": "EVIDENCE_PROPERTY_MATCH",
+                "evidenceType": "LICENSE",
+                "evidenceProperty": "evidenceValue.licenseStatus",
+                "operator": "EQUALS",
+                "value": 1
+            },
+            "ruleMetadata": {
+                "source": "Sample Pack"
+            }
+        },
+        {
+            "ruleId": "RULE-SAMPLE-WIN-002",
+            "ruleVersion": "1.0.0",
+            "rulePriority": 3,
+            "ruleCategory": "SECURITY",
+            "description": "Detects if a known piracy tool folder exists.",
+            "decisionType": "PIRACY_TOOL_DETECTED",
+            "enabled": true,
+            "condition": {
+                "type": "EVIDENCE_ARRAY_CONTAINS",
+                "evidenceType": "SYSTEM_INTEGRITY",
+                "evidenceProperty": "evidenceValue.PiratedFiles",
+                "operator": "CONTAINS",
+                "value": "C:\Program Files\KMSpico"
+            },
+            "ruleMetadata": {
+                 "source": "Sample Pack"
+            }
+        }
+    ]
+}

@@ -1,0 +1,43 @@
+{
+  "name": "OEM_MissingOA3",
+  "description": "Kênh OEM_DM nhưng thiếu OA3 Key trong BIOS (cần phát cảnh báo do sai thiết kế OEM).",
+  "Windows": {
+    "LicenseStatus": 1,
+    "Channel": "OEM_DM",
+    "Description": "Windows(R) Operating System, OEM_DM channel",
+    "OA3Key": "",
+    "HasOA3Key": false,
+    "PartialProductKey": "8HBW2",
+    "IsGenericKey": false
+  },
+  "System": {
+    "Files": [],
+    "Registry": [],
+    "Services": [],
+    "Tasks": [],
+    "Hosts": [],
+    "EventLogs": [],
+    "Processes": []
+  },
+  "structuredEvidences": [
+    {
+      "source": "license",
+      "confidence": 100,
+      "timestamp": 1770000000000,
+      "rawData": { "status": 1, "channel": "OEM_DM" },
+      "productName": "Windows 11 Pro OEM",
+      "status": 1,
+      "channel": "OEM_DM",
+      "hasOA3Key": false,
+      "isGenericKey": false
+    }
+  ],
+  "Expected": {
+    "Verdict": "Cảnh báo",
+    "OA3Status": "Warning",
+    "Risk": "Medium",
+    "Warnings": 1,
+    "Danger": 0,
+    "Evidence": ["Missing OA3 Key on OEM_DM Channel"]
+  }
+}

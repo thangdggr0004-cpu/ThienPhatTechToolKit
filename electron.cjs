@@ -548,7 +548,9 @@ app.whenReady().then(() => {
     }
     // Otherwise wait for fresh data
     try {
-      const info = await getRealHardwareInfo();
+      // Add a 15-second timeout to prevent UI hang if WMI/powershell freezes
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout fetching hardware info")), 15000));
+      const info = await Promise.race([getRealHardwareInfo(), timeoutPromise]);
       __hardwareCache = { ts: Date.now(), data: info };
       writeDiskCache(info);
       return info;
@@ -785,7 +787,7 @@ try {
     foreach ($rp in $masRegPaths) {
         if (Test-Path $rp) {
             $props = Get-ItemProperty -Path $rp -ErrorAction SilentlyContinue
-            if ($props -and ($props.PSObject.Properties.Name -match "MAS|HWID|Activation")) {
+            if ($props -and ($props.PSObject.Properties.Name -match "^(MAS|HWID|MAS_HWID)$")) {
                 $result.System.MasHistory = $true; break
             }
         }
@@ -825,8 +827,7 @@ try {
 
     # 2. Check for KMS38 store directory (used by KMS38 tool)
     $kms38StorePaths = @(
-        "$env:SystemRoot\\System32\\spp\\store_test",
-        "$env:SystemRoot\\System32\\spp\\store\\2.0\\tokens.dat"
+        "$env:SystemRoot\\System32\\spp\\store_test"
     )
     if (-not $result.System.IsKMS38) {
         foreach ($sp in $kms38StorePaths) {
@@ -939,12 +940,18 @@ foreach ($rp in $masRegPaths) {
   }
 }
 
-# 7. Clear event logs & restart sppsvc
-wevtutil cl Application -ErrorAction SilentlyContinue
-wevtutil cl System -ErrorAction SilentlyContinue
+# 7. Stop protection service FIRST, clear all event logs cleanly, then restart
 sc.exe config sppsvc start= auto | Out-Null
 net stop sppsvc /y -ErrorAction SilentlyContinue
+wevtutil cl Application -ErrorAction SilentlyContinue
+wevtutil cl System -ErrorAction SilentlyContinue
+wevtutil cl "Key Management Service" -ErrorAction SilentlyContinue
 net start sppsvc -ErrorAction SilentlyContinue
+
+# 8. Refresh ClipSVC for digital entitlement consistency (best-effort)
+sc.exe config clipsvc start= demand | Out-Null
+net stop clipsvc /y -ErrorAction SilentlyContinue
+net start clipsvc -ErrorAction SilentlyContinue
 
 echo "Done"
 `;
@@ -2473,14 +2480,18 @@ Write-Output "OK"
           $dest = "$env:TEMP\\MAS_AIO.cmd"
           
           if (-not (Test-Path $dest) -or (Get-Item $dest).Length -lt 10000) {
+              # Try curl.exe first (Built into Windows 10+, handles TLS automatically)
               try {
-                  [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-                  Invoke-WebRequest -Uri '${masUserRepoUrl}' -OutFile $dest -UseBasicParsing -ErrorAction Stop
-              } catch {
+                  curl.exe -sL -o "$dest" "${masUserRepoUrl}"
+              } catch {}
+              
+              if (-not (Test-Path $dest) -or (Get-Item $dest).Length -lt 10000) {
+                  # Fallback to PowerShell
                   try {
-                      Invoke-WebRequest -Uri '${masOfficialUrl}' -OutFile $dest -UseBasicParsing -ErrorAction Stop
+                      [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+                      Invoke-WebRequest -Uri "${masUserRepoUrl}" -OutFile $dest -UseBasicParsing -ErrorAction Stop
                   } catch {
-                      # Fallback to direct PowerShell MAS loader if raw URLs fail
+                      # Ultimate fallback: Official MAS runner (launches GUI directly, ignoring param if it's not supported via iex)
                       Start-Process powershell.exe -ArgumentList '-NoProfile -ExecutionPolicy Bypass -Command "iwr -useb https://get.activated.win | iex"' -Verb RunAs
                       return
                   }
@@ -3122,190 +3133,6 @@ Write-Output "OK"
     });
   });
 
-  ipcMain.handle('deep-clean-activation', async (event, type) => {
-    try {
-      let script = '';
-      if (type === 'windows') {
-        script = `
-          $OutputEncoding = [System.Text.Encoding]::UTF8
-          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-
-          Write-Host "[1/6] Dừng các dịch vụ bản quyền gốc..."
-          Stop-Service -Name sppsvc,osppsvc -Force -ErrorAction SilentlyContinue
-
-          Write-Host "[2/6] Dọn dẹp Key lậu và KMS Host..."
-          cscript //nologo $env:windir\\system32\\slmgr.vbs /upk | Out-Null
-          cscript //nologo $env:windir\\system32\\slmgr.vbs /cpky | Out-Null
-          cscript //nologo $env:windir\\system32\\slmgr.vbs /ckms | Out-Null
-          cscript //nologo $env:windir\\system32\\slmgr.vbs /rearm | Out-Null
-
-          Write-Host "[3/6] Tiêu diệt dịch vụ và tác vụ Crack..."
-          $crackServices = @("AutoKMS", "KMSELDI", "SppExtComObjHook", "KMSAuto")
-          foreach ($svc in $crackServices) {
-              Stop-Service -Name $svc -Force -ErrorAction SilentlyContinue
-              sc.exe delete $svc | Out-Null
-          }
-          $crackTasks = @("AutoKMS", "AutoPico Daily Restart", "KMSAutoNet", "SvcRestartTask")
-          foreach ($task in $crackTasks) {
-              Unregister-ScheduledTask -TaskName $task -Confirm:$false -ErrorAction SilentlyContinue
-          }
-
-          Write-Host "[4/6] Dọn dẹp File Rác, Lịch sử và Registry..."
-          $suspiciousFolders = @("$env:windir\\KMS", "$env:windir\\AutoKMS", "$env:ProgramData\\KMSAutoS")
-          foreach ($folder in $suspiciousFolders) {
-              if (Test-Path $folder) { Remove-Item -Path $folder -Recurse -Force -ErrorAction SilentlyContinue }
-          }
-          $historyPath = "$env:APPDATA\\Microsoft\\Windows\\PowerShell\\PSReadLine\\ConsoleHost_history.txt"
-          if (Test-Path $historyPath) { Remove-Item -Path $historyPath -Force -ErrorAction SilentlyContinue }
-
-          $sppPolicyPath = "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\CurrentVersion\\Software Protection Platform"
-          if (Test-Path $sppPolicyPath) {
-              Remove-ItemProperty -Path $sppPolicyPath -Name "KeyManagementServiceName" -ErrorAction SilentlyContinue
-              Remove-ItemProperty -Path $sppPolicyPath -Name "KeyManagementServicePort" -ErrorAction SilentlyContinue
-              Remove-ItemProperty -Path $sppPolicyPath -Name "NoGenTicket" -ErrorAction SilentlyContinue
-          }
-
-          Write-Host "[5/6] Khôi phục File Hosts..."
-          $hostsPath = "$env:windir\\System32\\drivers\\etc\\hosts"
-          if (Test-Path $hostsPath) {
-              Copy-Item -Path $hostsPath -Destination "$hostsPath.bak" -Force -ErrorAction SilentlyContinue
-              Set-ItemProperty -Path $hostsPath -Name Attributes -Value "Normal" -ErrorAction SilentlyContinue
-              Set-ItemProperty -Path $hostsPath -Name IsReadOnly -Value $false -ErrorAction SilentlyContinue
-          }
-          "# Default Hosts File\`r\`n127.0.0.1 localhost" | Out-File -FilePath $hostsPath -Encoding ascii -Force
-
-          Write-Host "[6/6] Khôi phục Bản quyền Gốc (OEM) nếu có..."
-          try {
-              $oae = (Get-CimInstance -ClassName SoftwareLicensingService -ErrorAction SilentlyContinue).OA3xOriginalProductKey
-              if ($oae) {
-                  Write-Host "-> Tìm thấy OEM BIOS Key. Đang cài đặt lại..."
-                  cscript //nologo $env:windir\\system32\\slmgr.vbs /ipk $oae | Out-Null
-                  Write-Host "-> Đang kết nối máy chủ Microsoft để kích hoạt..."
-                  cscript //nologo $env:windir\\system32\\slmgr.vbs /ato | Out-Null
-                  Write-Host "-> Kích hoạt OEM thành công!"
-              } else {
-                  Write-Host "-> Không có OEM BIOS Key. Hệ thống đang ở trạng thái trống."
-              }
-          } catch {
-              Write-Host "-> Lỗi khi kiểm tra OEM BIOS Key."
-          }
-
-          Write-Host "\nHoàn tất quá trình Deep Clean và Reset Windows!"
-        `;
-      } else { // office
-        script = `
-          $OutputEncoding = [System.Text.Encoding]::UTF8
-          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-          
-          Write-Host "[1/4] Dừng các dịch vụ bản quyền..."
-          Stop-Process -Name winword,excel,powerpnt,outlook,mspub,msaccess,lync,teams,OfficeClickToRun,c2rclient,AppVLP,integrator -Force -ErrorAction SilentlyContinue
-          Stop-Service -Name sppsvc,osppsvc,ClickToRunSvc -Force -ErrorAction SilentlyContinue
-
-          Write-Host "[2/4] Gỡ bỏ Key lậu và KMS Host Office..."
-          $officePath = ""
-          $officePaths = @(
-              "$env:ProgramFiles\\Microsoft Office\\Office16",
-              "$env:SystemDrive\\Program Files (x86)\\Microsoft Office\\Office16",
-              "$env:ProgramFiles\\Microsoft Office\\Office15",
-              "$env:SystemDrive\\Program Files (x86)\\Microsoft Office\\Office15"
-          )
-          foreach ($p in $officePaths) {
-              if (Test-Path "$p\\ospp.vbs") { $officePath = $p; break }
-          }
-          
-          if ($officePath -ne "") {
-              $dstatus = (cscript //nologo "$officePath\\ospp.vbs" /dstatus)
-              $keys = $dstatus | Select-String "Last 5 characters of installed product key:" | ForEach-Object { $_.ToString().Split(':')[-1].Trim() }
-              
-              if ($keys.Length -gt 0) {
-                  foreach ($key in $keys) {
-                      Write-Host "-> Đang gỡ bỏ key Office: $key"
-                      cscript //nologo "$officePath\\ospp.vbs" /unpkey:$key | Out-Null
-                  }
-              }
-              cscript //nologo "$officePath\\ospp.vbs" /remhst | Out-Null
-              Write-Host "-> Đã reset cấu hình KMS host của Office."
-          } else {
-              Write-Host "-> Không tìm thấy bộ cài đặt Office (ospp.vbs)."
-          }
-
-          Write-Host "[3/4] Dọn dẹp dịch vụ/tác vụ crack Office..."
-          $crackTasks = @("Office KMS", "Office AutoKMS")
-          foreach ($task in $crackTasks) {
-              Unregister-ScheduledTask -TaskName $task -Confirm:$false -ErrorAction SilentlyContinue
-          }
-
-          Write-Host "[4/4] Dừng tiến trình Office & Quét diệt triệt để Crack Ohook/Sppcs..."
-          $procsToStop = @("sppsvc", "osppsvc", "OfficeC2RClient", "WINWORD", "EXCEL", "POWERPNT", "OUTLOOK", "ONENOTE", "MSOSP")
-          foreach ($p in $procsToStop) {
-              Stop-Process -Name $p -Force -ErrorAction SilentlyContinue
-              Stop-Service -Name $p -Force -ErrorAction SilentlyContinue
-          }
-          Start-Sleep -Seconds 2
-
-          # Gỡ bỏ các Hook IFEO độc hại
-          $ifeoTargets = @(
-              "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sppsvc.exe",
-              "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\osppsvc.exe",
-              "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sppsvc.exe"
-          )
-          foreach ($ifeo in $ifeoTargets) {
-              if (Test-Path $ifeo) { Remove-Item -Path $ifeo -Recurse -Force -ErrorAction SilentlyContinue }
-          }
-
-          $ohookSearchPaths = @(
-              "$env:ProgramFiles\\Microsoft Office",
-              "$env:SystemDrive\\Program Files (x86)\\Microsoft Office",
-              "$env:CommonProgramFiles\\Microsoft Shared\\OfficeSoftwareProtectionPlatform",
-              "\${env:CommonProgramW6432}\\Microsoft Shared\\OfficeSoftwareProtectionPlatform"
-          )
-          $suspiciousFiles = @(
-              "$env:windir\\System32\\sppcs.dll",
-              "$env:windir\\SysWOW64\\sppcs.dll"
-          )
-          foreach ($searchBase in $ohookSearchPaths) {
-              if (Test-Path $searchBase) {
-                  $found = Get-ChildItem -Path $searchBase -Recurse -Filter "sppcs.dll" -ErrorAction SilentlyContinue
-                  foreach ($f in $found) { $suspiciousFiles += $f.FullName }
-                  $sppcFound = Get-ChildItem -Path $searchBase -Recurse -Filter "sppc.dll" -ErrorAction SilentlyContinue
-                  foreach ($f in $sppcFound) { $suspiciousFiles += $f.FullName }
-              }
-          }
-          foreach ($file in $suspiciousFiles) {
-              if (Test-Path $file) {
-                  Write-Host "-> Phát hiện file nghi ngờ: $file. Đang tước quyền sở hữu và xóa bỏ..."
-                  Set-ItemProperty -Path $file -Name IsReadOnly -Value $false -ErrorAction SilentlyContinue
-                  Set-ItemProperty -Path $file -Name Attributes -Value "Normal" -ErrorAction SilentlyContinue
-                  takeown.exe /f "$file" /a | Out-Null
-                  icacls.exe "$file" /grant "*S-1-5-32-544:F" /c /L | Out-Null
-                  cmd /c del /f /q /a "$file" >$null 2>&1
-                  Remove-Item -Path $file -Force -ErrorAction SilentlyContinue
-                  
-                  # Nếu kẹt do hệ thống lock file, đổi tên để vô hiệu hóa
-                  if (Test-Path $file) {
-                      Rename-Item -Path $file -NewName "$($file).bak_deleted" -Force -ErrorAction SilentlyContinue
-                      Write-Host "-> Đã vô hiệu hóa tệp kẹt: $($file).bak_deleted"
-                  }
-              }
-          }
-          if (-not (Test-Path "$env:windir\\System32\\sppc.dll")) {
-              Write-Host "-> Đang thử khôi phục sppc.dll..."
-              sfc /scanfile="$env:windir\\System32\\sppc.dll" | Out-Null
-          }
-
-          Start-Service -Name sppsvc -ErrorAction SilentlyContinue
-          Write-Host "\n[✓] Hoàn tất quá trình Deep Clean & Tách Khóa Ohook Office!"
-        `;
-      }
-
-      const result = await runPowerShellScriptElevated(script);
-      return result.trim();
-    } catch (err) {
-      console.error("Error during deep clean:", err);
-      return "Lỗi: " + err.message;
-    }
-  });
-
   ipcMain.handle('restore-oem-bios-key', async () => {
     try {
       const script = `
@@ -3433,6 +3260,26 @@ End If
       createWindow();
     }
   });
+});
+
+app.on('before-quit', () => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const possiblePaths = [
+      path.join(process.cwd(), 'MAS_AIO.cmd'),
+      path.join(path.dirname(process.execPath), 'MAS_AIO.cmd'),
+      path.join(process.cwd(), 'MAS', 'MAS_AIO.cmd'),
+      path.join(process.env.TEMP || 'C:\\Windows\\Temp', 'MAS_AIO.cmd'),
+      'C:\\ProgramData\\ThienPhatToolkit\\MAS_AIO.cmd',
+      'C:\\Windows\\Temp\\MAS_AIO.cmd'
+    ];
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p)) {
+        try { fs.unlinkSync(p); } catch (e) {}
+      }
+    }
+  } catch (err) {}
 });
 
 app.on('window-all-closed', () => {

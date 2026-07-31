@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Trash2, AlertCircle, CheckCircle, Download, List, Shield, Settings, Play, Database, History, RefreshCw, FileWarning } from 'lucide-react';
-import { JunkCategory } from '../types';
-import { generateJunkCleanerScript, downloadFile } from '../utils/scriptGenerator';
-import ProgressBarComponent from './ProgressBarComponent';
-import { useTaskManager } from '../context/TaskManagerContext';
+import { JunkCategory } from '../types.js';
+import { generateJunkCleanerScript, downloadFile } from '../utils/scriptGenerator.js';
+import ProgressBarComponent from './ProgressBarComponent.js';
+import { useTaskManager } from '../context/TaskManagerContext.js';
 
 const initialJunkCategories: JunkCategory[] = [
   {

@@ -92,8 +92,17 @@ export default function AdvancedActivation() {
             disabled={running}
             className="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
           >
-            {running ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-            Kích Hoạt Windows HWID
+            {running ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                Đang tải & xử lý...
+              </>
+            ) : (
+              <>
+                <Play className="w-3.5 h-3.5 fill-current" />
+                Kích Hoạt Windows HWID
+              </>
+            )}
           </button>
         </div>
 
@@ -114,8 +123,17 @@ export default function AdvancedActivation() {
             disabled={running}
             className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
           >
-            {running ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-            Kích Hoạt Office Ohook
+            {running ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                Đang tải & xử lý...
+              </>
+            ) : (
+              <>
+                <Play className="w-3.5 h-3.5 fill-current" />
+                Kích Hoạt Office Ohook
+              </>
+            )}
           </button>
         </div>
 
@@ -136,8 +154,17 @@ export default function AdvancedActivation() {
             disabled={running}
             className="w-full py-2 px-3 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white rounded text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
           >
-            {running ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-            Kích Hoạt KMS38
+            {running ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                Đang tải & xử lý...
+              </>
+            ) : (
+              <>
+                <Play className="w-3.5 h-3.5 fill-current" />
+                Kích Hoạt KMS38
+              </>
+            )}
           </button>
         </div>
 
@@ -154,12 +181,21 @@ export default function AdvancedActivation() {
             </p>
           </div>
           <button
-            onClick={() => handleAction('aio_menu', 'Mở Menu MAS AIO Gốc')}
+            onClick={() => handleAction('aio_menu', 'Mở Menu MAS AIO')}
             disabled={running}
             className="w-full py-2 px-3 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
           >
-            {running ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-            Mở Menu MAS AIO Gốc
+            {running ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                Đang tải & xử lý...
+              </>
+            ) : (
+              <>
+                <Terminal className="w-3.5 h-3.5 fill-current" />
+                Mở Giao Diện MAS Đầy Đủ
+              </>
+            )}
           </button>
         </div>
 

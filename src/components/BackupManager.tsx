@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Spinner } from './Spinner.js';
 import { Wifi, HardDrive, Download, Upload, RefreshCw, CheckCircle, AlertTriangle, Search, ShieldCheck } from 'lucide-react';
 
 interface WifiProfile {
@@ -58,7 +59,7 @@ export default function BackupManager() {
     try {
       const result = await window.electronAPI.exportWifi();
       if (result && result.success) {
-        showMessage('success', `Đã sao lưu WiFi thành công vào: ${result.path}`);
+        showMessage('success', `�?ã sao lưu WiFi thành công vào: ${result.path}`);
       } else {
         showMessage('error', result?.error || 'Không thể sao lưu WiFi');
       }
@@ -83,7 +84,7 @@ export default function BackupManager() {
     try {
       const result = await window.electronAPI.restoreWifi();
       if (result && result.success) {
-        showMessage('success', `Đã phục hồi ${result.count || ''} mạng WiFi thành công!`);
+        showMessage('success', `�?ã phục hồi ${result.count || ''} mạng WiFi thành công!`);
       } else {
         showMessage('error', result?.error || 'Không thể phục hồi WiFi');
       }
@@ -105,11 +106,11 @@ export default function BackupManager() {
     if (!isElectron) return;
     setDriverExporting(true);
     setMessage(null);
-    showMessage('info', 'Đang sao lưu driver, vui lòng chờ... (có thể mất vài phút)');
+    showMessage('info', '�?ang sao lưu driver, vui lòng ch�?... (có thể mất vài phút)');
     try {
       const result = await window.electronAPI.exportDrivers();
       if (result && result.success) {
-        showMessage('success', `Đã sao lưu driver thành công vào: ${result.path}`);
+        showMessage('success', `�?ã sao lưu driver thành công vào: ${result.path}`);
       } else {
         showMessage('error', result?.error || 'Không thể sao lưu driver');
       }
@@ -131,11 +132,11 @@ export default function BackupManager() {
     if (!isElectron) return;
     setDriverRestoring(true);
     setMessage(null);
-    showMessage('info', 'Đang phục hồi driver (cần quyền Admin)...');
+    showMessage('info', '�?ang phục hồi driver (cần quy�?n Admin)...');
     try {
       const result = await window.electronAPI.restoreDrivers();
       if (result && result.success) {
-        showMessage('success', 'Đã phục hồi driver thành công! Khuyến nghị khởi động lại máy.');
+        showMessage('success', '�?ã phục hồi driver thành công! Khuyến nghị khởi động lại máy.');
       } else {
         showMessage('error', result?.error || 'Không thể phục hồi driver');
       }
@@ -152,7 +153,6 @@ export default function BackupManager() {
     }
   };
 
-  const Spinner = () => <Spinner className="h-4 w-4" />;
 
   return (
     <div className="space-y-6" id="backup-container">
@@ -207,7 +207,7 @@ export default function BackupManager() {
               className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-xs font-semibold transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed border border-slate-200"
             >
               {wifiLoading ? <Spinner /> : <Search className="h-3.5 w-3.5" />}
-              {wifiLoading ? 'Đang quét...' : 'Quét WiFi đã lưu'}
+              {wifiLoading ? '�?ang quét...' : 'Quét WiFi đã lưu'}
             </button>
             <button
               onClick={handleExportWifi}
@@ -215,7 +215,7 @@ export default function BackupManager() {
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-md text-xs font-semibold transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
             >
               {wifiExporting ? <Spinner /> : <Download className="h-3.5 w-3.5" />}
-              {wifiExporting ? 'Đang sao lưu...' : 'Sao lưu WiFi'}
+              {wifiExporting ? '�?ang sao lưu...' : 'Sao lưu WiFi'}
             </button>
             <button
               onClick={handleRestoreWifi}
@@ -223,7 +223,7 @@ export default function BackupManager() {
               className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-xs font-semibold transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
             >
               {wifiRestoring ? <Spinner /> : <Upload className="h-3.5 w-3.5" />}
-              {wifiRestoring ? 'Đang phục hồi...' : 'Phục hồi WiFi'}
+              {wifiRestoring ? '�?ang phục hồi...' : 'Phục hồi WiFi'}
             </button>
           </div>
 
@@ -291,7 +291,7 @@ export default function BackupManager() {
             <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
             <div>
               <span className="font-bold block">Lưu ý:</span>
-              <span>Quá trình sao lưu driver có thể mất vài phút và file backup có thể nặng vài trăm MB tùy số lượng driver đã cài. Windows 10/11 thường tự tải driver qua Windows Update — tính năng này hữu ích nhất khi máy không có mạng sau khi cài lại.</span>
+              <span>Quá trình sao lưu driver có thể mất vài phút và file backup có thể nặng vài trăm MB tùy số lượng driver đã cài. Windows 10/11 thư�?ng tự tải driver qua Windows Update — tính năng này hữu ích nhất khi máy không có mạng sau khi cài lại.</span>
             </div>
           </div>
 
@@ -303,7 +303,7 @@ export default function BackupManager() {
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-md text-xs font-semibold transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
             >
               {driverExporting ? <Spinner /> : <Download className="h-3.5 w-3.5" />}
-              {driverExporting ? 'Đang sao lưu driver...' : 'Sao lưu Driver'}
+              {driverExporting ? '�?ang sao lưu driver...' : 'Sao lưu Driver'}
             </button>
             <button
               onClick={handleRestoreDrivers}
@@ -311,14 +311,14 @@ export default function BackupManager() {
               className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-xs font-semibold transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
             >
               {driverRestoring ? <Spinner /> : <Upload className="h-3.5 w-3.5" />}
-              {driverRestoring ? 'Đang phục hồi (Admin)...' : 'Phục hồi Driver (Admin)'}
+              {driverRestoring ? '�?ang phục hồi (Admin)...' : 'Phục hồi Driver (Admin)'}
             </button>
           </div>
 
           {/* Info about driver restore */}
           <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-600 flex items-start gap-2">
             <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5 text-blue-500" />
-            <span>Phục hồi driver yêu cầu quyền <strong>Administrator</strong>. Sau khi phục hồi, khuyến nghị khởi động lại máy tính để driver hoạt động đầy đủ.</span>
+            <span>Phục hồi driver yêu cầu quy�?n <strong>Administrator</strong>. Sau khi phục hồi, khuyến nghị khởi động lại máy tính để driver hoạt động đầy đủ.</span>
           </div>
         </div>
       </div>

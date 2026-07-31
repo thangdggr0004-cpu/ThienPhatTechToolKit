@@ -9,34 +9,55 @@ export default function TitleBar() {
     const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
     if (!isElectron) return;
 
-    // Get RAM total once
+    // One-time hardware info for RAM total
     (window as any).electronAPI.getHardwareInfo().then((info: any) => {
       if (info?.ramTotalSize) {
         setMetrics(prev => ({ cpu: prev?.cpu ?? 0, ram: prev?.ram ?? 0, ramTotal: info.ramTotalSize }));
       }
     }).catch(() => {});
 
-    const timer = setInterval(async () => {
-      if ((window as any).__ecoMode || document.hidden) return;
+    const applySharedMetrics = (detail: any) => {
+      const fm = detail?.footerMetrics;
+      if (!fm) return;
+      setMetrics(prev => {
+        const total = prev?.ramTotal ?? fm.ramTotal ?? 0;
+        const ramPct = total > 0 && typeof fm.ram === 'number' ? Math.max(0, Math.min(100, Math.round((fm.ram / total) * 100))) : (prev?.ram ?? 0);
+        return {
+          cpu: typeof fm.temp === 'number' ? (prev?.cpu ?? 0) : (prev?.cpu ?? 0),
+          ram: ramPct,
+          ramTotal: total,
+        };
+      });
+    };
+
+    const onMetrics = (e: any) => applySharedMetrics(e?.detail);
+    window.addEventListener('tp-live-metrics', onMetrics as EventListener);
+
+    // Seed from global cache if available
+    applySharedMetrics((window as any).__tpLiveMetrics);
+
+    // Keep lightweight direct CPU/RAM refresh only when needed (no interval storm)
+    let cancelled = false;
+    const pullRealtime = async () => {
+      if (cancelled || (window as any).__ecoMode || document.hidden) return;
       try {
         const m = await (window as any).electronAPI.getRealtimeMetrics();
         setMetrics(prev => ({
-          cpu: m.cpu ?? 0,
-          ram: m.ram ?? 0,
+          cpu: m.cpu ?? prev?.cpu ?? 0,
+          ram: m.ram ?? prev?.ram ?? 0,
           ramTotal: prev?.ramTotal ?? 0,
         }));
       } catch {}
-    }, 10000);
+    };
+    pullRealtime();
 
-    // Initial fetch
-    (async () => {
-      try {
-        const m = await (window as any).electronAPI.getRealtimeMetrics();
-        setMetrics(prev => ({ cpu: m.cpu ?? 0, ram: m.ram ?? 0, ramTotal: prev?.ramTotal ?? 0 }));
-      } catch {}
-    })();
+    const timer = setInterval(pullRealtime, 30000);
 
-    return () => clearInterval(timer);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      window.removeEventListener('tp-live-metrics', onMetrics as EventListener);
+    };
   }, []);
 
   const handleMinimize = () => {

@@ -9,3 +9,4 @@ coverage/
 dist-electron/
 release/
 *.exe
+.aider*

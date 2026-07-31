@@ -1,0 +1,73 @@
+{
+  "name": "KMS_Activated",
+  "description": "Máy dùng công cụ bẻ khóa KMS (AutoKMS) với GVLK key và KMS host giả.",
+  "Windows": {
+    "LicenseStatus": 1,
+    "Channel": "VOLUME_KMSCLIENT",
+    "Description": "Windows(R) Operating System, VOLUME_KMSCLIENT channel",
+    "OA3Key": "",
+    "HasOA3Key": false,
+    "PartialProductKey": "T4DCG",
+    "IsGenericKey": true
+  },
+  "System": {
+    "Files": ["C:\\Windows\\AutoKMS\\AutoKMS.exe"],
+    "Registry": [],
+    "Services": ["AutoKMS"],
+    "Tasks": ["AutoKMS"],
+    "Hosts": ["127.0.0.1 kms.msguides.com"],
+    "EventLogs": ["KMS Activation event ID 12288"],
+    "Processes": ["AutoKMS.exe"]
+  },
+  "structuredEvidences": [
+    {
+      "source": "license",
+      "confidence": 100,
+      "timestamp": 1770000000000,
+      "rawData": { "status": 1, "channel": "VOLUME_KMSCLIENT" },
+      "productName": "Windows 11 Pro Volume KMS",
+      "status": 1,
+      "channel": "VOLUME_KMSCLIENT",
+      "kmsHost": "kms.msguides.com",
+      "kmsPort": 1688,
+      "hasOA3Key": false,
+      "isGenericKey": true
+    },
+    {
+      "source": "filesystem",
+      "confidence": 95,
+      "timestamp": 1770000000000,
+      "rawData": "C:\\Windows\\AutoKMS\\AutoKMS.exe",
+      "path": "C:\\Windows\\AutoKMS\\AutoKMS.exe",
+      "exists": true
+    },
+    {
+      "source": "task",
+      "confidence": 90,
+      "timestamp": 1770000000000,
+      "rawData": "AutoKMS",
+      "name": "AutoKMS",
+      "path": "AutoKMS",
+      "action": "execute",
+      "suspicious": true
+    },
+    {
+      "source": "hosts",
+      "confidence": 85,
+      "timestamp": 1770000000000,
+      "rawData": "127.0.0.1 kms.msguides.com",
+      "ip": "127.0.0.1",
+      "hostname": "kms.msguides.com",
+      "lineNumber": 15,
+      "suspicious": true
+    }
+  ],
+  "Expected": {
+    "Verdict": "KMS_ACTIVATED",
+    "OA3Status": "Not Applicable",
+    "Risk": "High",
+    "Warnings": 0,
+    "Danger": 1,
+    "Evidence": ["KMS Host", "AutoKMS Task", "GVLK"]
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "name": "MAS_HWID",
+  "description": "Máy từng chạy tool bẻ khóa MAS/HWID để tạo bản quyền số giả lập.",
+  "Windows": {
+    "LicenseStatus": 1,
+    "Channel": "RETAIL",
+    "Description": "Windows(R) Operating System, RETAIL channel",
+    "OA3Key": "",
+    "HasOA3Key": false,
+    "PartialProductKey": "3V66T",
+    "IsGenericKey": false
+  },
+  "System": {
+    "Files": ["C:\\Windows\\Temp\\MAS_AIO.cmd"],
+    "Registry": ["HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SoftwareProtectionPlatform\\Activation\\Manual\\NoGenTicket"],
+    "Services": [],
+    "Tasks": [],
+    "Hosts": [],
+    "EventLogs": [],
+    "Processes": []
+  },
+  "structuredEvidences": [
+    {
+      "source": "registry",
+      "confidence": 95,
+      "timestamp": 1770000000000,
+      "rawData": "NoGenTicket",
+      "hive": "HKLM",
+      "key": "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SoftwareProtectionPlatform\\Activation\\Manual",
+      "valueName": "NoGenTicket",
+      "value": "1",
+      "exists": true
+    },
+    {
+      "source": "filesystem",
+      "confidence": 90,
+      "timestamp": 1770000000000,
+      "rawData": "C:\\Windows\\Temp\\MAS_AIO.cmd",
+      "path": "C:\\Windows\\Temp\\MAS_AIO.cmd",
+      "exists": true
+    }
+  ],
+  "Expected": {
+    "Verdict": "MAS_ACTIVATED",
+    "OA3Status": "Not Applicable",
+    "Risk": "High",
+    "Warnings": 0,
+    "Danger": 1,
+    "Evidence": ["NoGenTicket", "MAS History"]
+  }
+}

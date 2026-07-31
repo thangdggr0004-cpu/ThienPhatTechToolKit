@@ -1,0 +1,278 @@
+﻿            /* ============================================================ */
+            /* WINDOWS TAB — OFFICE-STYLE EVIDENCE WORKSPACE                */
+            /* ============================================================ */
+            <div className="space-y-4">
+              <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <button onClick={handleStartScan} disabled={isLoading || isResetting || isRestoringOem} className="w-full h-10 px-4 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.99] disabled:opacity-50">
+                    {isLoading ? <Loader className="animate-spin mr-2 h-4 w-4" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
+                    {isLoading ? 'Đang Quét...' : 'Quét Bản Quyền Windows (8 Bước)'}
+                  </button>
+
+                  <button onClick={handleRestoreOemBiosKey} disabled={isLoading || isResetting || isRestoringOem} className="w-full h-10 px-4 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.99] disabled:opacity-50">
+                    {isRestoringOem ? <Loader className="animate-spin mr-2 h-4 w-4" /> : <KeyRound className="mr-2 h-4 w-4" />}
+                    {isRestoringOem ? 'Đang Khôi Phục...' : 'Khôi Phục Key Gốc từ BIOS'}
+                  </button>
+
+                  <button onClick={handleResetActivation} disabled={isLoading || isResetting || isRestoringOem} className="w-full h-10 px-4 rounded-lg text-xs font-bold bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.99] disabled:opacity-50">
+                    {isResetting ? <Loader className="animate-spin mr-2 h-4 w-4" /> : <ShieldX className="mr-2 h-4 w-4" />}
+                    {isResetting ? 'Đang Đặt Lại...' : 'Đặt Lại Bản Quyền Windows Gốc'}
+                  </button>
+                </div>
+              </div>
+
+              {isLoading && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 flex items-center justify-center gap-3">
+                  <Loader className="animate-spin h-6 w-6 text-blue-600" />
+                  <span className="text-sm font-semibold text-blue-800">Đang thực hiện quét Windows 8 bước chuyên sâu...</span>
+                </div>
+              )}
+
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-xl">
+                  <h3 className="font-bold flex items-center gap-2"><ServerCrash className="h-5 w-5" />Lỗi Quét/Reset</h3>
+                  <p className="text-sm mt-1">{error}</p>
+                </div>
+              )}
+
+              {!windowsScanResult && !isLoading && !error && (
+                <div className="bg-gradient-to-br from-slate-50 to-blue-50/30 border border-slate-200 rounded-xl p-8 text-center">
+                  <ShieldCheck className="h-12 w-12 text-blue-300 mx-auto mb-3" />
+                  <h3 className="font-bold text-slate-700 text-base">Chưa có kết quả chẩn đoán Windows</h3>
+                  <p className="text-sm text-slate-500 mt-1">Nhấn nút "Quét Bản Quyền Windows (8 Bước)" để bắt đầu.</p>
+                </div>
+              )}
+
+              {windowsScanResult && (
+                <>
+                  <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-2xs flex flex-wrap items-center gap-2 justify-between">
+                    <div className="text-[11px] text-slate-500 font-semibold">Evidence First · Verification Second · Recommendation Last</div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => navigator.clipboard?.writeText(JSON.stringify(windowsScanResult, null, 2))}
+                        className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold"
+                      >
+                        <FileText className="h-3.5 w-3.5 inline mr-1" /> Copy Report JSON
+                      </button>
+                      <button
+                        onClick={() => setShowDevMode(v => !v)}
+                        className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold"
+                      >
+                        <Terminal className="h-3.5 w-3.5 inline mr-1" /> {showDevMode ? 'Ẩn Technical' : 'Xem Technical'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                    <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Activation Status</div>
+                      <div className="mt-1 text-xs font-bold text-slate-900">{computedVerdict.label}</div>
+                      <div className="mt-1"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${computedVerdict.color === 'red' ? 'bg-red-100 text-red-700' : computedVerdict.color === 'amber' ? 'bg-amber-100 text-amber-700' : computedVerdict.color === 'emerald' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>{computedVerdict.status}</span></div>
+                    </div>
+                    <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">License Channel</div>
+                      <div className="mt-1 text-xs font-bold text-slate-900 break-all">{winData?.ProductKeyChannel || winData?.Channel || '—'}</div>
+                      <div className="text-[10px] text-slate-500 mt-1">Partial Key: {winData?.PartialProductKey || '—'}</div>
+                    </div>
+                    <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Confidence</div>
+                      <div className="mt-1 text-lg font-black font-mono text-blue-700">{engineConfidence !== null ? `${engineConfidence}%` : 'N/A'}</div>
+                      <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden border border-slate-200 mt-1">
+                        <div className="h-full bg-blue-500" style={{ width: `${engineConfidence ?? 0}%` }} />
+                      </div>
+                    </div>
+                    <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Recommendation</div>
+                      <div className="mt-1 text-xs font-semibold text-slate-800 leading-snug">{recommendation?.action || 'Cần kiểm tra theo collector evidence'}</div>
+                      <div className="text-[10px] text-slate-500 mt-1">Risk: {recommendation?.risk || '—'}</div>
+                    </div>
+                    <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Timestamp</div>
+                      <div className="mt-1 text-xs font-semibold text-slate-800">{scanEndTime ? new Date(scanEndTime).toLocaleString() : '—'}</div>
+                      <div className="text-[10px] text-slate-500 mt-1">Duration: {scanDurationMs !== null ? `${scanDurationMs} ms` : '—'}</div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
+                    <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3">Evidence Overview</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                      <div className="p-2 rounded-lg bg-slate-50 border border-slate-200"><span className="font-semibold">Product Key:</span> {winData?.ProductKey || '—'}</div>
+                      <div className="p-2 rounded-lg bg-slate-50 border border-slate-200"><span className="font-semibold">Partial Key:</span> {winData?.PartialProductKey || '—'}</div>
+                      <div className="p-2 rounded-lg bg-slate-50 border border-slate-200"><span className="font-semibold">BIOS Key:</span> {winData?.OA3Key || '—'}</div>
+                      <div className="p-2 rounded-lg bg-slate-50 border border-slate-200"><span className="font-semibold">Installed Key:</span> {winData?.InstalledKey || '—'}</div>
+                      <div className="p-2 rounded-lg bg-slate-50 border border-slate-200"><span className="font-semibold">Activation ID:</span> {winData?.ActivationId || winData?.ApplicationID || '—'}</div>
+                      <div className="p-2 rounded-lg bg-slate-50 border border-slate-200"><span className="font-semibold">Activation State:</span> {winData?.LicenseStatus === 1 ? 'Activated' : 'Not Activated'}</div>
+                      <div className="p-2 rounded-lg bg-slate-50 border border-slate-200"><span className="font-semibold">KMS Host:</span> {winData?.KeyManagementServiceMachine || '—'}</div>
+                      <div className="p-2 rounded-lg bg-slate-50 border border-slate-200"><span className="font-semibold">KMS Port:</span> {winData?.KeyManagementServicePort || '—'}</div>
+                      <div className="p-2 rounded-lg bg-slate-50 border border-slate-200"><span className="font-semibold">Grace Period:</span> {winData?.GracePeriodRemaining || '—'}</div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
+                    <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3">Evidence Assessment</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+                      <div className="p-3 rounded-lg bg-slate-50 border border-slate-200"><p className="text-slate-500">Confidence</p><p className="text-sm font-bold text-slate-800">{engineConfidence !== null ? `${engineConfidence}%` : 'N/A'}</p></div>
+                      <div className="p-3 rounded-lg bg-slate-50 border border-slate-200"><p className="text-slate-500">Evidence Groups</p><p className="text-sm font-bold text-slate-800">{evidenceList.length}</p></div>
+                      <div className="p-3 rounded-lg bg-slate-50 border border-slate-200"><p className="text-slate-500">Risk Level</p><p className="text-sm font-bold text-slate-800">{dangerCount > 0 ? 'High' : warningCount > 0 ? 'Medium' : 'Low'}</p></div>
+                      <div className="p-3 rounded-lg bg-slate-50 border border-slate-200"><p className="text-slate-500">Recommendation</p><p className="text-sm font-bold text-slate-800">{recommendation?.action || 'Review collector details'}</p></div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
+                    <div className="xl:col-span-5 bg-white rounded-xl border border-slate-200 p-4 shadow-2xs space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Collectors</h3>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold">{filteredEvidence.length} items</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div className="relative sm:col-span-2">
+                          <Search className="h-3.5 w-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                          <input
+                            value={evidenceSearch}
+                            onChange={(e) => setEvidenceSearch(e.target.value)}
+                            placeholder="Search collector/evidence..."
+                            className="w-full pl-8 pr-2 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <select value={evidenceFilter} onChange={(e) => setEvidenceFilter(e.target.value as any)} className="px-2 py-1.5 text-xs border border-slate-300 rounded-lg bg-white">
+                          <option value="all">All</option>
+                          <option value="clean">Clean</option>
+                          <option value="warning">Warning</option>
+                          <option value="danger">Danger</option>
+                        </select>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <ArrowUpDown className="h-3.5 w-3.5 text-slate-400" />
+                        <select value={evidenceSortBy} onChange={(e) => setEvidenceSortBy(e.target.value as any)} className="px-2 py-1 text-xs border border-slate-300 rounded bg-white">
+                          <option value="id">Sort: ID</option>
+                          <option value="status">Sort: Status</option>
+                          <option value="weight">Sort: Weight</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
+                        {filteredEvidence.map((item) => (
+                          <button
+                            key={item.id}
+                            onClick={() => setActiveStep(item.idx + 1)}
+                            className={`w-full text-left p-3 rounded-lg border transition ${activeStep === item.idx + 1 ? 'border-blue-400 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'}`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <Activity className="h-4 w-4 text-slate-600" />
+                                <p className="text-xs font-bold text-slate-800">{item.collector}</p>
+                              </div>
+                              <StatusBadge status={item.status} />
+                            </div>
+                            <div className="mt-1 text-[11px] text-slate-500">Source: {item.sourceKind} · {item.source}</div>
+                            <div className="mt-1 text-[11px] text-slate-500">Confidence: {item.reliability !== null ? `${item.reliability}%` : 'N/A'} · Weight: {item.weight ?? 'N/A'} · Time: {item.durationMs ?? 'N/A'} ms</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="xl:col-span-7 bg-white rounded-xl border border-slate-200 p-4 shadow-2xs space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Collector Detail</h3>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold">Step {activeStep}</span>
+                      </div>
+
+                      {selectedStepForensics ? (
+                        <>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                            <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                              <p className="font-semibold text-slate-700">Source</p>
+                              <p className="mt-1 text-slate-600 break-all">{selectedStepForensics.metadata.source}</p>
+                            </div>
+                            <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                              <p className="font-semibold text-slate-700">Rule</p>
+                              <p className="mt-1 text-slate-600">{selectedStepForensics.metadata.rule}</p>
+                            </div>
+                          </div>
+
+                          <div className="border border-slate-200 rounded-lg overflow-hidden">
+                            {selectedStepForensics.evidenceSources.map((source, idx) => (
+                              <details key={idx} className="group border-b border-slate-100 last:border-0">
+                                <summary className="flex items-center gap-3 p-3 cursor-pointer hover:bg-slate-100 transition-colors list-none">
+                                  {source.values.length > 0 ? <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" /> : <XCircle className="h-4 w-4 text-slate-400 shrink-0" />}
+                                  <span className="w-24 text-xs font-bold text-slate-700 uppercase truncate">{source.label}</span>
+                                  <span className="flex-1 text-xs text-slate-600 truncate">{source.values.length > 0 ? translateFieldValue(source.values[0]) : 'Không có dữ liệu'}</span>
+                                  <ChevronDown className="h-3.5 w-3.5 text-slate-400 group-open:rotate-180 transition-transform" />
+                                </summary>
+                                <div className="p-3 pt-0 bg-slate-50/50">
+                                  <div className="pl-7 space-y-1">
+                                    {source.values.length > 0 ? source.values.map((value, index) => (
+                                      <p key={index} className="text-[11px] font-mono text-slate-700 bg-white border border-slate-200 p-2 rounded break-all">{value}</p>
+                                    )) : <p className="text-[11px] text-slate-500 italic">Collector không thu thập được dữ liệu từ nguồn này.</p>}
+                                  </div>
+                                </div>
+                              </details>
+                            ))}
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                            <div className="p-3 rounded-lg bg-violet-50 border border-violet-100">
+                              <p className="font-semibold text-slate-700">Interpretation</p>
+                              <p className="mt-1 text-slate-600">{selectedStepForensics.currentResult[0] ?? 'Chưa có dữ liệu phân tích.'}</p>
+                            </div>
+                            <div className="p-3 rounded-lg bg-indigo-50 border border-indigo-100">
+                              <p className="font-semibold text-slate-700">Recommendation</p>
+                              <p className="mt-1 text-slate-600">{selectedStepForensics.metadata.recommendation}</p>
+                            </div>
+                          </div>
+
+                          <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs">
+                            <p className="font-semibold text-slate-700 mb-1">Technical Information</p>
+                            <p className="text-slate-600">Collector status: {selectedStepForensics.step.status} · Source kind: {selectedStepForensics.metadata.sourceKind}</p>
+                            <p className="text-slate-600">Engine decision snapshot: {engineDecision || 'N/A'}</p>
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-xs text-slate-500">Chọn collector để xem chi tiết evidence.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {recommendation && (
+                    <div className={`rounded-xl border p-4 ${recommendation.risk === 'CAO' ? 'bg-red-50 border-red-200' : recommendation.risk === 'TRUNG BÌNH' ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Wrench className="h-4 w-4 text-slate-700" />
+                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Recommendation Panel</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+                        <div><p className="text-slate-500">Action</p><p className="font-semibold text-slate-800 mt-1">{recommendation.action}</p></div>
+                        <div><p className="text-slate-500">Risk</p><p className="font-semibold text-slate-800 mt-1">{recommendation.risk}</p></div>
+                        <div><p className="text-slate-500">Reason</p><p className="text-slate-700 mt-1">{recommendation.reason}</p></div>
+                        <div><p className="text-slate-500">Next Step</p><p className="text-slate-700 mt-1">{recommendation.next}</p></div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
+                    <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">System Log / Evidence Timeline</h3>
+                    <div className="space-y-2 text-xs max-h-52 overflow-y-auto">
+                      {evidenceList.map((e) => (
+                        <div key={e.id} className="flex items-center gap-2 p-2 rounded border border-slate-200 bg-slate-50">
+                          <Clock className="h-3.5 w-3.5 text-slate-400" />
+                          <span className="font-mono text-[11px] text-slate-600">{e.id}</span>
+                          <span className="font-semibold text-slate-800">{e.collector}</span>
+                          <StatusBadge status={e.status} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {showDevMode && (
+                    <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
+                      <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">Technical Information</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <pre className="bg-slate-900 text-green-400 p-3 rounded-lg text-[10px] font-mono overflow-x-auto h-56 overflow-y-auto">{JSON.stringify(winData, null, 2)}</pre>
+                        <pre className="bg-slate-900 text-cyan-400 p-3 rounded-lg text-[10px] font-mono overflow-x-auto h-56 overflow-y-auto">{JSON.stringify(sysData, null, 2)}</pre>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>

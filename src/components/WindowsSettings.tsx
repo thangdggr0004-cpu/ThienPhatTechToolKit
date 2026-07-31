@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, Zap, Battery, Play, Download, CheckCircle, Info, Activity, Settings, RefreshCw, AlertTriangle, Monitor, HardDrive, Cpu, Terminal, Wrench, X } from 'lucide-react';
-import ProgressBarComponent from './ProgressBarComponent';
-import { useTaskManager } from '../context/TaskManagerContext';
+import ProgressBarComponent from './ProgressBarComponent.js';
+import { useTaskManager } from '../context/TaskManagerContext.js';
 
 type PowerModeType = 'battery' | 'balanced' | 'gaming' | 'performance' | 'ultimate';
 

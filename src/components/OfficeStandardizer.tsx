@@ -24,9 +24,8 @@ import {
   generateOfficeQuickRepairScript,
   generateRetailToVolumeScript,
   generateBlockOfficeUpdateScript
-} from '../utils/scriptGenerator';
-import { useTaskManager } from '../context/TaskManagerContext';
-import OfficeLicenseAnalyzer from './OfficeLicenseAnalyzer';
+} from '../utils/scriptGenerator.js';
+import { useTaskManager } from '../context/TaskManagerContext.js';
 
 export default function OfficeStandardizer() {
   const [activeTask, setActiveTask] = useState<string | null>(null);
@@ -271,8 +270,6 @@ export default function OfficeStandardizer() {
         </div>
       </div>
 
-      {/* ENTERPRISE V3 DIAGNOSTIC ENGINE */}
-      <OfficeLicenseAnalyzer />
 
       {/* SECTION 3: QUẢN TRỊ BẢN QUYỀN (THAY CHO CRACK) */}
       <div>

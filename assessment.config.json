@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "1.0",
+  "overallStatusRules": [
+    {
+      "if": { "decisionType": "PIRACY_TOOL_DETECTED", "confidenceLevel": { "gte": "HIGH" } },
+      "thenSet": "CRITICAL_RISK",
+      "priority": 1
+    },
+    {
+      "if": { "decisionType": "TAMPERED_LICENSE_FILES", "confidenceLevel": { "gte": "MEDIUM" } },
+      "thenSet": "HIGH_RISK",
+      "priority": 2
+    },
+    { "if": { "overallScore": { "lt": 50 } }, "thenSet": "NEEDS_ATTENTION", "priority": 10 },
+    { "if": { "overallScore": { "gte": 90 } }, "thenSet": "HEALTHY", "priority": 10 }
+  ],
+  "scoring": {
+    "baseScore": 100,
+    "deductions": [
+      {
+        "if": { "decisionType": "PIRACY_TOOL_DETECTED" },
+        "points": 50,
+        "weightedByConfidence": true
+      },
+      {
+        "if": { "decisionType": "INCONSISTENT_LICENSE_INFO" },
+        "points": 20,
+        "weightedByConfidence": true
+      },
+      {
+        "if": { "decisionType": "NON_GENUINE_LICENSE" },
+        "points": 40,
+        "weightedByConfidence": true
+      },
+       {
+        "if": { "decisionType": "TAMPERED_LICENSE_FILES" },
+        "points": 30,
+        "weightedByConfidence": true
+      }
+    ]
+  },
+  "groups": [
+      {
+        "groupId": "ACTIVATION_STATUS",
+        "displayName": "Activation Status",
+        "decisionTypes": ["OEM_DM_CHANNEL_MATCHED", "NON_GENUINE_LICENSE", "INCONSISTENT_LICENSE_INFO"]
+      },
+      {
+        "groupId": "SYSTEM_INTEGRITY",
+        "displayName": "System Integrity",
+        "decisionTypes": ["PIRACY_TOOL_DETECTED", "AUTHENTICODE_DLL_SIGNATURES_VERIFIED", "TAMPERED_LICENSE_FILES"]
+      }
+  ]
+}

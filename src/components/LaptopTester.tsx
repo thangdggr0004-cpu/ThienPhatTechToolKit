@@ -4,7 +4,7 @@ import {
   X, Maximize, AlertTriangle, Keyboard as KeyboardIcon 
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
-import TouchScreenTester from './TouchScreenTester';
+import TouchScreenTester from './TouchScreenTester.js';
 
 export default function LaptopTester() {
   const [activeTest, setActiveTest] = useState<string | null>(null);

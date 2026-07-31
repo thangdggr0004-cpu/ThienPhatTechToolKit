@@ -1,0 +1,6 @@
+*** Begin Patch
+*** Update File: src/core/activation/ActivationExecutor.ts
+@@
+-export class ActivationExecutor {
++export class ActivationExecutor {
+*** End Patch

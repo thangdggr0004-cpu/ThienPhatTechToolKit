@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "1.0",
+  "recommendations": [
+    {
+      "recommendationId": "REC-PIRACY-001",
+      "priority": 1,
+      "if": {
+        "decisionType": "PIRACY_TOOL_DETECTED",
+        "confidenceLevel": { "gte": "HIGH" }
+      },
+      "then": {
+        "title": "Remove Piracy and Hacking Tools",
+        "description": "Software used for cracking licenses was detected. These tools are a major security risk and can compromise your system. It is strongly recommended to remove them.",
+        "category": "SECURITY",
+        "action": {
+          "type": "MANUAL_REMOVAL",
+          "details": "Review and remove suspicious applications and scheduled tasks related to KMS, AutoKMS, or other activators."
+        }
+      }
+    },
+    {
+      "recommendationId": "REC-LICENSE-001",
+      "priority": 5,
+      "if": {
+        "decisionType": "INCONSISTENT_LICENSE_INFO"
+      },
+      "then": {
+        "title": "Re-activate Windows/Office",
+        "description": "The current licensing information is inconsistent or invalid. Please try to re-activate your product using a genuine key.",
+        "category": "LICENSING",
+        "action": {
+          "type": "NAVIGATE",
+          "payload": "/activation"
+        }
+      }
+    },
+    {
+      "recommendationId": "REC-GENERIC-HEALTH-001",
+      "priority": 10,
+      "if": {
+        "overallStatus": "NEEDS_ATTENTION"
+      },
+      "then": {
+        "title": "General System Health Check",
+        "description": "Your system has several issues that need attention. Review the detailed findings and take appropriate action.",
+        "category": "GENERAL",
+        "action": {
+          "type": "REVIEW_REPORT"
+        }
+      }
+    }
+  ]
+}

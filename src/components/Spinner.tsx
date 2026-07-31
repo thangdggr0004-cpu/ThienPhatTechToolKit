@@ -1,4 +1,4 @@
-import { cn } from '../lib/utils';
+﻿import { cn } from '../utils/cn.js';
 
 export function Spinner({ className }: { className?: string }) {
   return (
@@ -12,3 +12,4 @@ export function Spinner({ className }: { className?: string }) {
     </svg>
   );
 }
+

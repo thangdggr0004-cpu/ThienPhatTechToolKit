@@ -48,23 +48,41 @@ export default function Sidebar({ activeSection, setActiveSection, isUnlocked }:
     const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
     if (!isElectron) return;
 
-    const fetchInfo = () => {
-      (window as any).electronAPI.getHardwareInfo()
-        .then((info: any) => {
-          if (info) {
-            setSysInfo({
-              uptime: info.uptime || '--',
-              usedRam: info.usedRamGB != null ? info.usedRamGB.toFixed(1) : '--',
-              totalRam: info.totalRamGB != null ? info.totalRamGB.toFixed(1) : '--',
-            });
-          }
-        })
-        .catch(() => {});
+    const applyFromHardware = (info: any) => {
+      if (!info) return;
+      setSysInfo(prev => ({
+        uptime: info.uptime || prev?.uptime || '--',
+        usedRam: prev?.usedRam || (info.usedRamGB != null ? info.usedRamGB.toFixed(1) : '--'),
+        totalRam: info.totalRamGB != null ? info.totalRamGB.toFixed(1) : (prev?.totalRam || '--'),
+      }));
     };
 
-    fetchInfo();
-    const timer = setInterval(fetchInfo, 30000);
-    return () => clearInterval(timer);
+    const applyFromLive = (detail: any) => {
+      const fm = detail?.footerMetrics;
+      if (!fm) return;
+      setSysInfo(prev => {
+        const total = fm.ramTotal ?? (prev?.totalRam ? parseFloat(prev.totalRam) : null);
+        const used = typeof fm.ram === 'number' ? fm.ram : (prev?.usedRam ? parseFloat(prev.usedRam) : null);
+        return {
+          uptime: prev?.uptime || '--',
+          usedRam: used != null ? used.toFixed(1) : (prev?.usedRam || '--'),
+          totalRam: total != null ? Number(total).toFixed(1) : (prev?.totalRam || '--'),
+        };
+      });
+    };
+
+    (window as any).electronAPI.getHardwareInfo()
+      .then((info: any) => applyFromHardware(info))
+      .catch(() => {});
+
+    const onMetrics = (e: any) => applyFromLive(e?.detail);
+    window.addEventListener('tp-live-metrics', onMetrics as EventListener);
+
+    applyFromLive((window as any).__tpLiveMetrics);
+
+    return () => {
+      window.removeEventListener('tp-live-metrics', onMetrics as EventListener);
+    };
   }, []);
 
   const renderItem = (item: MenuItem) => {

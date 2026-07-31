@@ -1,4 +1,4 @@
-import { DocumentStandardPreset } from '../types';
+import { DocumentStandardPreset } from '../types.js';
 
 // Helper to trigger file download in browser
 export function downloadFile(content: string, filename: string, mimeType: string = 'text/plain') {

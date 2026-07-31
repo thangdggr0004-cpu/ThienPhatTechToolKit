@@ -1,0 +1,44 @@
+{
+  "name": "OEM_Genuine",
+  "description": "OEM Laptop/PC pre-activated có OA3 BIOS Key.",
+  "Windows": {
+    "LicenseStatus": 1,
+    "Channel": "OEM_DM",
+    "Description": "Windows(R) Operating System, OEM_DM channel",
+    "OA3Key": "8HBW2",
+    "HasOA3Key": true,
+    "PartialProductKey": "8HBW2",
+    "IsGenericKey": false
+  },
+  "System": {
+    "Files": [],
+    "Registry": [],
+    "Services": [],
+    "Tasks": [],
+    "Hosts": [],
+    "EventLogs": [],
+    "Processes": []
+  },
+  "structuredEvidences": [
+    {
+      "source": "license",
+      "confidence": 100,
+      "timestamp": 1770000000000,
+      "rawData": { "status": 1, "channel": "OEM_DM" },
+      "productName": "Windows 11 Pro OEM",
+      "status": 1,
+      "channel": "OEM_DM",
+      "hasOA3Key": true,
+      "oa3Key": "8HBW2",
+      "isGenericKey": false
+    }
+  ],
+  "Expected": {
+    "Verdict": "Genuine",
+    "OA3Status": "Valid",
+    "Risk": "Low",
+    "Warnings": 0,
+    "Danger": 0,
+    "Evidence": []
+  }
+}
