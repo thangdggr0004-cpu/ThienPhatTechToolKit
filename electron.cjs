@@ -2411,6 +2411,31 @@ Write-Output "OK"
       } else {
         script += `Remove-Item -Path "HKCU:\\Software\\Classes\\CLSID\\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}" -Recurse -Force -ErrorAction SilentlyContinue\n`;
       }
+
+      if (settings.photoViewer) {
+        script += `
+          $pvPath = "HKLM:\\SOFTWARE\\Microsoft\\Windows Photo Viewer\\Capabilities\\FileAssociations"
+          New-Item -Path $pvPath -Force -ErrorAction SilentlyContinue | Out-Null
+          Set-ItemProperty -Path $pvPath -Name ".jpg" -Value "PhotoViewer.FileAssoc.Tiff" -Force -ErrorAction SilentlyContinue
+          Set-ItemProperty -Path $pvPath -Name ".jpeg" -Value "PhotoViewer.FileAssoc.Tiff" -Force -ErrorAction SilentlyContinue
+          Set-ItemProperty -Path $pvPath -Name ".png" -Value "PhotoViewer.FileAssoc.Tiff" -Force -ErrorAction SilentlyContinue
+          Set-ItemProperty -Path $pvPath -Name ".bmp" -Value "PhotoViewer.FileAssoc.Tiff" -Force -ErrorAction SilentlyContinue
+        `;
+      }
+
+      if (settings.disableAutoBrightness) {
+        script += `Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Intel\\Display\\igfxcui\\powersettings" -Name "FeatureTestControl" -Value 512 -Force -ErrorAction SilentlyContinue\n`;
+      }
+
+      if (settings.hideTaskbarIcons) {
+        script += `Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer" -Name "EnableAutoTray" -Value 1 -Force -ErrorAction SilentlyContinue\n`;
+      } else {
+        script += `Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer" -Name "EnableAutoTray" -Value 0 -Force -ErrorAction SilentlyContinue\n`;
+      }
+
+      if (settings.removeLangs) {
+        script += `Set-WinUserLanguageList -LanguageList "en-US", "vi" -Force -ErrorAction SilentlyContinue\n`;
+      }
       
       await runPowerShellScriptElevated(script);
       return { success: true };
@@ -2432,6 +2457,9 @@ Write-Output "OK"
         Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced" -Name "TaskbarMn" -Value $(if($true -eq ${settings.hideChat}) {0} else {1}) -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced" -Name "ShowCopilotButton" -Value $(if($true -eq ${settings.hideCopilot}) {0} else {1}) -Force -ErrorAction SilentlyContinue
         
+        New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Feeds" -Force -ErrorAction SilentlyContinue | Out-Null
+        Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Feeds" -Name "EnableFeeds" -Value $(if($true -eq ${settings.hideNews}) {0} else {1}) -Force -ErrorAction SilentlyContinue
+
         Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
       `;
       script += `\nStart-Sleep -Seconds 1\nStart-Process explorer\n`;
