@@ -2774,6 +2774,20 @@ Write-Output "OK"
 
       if (opts.purgeStandbyRam) {
         script += `
+          try {
+            $code = @"
+using System;
+using System.Runtime.InteropServices;
+public class WinRamCleaner {
+    [DllImport("psapi.dll")]
+    public static extern int EmptyWorkingSet(IntPtr hProcess);
+}
+"@
+            Add-Type -TypeDefinition $code -ErrorAction SilentlyContinue
+            Get-Process -ErrorAction SilentlyContinue | ForEach-Object {
+              try { [WinRamCleaner]::EmptyWorkingSet($_.Handle) } catch {}
+            }
+          } catch {}
           [System.GC]::Collect()
           [System.GC]::WaitForPendingFinalizers()
         \n`;
