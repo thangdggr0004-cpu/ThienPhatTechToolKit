@@ -429,7 +429,7 @@ ${(report.matrix || []).map((m: any) => `| ${m.componentName} | **${m.status}** 
         <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-              <Zap className="w-3.5 h-3.5 text-blue-600" /> ĐÁNH GIÁ NGUỒN GỐC KÍCH HOẠT (Evidence-Based Activation Assessment)
+              <Zap className="w-3.5 h-3.5 text-blue-600" /> KẾT QUẢ XÁC MINH NGUỒN GỐC BẢN QUYỀN
             </div>
             <span className="text-[10px] font-bold font-mono text-blue-700 flex items-center">
               Độ tin cậy đánh giá: {report.provenance.confidence}%
@@ -440,7 +440,7 @@ ${(report.matrix || []).map((m: any) => `| ${m.componentName} | **${m.status}** 
           {/* 4-LEVEL ENTERPRISE EVIDENCE-BASED ASSESSMENT CARD */}
           <div className="p-3 bg-slate-900 text-white rounded-lg space-y-2 border border-slate-800 font-mono">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-1.5 text-xs">
-              <span className="text-slate-400 font-bold uppercase text-[10px]">Mức Đánh Giá Bằng Chứng (Evidence Assessment Level):</span>
+              <span className="text-slate-400 font-bold uppercase text-[10px]">Cấp độ xác minh bản quyền:</span>
               <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-950 text-blue-300 border border-blue-800">
                 {report.provenance.provenanceLevelText || 'NGUỒN KÍCH HOẠT CẦN XÁC MINH THÊM (LEVEL 3)'}
               </span>
@@ -448,35 +448,35 @@ ${(report.matrix || []).map((m: any) => `| ${m.componentName} | **${m.status}** 
 
             {/* EVIDENCE TRACE CHAIN */}
             <div className="bg-slate-950 p-2 rounded border border-slate-800/80 text-[10px] text-slate-300 flex flex-wrap items-center gap-1.5 font-mono">
-              <span className="text-slate-400 font-bold">Chuỗi Bằng Chứng:</span>
-              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-blue-300">Bộ Thu Thập ({report.matrix?.length || 8})</span>
+              <span className="text-slate-400 font-bold">Quy trình kiểm tra:</span>
+              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-blue-300">Các bước kiểm tra ({report.matrix?.length || 8})</span>
               <span>➔</span>
-              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-emerald-300">Ma Trận Bằng Chứng</span>
+              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-emerald-300">Tổng hợp dữ liệu</span>
               <span>➔</span>
-              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-amber-300">Trọng Số Tin Cậy ({systemConfidence}%)</span>
+              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-amber-300">Mức độ tin cậy ({systemConfidence}%)</span>
               <span>➔</span>
-              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-purple-300">Đánh Giá Chẩn Đoán</span>
+              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-purple-300">Chẩn đoán hệ thống</span>
               <span>➔</span>
-              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-teal-300">Khuyên Dùng</span>
+              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-teal-300">Hướng xử lý</span>
             </div>
 
             <div className="text-[11px] text-slate-300 space-y-1 font-sans">
               <p>
-                Engine ghi nhận trạng thái: <strong className="text-white">{report.provenance.activationStatus}</strong> ({report.provenance.activationMethod}). Hệ thống không phát hiện các hook bẻ lái hoặc file bị sửa đổi. Nếu cần chứng minh quyền sử dụng hợp lệ, người dùng nên lưu giữ các chứng từ cấp phép sau:
+                Trạng thái ghi nhận: <strong className="text-white">{report.provenance.activationStatus}</strong> ({report.provenance.activationMethod}). Hệ thống không phát hiện các công cụ can thiệp hoặc tệp tin bị thay đổi. Khi cần đối soát bản quyền, bạn có thể lưu giữ các chứng từ sau:
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-1 text-[10px] text-slate-300 pt-1 border-t border-slate-800/60 font-mono">
-                <div>• Hóa đơn mua máy hoặc giấy phép.</div>
-                <div>• COA (Certificate of Authenticity).</div>
-                <div>• Product Key chính hãng.</div>
+                <div>• Hóa đơn mua máy hoặc chứng nhận bản quyền.</div>
+                <div>• Tem COA (Certificate of Authenticity).</div>
+                <div>• Khóa bản quyền (Product Key) chính hãng.</div>
                 <div>• Email xác nhận từ Microsoft Store.</div>
-                <div>• Thông tin Hợp đồng Volume (VLSC / M365).</div>
-                <div>• Tài khoản Microsoft Digital License.</div>
+                <div>• Hợp đồng cấp phép doanh nghiệp (VLSC / M365).</div>
+                <div>• Tài khoản bản quyền số (Microsoft Digital License).</div>
               </div>
             </div>
 
             {/* SHORTENED MANDATORY DISCLAIMER BLOCK */}
             <div className="p-2 bg-amber-950/40 border border-amber-800/50 rounded text-[10px] text-amber-200/90 leading-relaxed font-sans mt-1">
-              Đánh giá này chỉ phản ánh các bằng chứng kỹ thuật Engine đọc được tại thời điểm kiểm tra. Việc xác minh quyền sử dụng có thể cần thêm tài liệu hoặc hồ sơ cấp phép ngoài hệ thống.
+              Lưu ý: Kết quả chẩn đoán phản ánh dữ liệu hệ thống ghi nhận tại thời điểm kiểm tra. Việc đối soát bản quyền thực tế có thể cần thêm hóa đơn chứng từ kèm theo.
             </div>
           </div>
 
@@ -590,7 +590,7 @@ ${(report.matrix || []).map((m: any) => `| ${m.componentName} | **${m.status}** 
               onClick={() => setActiveTab('matrix')}
               className={`px-3 py-1.5 rounded-lg font-bold transition-all ${activeTab === 'matrix' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
             >
-              ⑤ Trạng Thái Collectors ({report.matrix?.length || 0})
+              ⑤ Chi Tiết Các Bước Kiểm Tra ({report.matrix?.length || 0})
             </button>
             <button
               onClick={() => setActiveTab('plan')}
@@ -612,8 +612,8 @@ ${(report.matrix || []).map((m: any) => `| ${m.componentName} | **${m.status}** 
             {activeTab === 'matrix' && (
               <div className="space-y-2.5">
                 <div className="font-bold text-slate-900 text-xs flex items-center justify-between border-b border-slate-100 pb-1.5">
-                  <span className="flex items-center gap-2"><FileCheck2 className="w-3.5 h-3.5 text-blue-600" /> BẢNG TRẠNG THÁI COLLECTOR &amp; BẰNG CHỨNG THỰC TẾ:</span>
-                  <span className="text-[10px] text-slate-400 font-normal">Bấm vào từng Collector để xem dữ liệu chi tiết</span>
+                  <span className="flex items-center gap-2"><FileCheck2 className="w-3.5 h-3.5 text-blue-600" /> CHI TIẾT DỮ LIỆU ĐỌC TỪ MÁY TÍNH:</span>
+                  <span className="text-[10px] text-slate-400 font-normal">Bấm vào từng mục để xem thông số chi tiết</span>
                 </div>
                 <div className="space-y-1.5">
                   {report.matrix && report.matrix.map((item: any, i: number) => {
@@ -655,16 +655,16 @@ ${(report.matrix || []).map((m: any) => `| ${m.componentName} | **${m.status}** 
                         {isExpanded && (
                           <div className="p-3 bg-slate-900 text-slate-200 border-t border-slate-800 text-[11px] font-mono space-y-2">
                             <div className="flex justify-between items-center text-[10px] text-slate-400 border-b border-slate-800 pb-1">
-                              <span>COLLECTOR ID: <strong className="text-blue-300">{item.componentName}</strong></span>
+                              <span>MỤC KIỂM TRA: <strong className="text-blue-300">{item.componentName}</strong></span>
                               <span>THỜI GIAN THỰC THI: <strong className="text-emerald-400">{item.executionTimeMs || 0} ms</strong></span>
                             </div>
                             <div>
-                              <span className="text-slate-400 block text-[10px] uppercase font-bold">Mô tả bằng chứng:</span>
+                              <span className="text-slate-400 block text-[10px] uppercase font-bold">Kết quả ghi nhận:</span>
                               <div className="text-white font-medium">{item.details}</div>
                             </div>
                             {item.rawData && (
                               <div>
-                                <span className="text-slate-400 block text-[10px] uppercase font-bold">Dữ liệu thô thu thập (Raw Evidence Data):</span>
+                                <span className="text-slate-400 block text-[10px] uppercase font-bold">Dữ liệu kỹ thuật gốc:</span>
                                 <pre className="bg-slate-950 p-2 rounded text-[10px] text-emerald-400 overflow-x-auto border border-slate-800">
                                   {JSON.stringify(item.rawData, null, 2)}
                                 </pre>
