@@ -549,11 +549,30 @@ export default function WindowsSettings() {
               {toggleCheckbox("Xbox Services", "xboxServices")}
               
               {toggleCheckbox("Superfetch/SysMain", "sysMain")}
-              {toggleCheckbox("Print Spooler (Máy in)", "printSpooler")}
+              <div className="flex flex-col">
+                {toggleCheckbox("Print Spooler (Máy in)", "printSpooler")}
+                {!state.printSpooler ? (
+                  <span className="text-[10px] text-amber-600 font-bold ml-6 mt-0.5 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3 text-amber-600" /> Sẽ TẮT (Ngừng in ấn)
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-emerald-600 font-medium ml-6 mt-0.5">✓ BẬT (In ấn bình thường)</span>
+                )}
+              </div>
               {toggleCheckbox("OneDrive tự khởi động", "oneDrive")}
             </div>
             
             <p className="text-xs text-slate-400 mt-4 italic">💡 Tắt các dịch vụ không cần thiết giúp tăng hiệu năng và tiết kiệm RAM</p>
+
+            {!state.printSpooler && (
+              <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 flex items-start gap-2.5 animate-fade-in">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <strong className="font-bold text-amber-900 block">⚠️ Cảnh báo dịch vụ máy in (Print Spooler):</strong>
+                  <p>Bạn đang chọn TẮT dịch vụ máy in. Sau khi bấm áp dụng, máy tính sẽ <strong>không thể gửi lệnh in hoặc kết nối bất kỳ máy in LAN/USB nào</strong> cho tới khi bạn tích chọn BẬT lại.</p>
+                </div>
+              </div>
+            )}
             
             {applyingSection === 'optimization' && (
               <div className="mt-4 space-y-1">
