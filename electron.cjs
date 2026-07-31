@@ -407,7 +407,7 @@ function createWindow() {
       win.hide();
     } else {
       isQuittingApp = true;
-      win.close();
+      app.quit();
     }
   });
 
@@ -422,7 +422,7 @@ function createWindow() {
 
 let appTray = null;
 let isQuittingApp = false;
-let isCloseToTrayEnabled = true;
+let isCloseToTrayEnabled = false;
 
 function createSystemTray(win) {
   if (appTray) return;
