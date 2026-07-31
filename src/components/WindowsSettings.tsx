@@ -89,6 +89,8 @@ export default function WindowsSettings() {
   const [loadingState, setLoadingState] = useState(false);
   const [fixingAction, setFixingAction] = useState<string | null>(null);
   const [isApplyingSettings, setIsApplyingSettings] = useState(false);
+  const [applyingSection, setApplyingSection] = useState<'system' | 'taskbar' | 'optimization' | null>(null);
+  const [successNotice, setSuccessNotice] = useState<{ title: string; message: string; sectionName: string } | null>(null);
 
   // Advanced Optimization Modal State
   const [showAdvancedModal, setShowAdvancedModal] = useState(false);
@@ -296,26 +298,36 @@ export default function WindowsSettings() {
       alert("Chỉ hoạt động trên ứng dụng thật.");
       return;
     }
+    setApplyingSection(type);
     setIsApplyingSettings(true);
     try {
       let res;
+      let sectionName = '';
       if (type === 'system') {
+        sectionName = 'Cài đặt hệ thống';
         res = await (window as any).electronAPI.applyWindowsSettings(state);
       } else if (type === 'taskbar') {
+        sectionName = 'Taskbar & System Tray';
         res = await (window as any).electronAPI.applyTaskbarSettings(state);
       } else if (type === 'optimization') {
+        sectionName = 'Tối ưu hóa Services';
         res = await (window as any).electronAPI.applySystemOptimization(state);
       }
       
-      if (res.success) {
-        alert("Áp dụng thiết lập thành công!");
+      if (res && res.success) {
+        setSuccessNotice({
+          title: `Đã áp dụng thành công: ${sectionName}`,
+          message: `Các cấu hình Registry và Services đã được cập nhật vào hệ thống.`,
+          sectionName
+        });
       } else {
-        alert("Lỗi: " + res.error);
+        alert("Lỗi khi áp dụng: " + (res?.error || "Không xác định"));
       }
     } catch (e: any) {
       alert("Lỗi Exception: " + e.message);
     } finally {
       setIsApplyingSettings(false);
+      setApplyingSection(null);
     }
   };
 
@@ -420,14 +432,34 @@ export default function WindowsSettings() {
               {toggleCheckbox("Tắt tự động điều chỉnh độ sáng", "disableAutoBrightness")}
               {toggleCheckbox("Xóa bàn phím ngôn ngữ khác (giữ US)", "removeLangs")}
             </div>
-            <div className="mt-6 flex justify-end">
+            <div className="mt-6 flex flex-col items-end gap-3">
+              {applyingSection === 'system' && (
+                <div className="w-full space-y-1">
+                  <div className="flex justify-between text-xs text-indigo-600 font-semibold animate-pulse">
+                    <span>Đang cập nhật Registry cài đặt hệ thống...</span>
+                    <span>Vui lòng chờ</span>
+                  </div>
+                  <div className="w-full h-2 bg-indigo-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-indigo-600 rounded-full animate-pulse w-full" />
+                  </div>
+                </div>
+              )}
               <button 
                 onClick={() => applySettings('system')}
                 disabled={isApplyingSettings}
-                className="flex items-center gap-2 px-5 py-2.5 bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-600 hover:text-white rounded-lg font-semibold transition-all shadow-sm"
+                className="flex items-center gap-2 px-5 py-2.5 bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-600 hover:text-white rounded-lg font-semibold transition-all shadow-sm disabled:opacity-50"
               >
-                <Shield className="w-4 h-4" />
-                Áp dụng Cài đặt hệ thống
+                {applyingSection === 'system' ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-indigo-600" />
+                    <span>Đang áp dụng hệ thống...</span>
+                  </>
+                ) : (
+                  <>
+                    <Shield className="w-4 h-4" />
+                    <span>Áp dụng Cài đặt hệ thống</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -450,6 +482,17 @@ export default function WindowsSettings() {
               {toggleCheckbox("Ẩn Copilot", "hideCopilot")}
               {toggleCheckbox("Ẩn News/Weather", "hideNews")}
             </div>
+            {applyingSection === 'taskbar' && (
+              <div className="mb-4 space-y-1">
+                <div className="flex justify-between text-xs text-blue-600 font-semibold animate-pulse">
+                  <span>Đang áp dụng Taskbar & Restart Explorer...</span>
+                  <span>Đang xử lý</span>
+                </div>
+                <div className="w-full h-2 bg-blue-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-blue-600 rounded-full animate-pulse w-full" />
+                </div>
+              </div>
+            )}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-slate-50 rounded-lg border border-slate-100">
               <div className="flex items-center gap-3">
                 <span className="text-sm font-medium text-slate-700">Vị trí Taskbar:</span>
@@ -465,10 +508,19 @@ export default function WindowsSettings() {
               <button 
                 onClick={() => applySettings('taskbar')}
                 disabled={isApplyingSettings}
-                className="flex items-center gap-2 px-5 py-2.5 bg-[#8fdcc5] hover:bg-[#7bc8b1] text-slate-800 border border-[#68bda3] rounded-lg font-bold transition-all shadow-sm"
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#8fdcc5] hover:bg-[#7bc8b1] text-slate-800 border border-[#68bda3] rounded-lg font-bold transition-all shadow-sm disabled:opacity-50"
               >
-                <Shield className="w-4 h-4" />
-                Áp dụng Taskbar
+                {applyingSection === 'taskbar' ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-slate-800" />
+                    <span>Đang áp dụng Taskbar...</span>
+                  </>
+                ) : (
+                  <>
+                    <Shield className="w-4 h-4" />
+                    <span>Áp dụng Taskbar</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -503,14 +555,35 @@ export default function WindowsSettings() {
             
             <p className="text-xs text-slate-400 mt-4 italic">💡 Tắt các dịch vụ không cần thiết giúp tăng hiệu năng và tiết kiệm RAM</p>
             
+            {applyingSection === 'optimization' && (
+              <div className="mt-4 space-y-1">
+                <div className="flex justify-between text-xs text-emerald-600 font-semibold animate-pulse">
+                  <span>Đang cấu hình Windows Services & Registry...</span>
+                  <span>Đang thực thi</span>
+                </div>
+                <div className="w-full h-2 bg-emerald-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-emerald-600 rounded-full animate-pulse w-full" />
+                </div>
+              </div>
+            )}
+
             <div className="mt-6 flex flex-col sm:flex-row justify-end gap-3 border-t border-slate-100 pt-5">
               <button 
                 onClick={() => applySettings('optimization')}
                 disabled={isApplyingSettings}
-                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-bold transition-all shadow-sm"
+                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-bold transition-all shadow-sm disabled:opacity-50"
               >
-                <Shield className="w-4 h-4" />
-                Áp dụng tối ưu
+                {applyingSection === 'optimization' ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                    <span>Đang áp dụng tối ưu...</span>
+                  </>
+                ) : (
+                  <>
+                    <Shield className="w-4 h-4" />
+                    <span>Áp dụng tối ưu</span>
+                  </>
+                )}
               </button>
               
               <button 
@@ -841,6 +914,66 @@ export default function WindowsSettings() {
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* SUCCESS NOTICE & REBOOT GUIDANCE MODAL */}
+      {successNotice && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-emerald-100 rounded-full shrink-0">
+                <CheckCircle className="w-6 h-6 text-emerald-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-800 text-base">{successNotice.title}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">{successNotice.message}</p>
+              </div>
+            </div>
+
+            {/* Reboot Advice Warning Box */}
+            <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl space-y-2 text-xs text-amber-900">
+              <div className="flex items-center gap-1.5 font-bold text-amber-800">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>Hướng dẫn hoàn tất cài đặt:</span>
+              </div>
+              <ul className="list-disc pl-4 space-y-1.5 text-[11px] text-amber-800/90 leading-relaxed">
+                <li>Một số thiết lập (như Menu chuột phải cổ điển, Fast Startup, Tắt Services ngầm...) cần **Khởi động lại máy (Restart PC)** để Windows áp dụng 100%.</li>
+                <li>Các thiết lập giao diện Taskbar đã được làm mới Explorer tự động.</li>
+              </ul>
+            </div>
+
+            {/* Actions */}
+            <div className="pt-2 flex flex-col sm:flex-row items-center gap-2 justify-end">
+              <button
+                onClick={async () => {
+                  if (isElectron) await (window as any).electronAPI.restartExplorer();
+                }}
+                className="w-full sm:w-auto px-3.5 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Restart Explorer
+              </button>
+
+              <button
+                onClick={async () => {
+                  if (window.confirm("Bạn có chắc chắn muốn khởi động lại máy tính ngay bây giờ để hoàn tất cài đặt?")) {
+                    if (isElectron) await (window as any).electronAPI.restartComputer();
+                  }
+                }}
+                className="w-full sm:w-auto px-3.5 py-2 text-xs font-semibold bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                Khởi động lại máy
+              </button>
+
+              <button
+                onClick={() => setSuccessNotice(null)}
+                className="w-full sm:w-auto px-4 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors cursor-pointer shadow-sm"
+              >
+                Đã hiểu (Đóng)
+              </button>
             </div>
           </div>
         </div>

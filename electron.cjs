@@ -2402,6 +2402,30 @@ Write-Output "OK"
     }
   });
 
+  ipcMain.handle('restart-explorer', async () => {
+    try {
+      const script = `
+        Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 1
+        Start-Process explorer
+      `;
+      await runPowerShellScript(script);
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('restart-computer', async () => {
+    try {
+      const { exec } = require('child_process');
+      exec('shutdown /r /t 5 /f /c "ThienPhatTechToolKit: Khoi dong lai de ap dung thiet lap"');
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
   ipcMain.handle('apply-system-optimization', async (event, settings) => {
     try {
       let script = `
