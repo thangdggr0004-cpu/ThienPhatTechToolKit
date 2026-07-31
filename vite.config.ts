@@ -14,11 +14,20 @@ export default defineConfig(() => {
     },
     build: {
       chunkSizeWarningLimit: 1000,
+      target: 'es2020',
+      cssCodeSplit: true,
+      minify: 'esbuild',
       rollupOptions: {
         output: {
-          manualChunks: {
-            'vendor-react': ['react', 'react-dom'],
-            'vendor-icons': ['lucide-react'],
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('react') || id.includes('react-dom')) {
+                return 'vendor-react';
+              }
+              if (id.includes('lucide-react')) {
+                return 'vendor-icons';
+              }
+            }
           },
         },
       },
