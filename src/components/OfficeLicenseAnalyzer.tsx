@@ -431,40 +431,40 @@ ${(report.matrix || []).map((m: any) => `| ${m.componentName} | **${m.status}** 
             <div className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
               <Zap className="w-3.5 h-3.5 text-blue-600" /> KẾT QUẢ XÁC MINH NGUỒN GỐC BẢN QUYỀN
             </div>
-            <span className="text-[10px] font-bold font-mono text-blue-700 flex items-center">
+            <span className="text-xs font-bold font-mono text-blue-700 flex items-center">
               Độ tin cậy đánh giá: {report.provenance.confidence}%
               {renderTooltipIcon('ActivationConfidence')}
             </span>
           </div>
 
           {/* 4-LEVEL ENTERPRISE EVIDENCE-BASED ASSESSMENT CARD */}
-          <div className="p-3 bg-slate-900 text-white rounded-lg space-y-2 border border-slate-800 font-mono">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-1.5 text-xs">
-              <span className="text-slate-400 font-bold uppercase text-[10px]">Cấp độ xác minh bản quyền:</span>
-              <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-950 text-blue-300 border border-blue-800">
+          <div className="p-4 bg-slate-900 text-white rounded-xl space-y-3 border border-slate-800 font-sans shadow-md">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2 text-xs">
+              <span className="text-slate-400 font-bold uppercase text-xs">Cấp độ xác minh bản quyền:</span>
+              <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-blue-950 text-blue-300 border border-blue-800">
                 {report.provenance.provenanceLevelText || 'NGUỒN KÍCH HOẠT CẦN XÁC MINH THÊM (LEVEL 3)'}
               </span>
             </div>
 
             {/* EVIDENCE TRACE CHAIN */}
-            <div className="bg-slate-950 p-2 rounded border border-slate-800/80 text-[10px] text-slate-300 flex flex-wrap items-center gap-1.5 font-mono">
+            <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800/80 text-xs text-slate-300 flex flex-wrap items-center gap-2 font-mono">
               <span className="text-slate-400 font-bold">Quy trình kiểm tra:</span>
-              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-blue-300">Các bước kiểm tra ({report.matrix?.length || 8})</span>
+              <span className="px-2 py-0.5 bg-slate-800 rounded text-blue-300 font-semibold">Các bước kiểm tra ({report.matrix?.length || 8})</span>
               <span>➔</span>
-              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-emerald-300">Tổng hợp dữ liệu</span>
+              <span className="px-2 py-0.5 bg-slate-800 rounded text-emerald-300 font-semibold">Tổng hợp dữ liệu</span>
               <span>➔</span>
-              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-amber-300">Mức độ tin cậy ({systemConfidence}%)</span>
+              <span className="px-2 py-0.5 bg-slate-800 rounded text-amber-300 font-semibold">Mức độ tin cậy ({systemConfidence}%)</span>
               <span>➔</span>
-              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-purple-300">Chẩn đoán hệ thống</span>
+              <span className="px-2 py-0.5 bg-slate-800 rounded text-purple-300 font-semibold">Chẩn đoán hệ thống</span>
               <span>➔</span>
-              <span className="px-1.5 py-0.5 bg-slate-800 rounded text-teal-300">Hướng xử lý</span>
+              <span className="px-2 py-0.5 bg-slate-800 rounded text-teal-300 font-semibold">Hướng xử lý</span>
             </div>
 
-            <div className="text-[11px] text-slate-300 space-y-1 font-sans">
-              <p>
-                Trạng thái ghi nhận: <strong className="text-white">{report.provenance.activationStatus}</strong> ({report.provenance.activationMethod}). Hệ thống không phát hiện các công cụ can thiệp hoặc tệp tin bị thay đổi. Khi cần đối soát bản quyền, bạn có thể lưu giữ các chứng từ sau:
+            <div className="text-xs text-slate-200 space-y-2 font-sans leading-relaxed">
+              <p className="text-sm">
+                Trạng thái ghi nhận: <strong className="text-white font-bold">{report.provenance.activationStatus}</strong> ({report.provenance.activationMethod}). Hệ thống không phát hiện các công cụ can thiệp hoặc tệp tin bị thay đổi. Khi cần đối soát bản quyền, bạn có thể lưu giữ các chứng từ sau:
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-1 text-[10px] text-slate-300 pt-1 border-t border-slate-800/60 font-mono">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-slate-300 pt-2 border-t border-slate-800/60">
                 <div>• Hóa đơn mua máy hoặc chứng nhận bản quyền.</div>
                 <div>• Tem COA (Certificate of Authenticity).</div>
                 <div>• Khóa bản quyền (Product Key) chính hãng.</div>
@@ -475,50 +475,50 @@ ${(report.matrix || []).map((m: any) => `| ${m.componentName} | **${m.status}** 
             </div>
 
             {/* SHORTENED MANDATORY DISCLAIMER BLOCK */}
-            <div className="p-2 bg-amber-950/40 border border-amber-800/50 rounded text-[10px] text-amber-200/90 leading-relaxed font-sans mt-1">
+            <div className="p-2.5 bg-amber-950/40 border border-amber-800/50 rounded-lg text-xs text-amber-200/90 leading-relaxed font-sans mt-1">
               Lưu ý: Kết quả chẩn đoán phản ánh dữ liệu hệ thống ghi nhận tại thời điểm kiểm tra. Việc đối soát bản quyền thực tế có thể cần thêm hóa đơn chứng từ kèm theo.
             </div>
           </div>
 
           {/* PROPERTY GRID 4 FIELDS COMPACT */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-xs font-mono">
-            <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
-              <span className="text-[10px] font-bold text-slate-400 block uppercase">Trạng Thái</span>
-              <span className="font-bold text-emerald-700 text-xs mt-0.5 block">{report.provenance.activationStatus}</span>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <span className="text-xs font-bold text-slate-500 block uppercase">Trạng Thái</span>
+              <span className="font-bold text-emerald-700 text-sm mt-0.5 block">{report.provenance.activationStatus}</span>
             </div>
 
-            <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
-              <span className="text-[10px] font-bold text-slate-400 block uppercase">Phương Thức</span>
-              <span className="font-bold text-slate-800 text-xs mt-0.5 block flex items-center">
+            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <span className="text-xs font-bold text-slate-500 block uppercase">Phương Thức</span>
+              <span className="font-bold text-slate-800 text-sm mt-0.5 block flex items-center">
                 {report.provenance.activationMethod}
                 {renderTooltipIcon('GVLK')}
               </span>
             </div>
 
-            <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
-              <span className="text-[10px] font-bold text-slate-400 block uppercase">
+            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <span className="text-xs font-bold text-slate-500 block uppercase">
                 {isKmsMethod ? 'Máy chủ KMS' : 'Nguồn kích hoạt'}
               </span>
-              <span className="font-bold text-slate-800 text-xs mt-0.5 block">
+              <span className="font-bold text-slate-800 text-sm mt-0.5 block">
                 {report.provenance.kmsHostInfo?.host === 'Không đọc được dữ liệu' ? 'Chưa xác định' : report.provenance.activationSource}
               </span>
             </div>
 
-            <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
-              <span className="text-[10px] font-bold text-slate-400 block uppercase flex items-center">
+            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <span className="text-xs font-bold text-slate-500 block uppercase flex items-center">
                 Độ tin cậy nguồn kích hoạt
                 {renderTooltipIcon('ActivationConfidence')}
               </span>
-              <span className="font-bold text-blue-700 text-xs mt-0.5 block">{report.provenance.confidence}%</span>
+              <span className="font-bold text-blue-700 text-sm mt-0.5 block">{report.provenance.confidence}%</span>
             </div>
           </div>
 
           {/* KHUYẾN NGHỊ VỚI GIẢI THÍCH LÝ DO CHI TIẾT */}
-          <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs text-slate-700 flex items-start gap-2">
-            <Info className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
-            <div className="text-[11px] leading-snug space-y-1">
-              <strong className="text-slate-900 block font-bold">Khuyến nghị &amp; Lý do giải thích:</strong>
-              <div className="text-slate-700 font-medium space-y-0.5">
+          <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs text-slate-700 flex items-start gap-2.5">
+            <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+            <div className="text-xs leading-relaxed space-y-1">
+              <strong className="text-slate-900 block font-bold text-sm">Khuyên nghị &amp; Lý do giải thích:</strong>
+              <div className="text-slate-700 font-medium space-y-1 text-xs">
                 <div>✓ Không cần khôi phục vì: <strong>Registry sạch, DLL chính hãng Microsoft, tệp hệ thống không có dấu hiệu can thiệp.</strong></div>
                 <div>✓ Xác minh thêm nguồn KMS nếu cần đối soát máy chủ doanh nghiệp.</div>
               </div>
