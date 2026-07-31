@@ -192,23 +192,44 @@ export default function JunkCleaner() {
     <div className="space-y-6 animate-fade-in pb-8">
       {/* HEADER & OVERVIEW STATS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="col-span-2 bg-gradient-to-r from-slate-900 to-slate-800 p-6 rounded-xl border border-slate-700 shadow-md flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <Trash2 className="h-6 w-6 text-rose-400" />
-              Dọn Dẹp Rác Hệ Thống
-            </h2>
-            <p className="text-sm text-slate-300 mt-1">
-              Phân tích và giải phóng không gian lưu trữ bị chiếm dụng vô ích.
-            </p>
+        <div className="col-span-2 bg-gradient-to-r from-slate-900 to-slate-800 p-6 rounded-xl border border-slate-700 shadow-md flex flex-col justify-between space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <Trash2 className="h-6 w-6 text-rose-400" />
+                Dọn Dẹp Rác Hệ Thống
+              </h2>
+              <p className="text-sm text-slate-300 mt-1">
+                Phân tích và giải phóng không gian lưu trữ bị chiếm dụng vô ích.
+              </p>
+            </div>
+            <button 
+              onClick={handleScan}
+              disabled={scanning || cleaning}
+              className={`p-3 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-all cursor-pointer disabled:opacity-50 ${scanning ? 'animate-pulse' : ''}`}
+            >
+              <RefreshCw className={`h-5 w-5 ${scanning ? 'animate-spin text-amber-400' : ''}`} />
+            </button>
           </div>
-          <button 
-            onClick={handleScan}
-            disabled={scanning || cleaning}
-            className={`p-3 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-all ${scanning ? 'animate-pulse' : ''}`}
-          >
-            <RefreshCw className="h-5 w-5" />
-          </button>
+
+          {/* EMBEDDED PROGRESS BAR IN TOP HEADER */}
+          {(scanning || cleaning) && (
+            <div className="pt-2 border-t border-slate-700/80 space-y-1.5 animate-fade-in">
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-200">
+                <span className="flex items-center gap-2">
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-400" />
+                  {scanning ? "Đang phân tích bộ nhớ đệm..." : `Đang dọn dẹp rác hệ thống (${cleanProgress}%)...`}
+                </span>
+                <span className="font-mono text-amber-400 font-bold">{scanning ? "65%" : `${cleanProgress}%`}</span>
+              </div>
+              <div className="w-full bg-slate-950/80 rounded-full h-2 overflow-hidden border border-slate-700/60 p-0.5">
+                <div 
+                  className={`h-full rounded-full transition-all duration-300 ${scanning ? 'bg-gradient-to-r from-amber-500 to-rose-500 w-[65%]' : 'bg-gradient-to-r from-rose-500 to-emerald-400'}`}
+                  style={cleaning ? { width: `${cleanProgress}%` } : undefined}
+                />
+              </div>
+            </div>
+          )}
         </div>
         
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center items-center">
@@ -275,23 +296,31 @@ export default function JunkCleaner() {
           <span className="text-2xl font-black text-blue-600 font-mono">{(totalSelectedSize / 1024).toFixed(2)} <span className="text-sm font-bold text-slate-500">GB</span></span>
         </div>
         
-        <div className="w-full md:w-[350px]">
-          {scanning ? (
-            <ProgressBarComponent progress={65} progressText="Đang phân tích bộ nhớ đệm..." color="from-amber-500 to-rose-500" />
-          ) : cleaning ? (
-            <ProgressBarComponent progress={cleanProgress} progressText="Đang dọn dẹp đĩa C..." color="from-rose-500 to-blue-600" />
-          ) : cleaned ? (
-            <div className="flex items-center justify-center gap-2 p-3 bg-emerald-50 text-emerald-600 rounded-lg border border-emerald-200">
+        <div className="w-full md:w-[320px]">
+          {cleaned ? (
+            <div className="flex items-center justify-center gap-2 p-3 bg-emerald-50 text-emerald-600 rounded-lg border border-emerald-200 shadow-xs">
               <CheckCircle className="w-5 h-5" />
               <span className="text-sm font-bold">Đã dọn {(totalReclaimed / 1024).toFixed(2)} GB!</span>
             </div>
           ) : (
             <button
               onClick={handleClean}
-              disabled={scanning || totalSelectedSize === 0}
-              className="w-full p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold text-sm transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              disabled={scanning || cleaning || totalSelectedSize === 0}
+              className="w-full p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold text-sm transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
             >
-              <Trash2 className="w-4 h-4" /> DỌN DẸP NGAY
+              {cleaning ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" /> ĐANG DỌN DẸP...
+                </>
+              ) : scanning ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" /> ĐANG PHÂN TÍCH...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4" /> DỌN DẸP NGAY
+                </>
+              )}
             </button>
           )}
         </div>
