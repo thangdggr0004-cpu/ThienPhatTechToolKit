@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import { Trash2, AlertCircle, CheckCircle, Download, List, Shield, Settings, Play, Database, History, RefreshCw, FileWarning } from 'lucide-react';
+import { Trash2, CheckCircle, Settings, Database, History, RefreshCw, FileWarning } from 'lucide-react';
 import { JunkCategory } from '../types.js';
-import { generateJunkCleanerScript, downloadFile } from '../utils/scriptGenerator.js';
-import ProgressBarComponent from './ProgressBarComponent.js';
 import { useTaskManager } from '../context/TaskManagerContext.js';
 import { updateSessionReport, getSessionReport } from '../utils/SessionAuditStore.js';
 
@@ -103,7 +101,6 @@ export default function JunkCleaner() {
   const [scanned, setScanned] = useState(false);
   const [cleaning, setCleaning] = useState(false);
   const [cleaned, setCleaned] = useState(false);
-  const [scanLogs, setScanLogs] = useState<string[]>([]);
   const [totalReclaimed, setTotalReclaimed] = useState(0);
 
   // Simulated progress state
@@ -127,12 +124,10 @@ export default function JunkCleaner() {
     setScanning(true);
     setScanned(false);
     setCleaned(false);
-    setScanLogs([]);
 
     const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
     if (isElectron) {
       try {
-        setScanLogs(['[*] Đang quét bộ đệm hệ thống...']);
         const data = await (window as any).electronAPI.scanJunk();
         
         setCategories(prev =>
