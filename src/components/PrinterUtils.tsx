@@ -216,7 +216,7 @@ export default function PrinterUtils() {
     if (!isElectron) { alert('Chức năng này yêu cầu chạy trong môi trường ứng dụng thực.'); return; }
 
     const manualOnlyActions: Record<string, string> = {
-      'clean-head': 'Làm sạch đầu in cần thao tác trong driver/hãng máy in (Maintenance/Nozzle Cleaning). Tool gợi ý chế độ hướng dẫn an toàn.',
+      'clean-head': 'HƯỚNG DẪN Clean Đầu In: tool chỉ cung cấp hướng dẫn, không tự thực thi lệnh driver. Vui lòng thao tác trong trình điều khiển máy in hoặc phần mềm hãng.',
       'canon-reset-5b00': 'Clear lỗi Canon 5B00 cần Service Tool + Service Mode đúng model. Tool gợi ý chế độ hướng dẫn để tránh rủi ro firmware.'
     };
 
@@ -297,6 +297,7 @@ export default function PrinterUtils() {
         addLog(`[+] Hướng dẫn thao tác: ${name}`);
         addLog(`[*] Ghi chú: ${manualOnlyActions[action]}`);
         alert(manualOnlyActions[action]);
+        setLoadingAction(null);
         return;
       }
 
@@ -504,11 +505,11 @@ export default function PrinterUtils() {
                   <Eye className="w-4 h-4" /> Xem Hàng Đợi
                 </button>
                 <button
-                  onClick={() => handleAction('clean-head', `Clean Đầu In (${selectedPrinter})`)}
+                  onClick={() => handleAction('clean-head', `Hướng dẫn Clean Đầu In (${selectedPrinter})`)}
                   disabled={!selectedPrinter || loadingAction !== null}
                   className="flex items-center justify-center gap-2 py-2.5 px-3 bg-cyan-50 hover:bg-cyan-100 border border-cyan-200 text-cyan-700 rounded-lg text-xs font-semibold transition-all"
                 >
-                  <Droplet className="w-4 h-4" /> Clean Đầu In
+                  <Droplet className="w-4 h-4" /> Hướng dẫn Clean Đầu In
                 </button>
                 <button
                   onClick={handleRemoveReinstall}

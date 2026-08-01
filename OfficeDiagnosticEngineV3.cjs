@@ -471,14 +471,16 @@ const {
   COLLECTOR_PRIORITIES 
 } = require('./EnterpriseCollectorFramework.cjs');
 
-const LicenseCollector = require('./src/collectors/LicenseCollector.cjs');
-const AuthenticodeCollector = require('./src/collectors/AuthenticodeCollector.cjs');
-const OhookCollector = require('./src/collectors/OhookCollector.cjs');
-const RegistryCollector = require('./src/collectors/RegistryCollector.cjs');
-const ServicesCollector = require('./src/collectors/ServicesCollector.cjs');
-const SPPCollector = require('./src/collectors/SPPCollector.cjs');
-const OfficeUpdateCollector = require('./src/collectors/OfficeUpdateCollector.cjs');
-const WMICollector = require('./src/collectors/WMICollector.cjs');
+const collectorsDir = path.join(__dirname, 'src', 'collectors');
+
+const LicenseCollector = require(path.join(collectorsDir, 'LicenseCollector.cjs'));
+const AuthenticodeCollector = require(path.join(collectorsDir, 'AuthenticodeCollector.cjs'));
+const OhookCollector = require(path.join(collectorsDir, 'OhookCollector.cjs'));
+const RegistryCollector = require(path.join(collectorsDir, 'RegistryCollector.cjs'));
+const ServicesCollector = require(path.join(collectorsDir, 'ServicesCollector.cjs'));
+const SPPCollector = require(path.join(collectorsDir, 'SPPCollector.cjs'));
+const OfficeUpdateCollector = require(path.join(collectorsDir, 'OfficeUpdateCollector.cjs'));
+const WMICollector = require(path.join(collectorsDir, 'WMICollector.cjs'));
 
 class OfficeDiagnosticEngineV3 {
   constructor(powerShellRunner) {

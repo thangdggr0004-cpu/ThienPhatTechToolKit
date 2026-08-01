@@ -31,13 +31,13 @@ export default function LaptopTester() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 rounded-xl shadow-lg text-white">
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-slate-900">
         <h2 className="text-2xl font-black flex items-center gap-3">
-          <Monitor className="h-7 w-7" />
+          <Monitor className="h-7 w-7 text-slate-900" />
           KIỂM TRA LAPTOP TOÀN DIỆN
         </h2>
-        <p className="mt-2 text-blue-100 text-sm">
-          Bộ công cụ 8 trong 1 giúp kỹ thuật viên test nhanh chóng các thành phần phần cứng máy tính mà không cần cài thêm phần mềm.
+        <p className="mt-2 text-slate-600 text-sm">
+          Bộ công cụ 8 trong 1 giúp kỹ thuật viên test nhanh chóng các thành phần phần cứng máy tính một cách chuyên nghiệp.
         </p>
       </div>
 
@@ -46,10 +46,10 @@ export default function LaptopTester() {
           <div 
             key={card.id}
             onClick={() => card.action ? card.action() : setActiveTest(card.id)}
-            className={`bg-gradient-to-br ${card.color} p-1 rounded-2xl cursor-pointer hover:scale-105 transition-transform shadow-md hover:shadow-xl group`}
+            className="bg-white border border-slate-200 p-1 rounded-2xl cursor-pointer hover:shadow-lg transition-shadow duration-200 group"
           >
-            <div className="bg-white/10 backdrop-blur-sm h-full w-full p-6 rounded-xl flex flex-col items-center justify-center gap-4 text-white border border-white/20">
-              <div className="p-4 bg-white/20 rounded-full group-hover:scale-110 transition-transform shadow-inner">
+            <div className="bg-slate-50 h-full w-full p-6 rounded-xl flex flex-col items-center justify-center gap-4 text-slate-900">
+              <div className="p-4 bg-slate-100 rounded-full group-hover:scale-110 transition-transform shadow-sm">
                 {card.icon}
               </div>
               <span className="font-bold text-center tracking-wide">{card.name}</span>
@@ -101,10 +101,10 @@ function TestModal({ test, onClose }: { test: string, onClose: () => void }) {
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center select-none">
+    <div className="fixed inset-0 z-[100] bg-slate-50 flex flex-col items-center justify-center select-none">
       <button 
         onClick={onClose}
-        className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors z-[110] shadow-lg border border-white/10"
+        className="absolute top-6 right-6 p-3 bg-white border border-slate-200 text-slate-700 rounded-full transition-colors z-[110] shadow-sm hover:bg-slate-100"
         title="Nhấn ESC để thoát"
       >
         <X className="h-6 w-6" />
@@ -170,10 +170,10 @@ function KeyboardTest({ onClose }: { onClose?: () => void }) {
     return (
       <div 
         key={code}
-        className={`border border-slate-700/80 rounded flex items-center justify-center font-bold text-[10px] uppercase transition-colors duration-75 select-none
+        className={`border border-slate-200 rounded flex items-center justify-center font-bold text-[10px] uppercase transition-all duration-75 select-none
           ${height ? height : 'h-10'}
           ${flex ? flex : 'w-10'}
-          ${isPressed ? 'bg-emerald-500 border-emerald-400 text-white shadow-[0_0_12px_rgba(16,185,129,0.6)] font-black scale-[0.98]' : 'bg-slate-800/90 text-slate-300'}
+          ${isPressed ? 'bg-blue-600 border-blue-500 text-white shadow-sm scale-[0.98]' : 'bg-white text-slate-700 hover:bg-slate-100'}
         `}
       >
         {label || code.replace('Key', '').replace('Digit', '').replace('Numpad', '')}
@@ -182,35 +182,35 @@ function KeyboardTest({ onClose }: { onClose?: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md p-4 flex flex-col items-center justify-center overflow-auto select-none">
+    <div className="fixed inset-0 z-50 bg-slate-50 p-4 flex flex-col items-center justify-center overflow-auto select-none">
       {/* Top Header & Layout Switcher Card */}
-      <div className="w-full max-w-[1050px] mb-3 flex flex-wrap justify-between items-center gap-2 bg-slate-900/90 p-3 rounded-xl border border-slate-800 shadow-xl">
+      <div className="w-full max-w-[1050px] mb-3 flex flex-wrap justify-between items-center gap-2 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
         <div className="flex items-center gap-3">
-          <h3 className="text-base font-black text-white flex items-center gap-1.5">
+          <h3 className="text-base font-black text-slate-900 flex items-center gap-1.5">
             <span>⌨️</span> Kiểm tra Bàn phím
           </h3>
-          <span className="text-[11px] font-bold px-2.5 py-1 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/60">
+          <span className="text-[11px] font-bold px-2.5 py-1 rounded bg-slate-100 text-slate-600 border border-slate-200">
             Đã nhận: {pressedKeys.size} phím
           </span>
         </div>
 
         {/* Layout Tabs */}
-        <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-800">
+        <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
           <button
             onClick={() => setLayout('laptop')}
-            className={`px-3 py-1 rounded text-[11px] font-bold transition-all cursor-pointer ${layout === 'laptop' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+            className={`px-3 py-1 rounded text-[11px] font-bold transition-all cursor-pointer ${layout === 'laptop' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
           >
             💻 Laptop (75%)
           </button>
           <button
             onClick={() => setLayout('full')}
-            className={`px-3 py-1 rounded text-[11px] font-bold transition-all cursor-pointer ${layout === 'full' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+            className={`px-3 py-1 rounded text-[11px] font-bold transition-all cursor-pointer ${layout === 'full' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
           >
             ⌨️ Bàn phím đầy đủ (Full 100%)
           </button>
           <button
             onClick={() => setLayout('mac')}
-            className={`px-3 py-1 rounded text-[11px] font-bold transition-all cursor-pointer ${layout === 'mac' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+            className={`px-3 py-1 rounded text-[11px] font-bold transition-all cursor-pointer ${layout === 'mac' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
           >
             🍎 Macbook Layout
           </button>
@@ -220,14 +220,14 @@ function KeyboardTest({ onClose }: { onClose?: () => void }) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => { setPressedKeys(new Set()); setCurrentKey(''); }}
-            className="px-3 py-1 bg-rose-600/80 hover:bg-rose-500 text-white rounded text-[11px] font-bold transition cursor-pointer shadow"
+            className="px-3 py-1 bg-slate-900 hover:bg-slate-700 text-white rounded text-[11px] font-bold transition cursor-pointer shadow-sm"
           >
             🔄 Reset
           </button>
           {onClose && (
             <button
               onClick={onClose}
-              className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded text-[11px] font-bold transition cursor-pointer shadow"
+              className="px-3 py-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded text-[11px] font-bold transition cursor-pointer shadow-sm"
             >
               ❌ Thoát (ESC)
             </button>
@@ -237,11 +237,11 @@ function KeyboardTest({ onClose }: { onClose?: () => void }) {
 
       {/* Current Key Indicator */}
       <div className="mb-3 text-center">
-        <div className="text-xl font-black text-emerald-400 h-7 font-mono flex items-center justify-center gap-2">
+        <div className="text-xl font-black text-slate-900 h-7 font-mono flex items-center justify-center gap-2">
           {currentKey ? (
             <>
               <span className="text-[11px] text-slate-500 font-sans">Phím vừa gõ:</span>
-              <span className="bg-slate-900 px-3 py-0.5 rounded border border-slate-800 shadow text-emerald-400 font-mono text-base">{currentKey}</span>
+              <span className="bg-white px-3 py-0.5 rounded border border-slate-200 shadow-sm text-blue-600 font-mono text-base">{currentKey}</span>
             </>
           ) : (
             <span className="text-[11px] text-slate-500 font-sans">Gõ bất kỳ phím nào để bắt đầu test...</span>
@@ -250,7 +250,7 @@ function KeyboardTest({ onClose }: { onClose?: () => void }) {
       </div>
 
       {/* Keyboard Matrix Main Box */}
-      <div className="p-4 bg-slate-900/90 rounded-2xl border border-slate-800 shadow-2xl flex gap-3 max-w-[1050px]">
+      <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex gap-3 max-w-[1050px]">
         {/* Main QWERTY Block */}
         <div className="flex flex-col gap-1">
           {/* Function Row */}
@@ -448,11 +448,11 @@ function WebcamTest() {
   }, []);
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950 p-8">
-      <h3 className="text-2xl font-black text-white mb-6">Kiểm tra Webcam</h3>
-      <div className="relative w-full max-w-4xl aspect-video bg-black rounded-2xl overflow-hidden border-4 border-slate-800 shadow-2xl">
+    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50 p-8">
+      <h3 className="text-2xl font-black text-slate-900 mb-6">Kiểm tra Webcam</h3>
+      <div className="relative w-full max-w-4xl aspect-video bg-slate-900 rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
         {error ? (
-          <div className="absolute inset-0 flex items-center justify-center text-rose-500 font-bold p-8 text-center">
+          <div className="absolute inset-0 flex items-center justify-center text-rose-600 font-bold p-8 text-center bg-white/80">
             <AlertTriangle className="h-10 w-10 mr-3" /> Lỗi Webcam: {error}
           </div>
         ) : (
@@ -506,26 +506,26 @@ function MicTest() {
   }, []);
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950 p-8">
-      <h3 className="text-2xl font-black text-white mb-10">Kiểm tra Micro</h3>
+    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50 p-8">
+      <h3 className="text-2xl font-black text-slate-900 mb-10">Kiểm tra Micro</h3>
       {error ? (
-        <div className="text-rose-500 font-bold flex items-center"><AlertTriangle className="mr-2" /> {error}</div>
+        <div className="text-rose-600 font-bold flex items-center"><AlertTriangle className="mr-2" /> {error}</div>
       ) : (
         <div className="flex flex-col items-center gap-10">
           <div className="relative flex items-center justify-center w-64 h-64">
             <div 
-              className="absolute bg-blue-500/20 rounded-full transition-all duration-75"
+              className="absolute bg-blue-500/10 rounded-full transition-all duration-75"
               style={{ width: `${100 + vol * 2}%`, height: `${100 + vol * 2}%` }}
             />
             <div 
-              className="absolute bg-blue-500/40 rounded-full transition-all duration-75"
+              className="absolute bg-blue-500/20 rounded-full transition-all duration-75"
               style={{ width: `${100 + vol}%`, height: `${100 + vol}%` }}
             />
-            <div className="relative z-10 p-8 bg-blue-600 rounded-full shadow-[0_0_30px_rgba(37,99,235,0.5)]">
+            <div className="relative z-10 p-8 bg-blue-600 rounded-full shadow-sm">
               <Mic className="h-16 w-16 text-white" />
             </div>
           </div>
-          <p className="text-slate-400">Hãy nói gì đó, vòng sóng âm sẽ thay đổi độ lớn theo giọng của bạn.</p>
+          <p className="text-slate-600">Hãy nói gì đó, vòng sóng âm sẽ thay đổi độ lớn theo giọng của bạn.</p>
         </div>
       )}
     </div>
@@ -656,7 +656,7 @@ function BatteryTest() {
     }
   }, []);
 
-  if (loading) return <div className="text-white text-center p-20">Đang tải thông tin pin...</div>;
+  if (loading) return <div className="text-slate-700 text-center p-20">Đang tải thông tin pin...</div>;
 
   const design = parseInt(data?.DesignCapacity) || 0;
   const full = parseInt(data?.FullChargeCapacity) || 0;
@@ -679,17 +679,17 @@ function BatteryTest() {
   };
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950 p-8">
-      <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl w-full max-w-2xl shadow-2xl">
+    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50 p-8">
+      <div className="bg-white border border-slate-200 p-8 rounded-3xl w-full max-w-2xl shadow-sm">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-2xl font-black text-white flex items-center gap-3">
-            <Battery className="text-yellow-500 h-8 w-8" /> Thông tin sức khỏe Pin (Battery)
+          <h3 className="text-2xl font-black text-slate-900 flex items-center gap-3">
+            <Battery className="text-blue-600 h-8 w-8" /> Thông tin sức khỏe Pin (Battery)
           </h3>
           {design > 0 && (
             <button
               onClick={handleOpenHtmlReport}
               disabled={openingReport}
-              className="px-4 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 border border-yellow-500/40 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              className="px-4 py-2 bg-blue-600/10 hover:bg-blue-600/20 text-blue-700 border border-blue-100 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <span>{openingReport ? 'Đang xuất báo cáo...' : '📄 Báo Cáo HTML Chi Tiết'}</span>
             </button>
@@ -697,40 +697,40 @@ function BatteryTest() {
         </div>
 
         {design === 0 ? (
-          <div className="text-rose-400 font-bold flex items-center gap-2 p-4 bg-rose-500/10 rounded-lg">
+          <div className="text-rose-600 font-bold flex items-center gap-2 p-4 bg-rose-100 rounded-lg">
             <AlertTriangle /> Không tìm thấy thông tin Pin. (Có thể máy tính là máy bàn hoặc lỗi driver Pin).
           </div>
         ) : (
           <div className="space-y-6">
             <div className="grid grid-cols-3 gap-4">
-              <div className="bg-slate-800 p-4 rounded-xl">
-                <div className="text-slate-400 text-xs mb-1">Dung lượng thiết kế</div>
-                <div className="text-lg font-bold text-white">{design} mWh</div>
+              <div className="bg-slate-100 p-4 rounded-xl border border-slate-200">
+                <div className="text-slate-500 text-xs mb-1">Dung lượng thiết kế</div>
+                <div className="text-lg font-bold text-slate-900">{design} mWh</div>
               </div>
-              <div className="bg-slate-800 p-4 rounded-xl">
-                <div className="text-slate-400 text-xs mb-1">Sạc đầy hiện tại</div>
-                <div className="text-lg font-bold text-white">{full} mWh</div>
+              <div className="bg-slate-100 p-4 rounded-xl border border-slate-200">
+                <div className="text-slate-500 text-xs mb-1">Sạc đầy hiện tại</div>
+                <div className="text-lg font-bold text-slate-900">{full} mWh</div>
               </div>
-              <div className="bg-slate-800 p-4 rounded-xl">
-                <div className="text-slate-400 text-xs mb-1">Số chu kỳ sạc</div>
-                <div className="text-lg font-bold text-amber-400">{cycleCount > 0 ? `${cycleCount} lần` : 'Chưa ghi nhận'}</div>
+              <div className="bg-slate-100 p-4 rounded-xl border border-slate-200">
+                <div className="text-slate-500 text-xs mb-1">Số chu kỳ sạc</div>
+                <div className="text-lg font-bold text-blue-600">{cycleCount > 0 ? `${cycleCount} lần` : 'Chưa ghi nhận'}</div>
               </div>
             </div>
             
-            <div className="bg-slate-800 p-6 rounded-xl flex items-center justify-between">
+            <div className="bg-slate-100 p-6 rounded-xl flex items-center justify-between border border-slate-200">
               <div>
-                <div className="text-slate-400 text-sm mb-1">Độ chai pin (Wear Level)</div>
-                <div className={`text-3xl font-black ${wearNum > 30 ? 'text-rose-500' : wearNum > 15 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                <div className="text-slate-500 text-sm mb-1">Độ chai pin (Wear Level)</div>
+                <div className={`text-3xl font-black ${wearNum > 30 ? 'text-rose-600' : wearNum > 15 ? 'text-amber-500' : 'text-blue-600'}`}>
                   {wear}%
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-slate-400 text-sm mb-1">Đánh giá sức khỏe (Health)</div>
-                <div className="text-3xl font-black text-emerald-400">{health}%</div>
+                <div className="text-slate-500 text-sm mb-1">Đánh giá sức khỏe (Health)</div>
+                <div className="text-3xl font-black text-blue-600">{health}%</div>
               </div>
             </div>
 
-            <div className="p-3 bg-slate-850 border border-slate-800 rounded-xl text-xs text-slate-400 italic">
+            <div className="p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-500 italic">
               💡 Bấm nút <strong>"📄 Báo Cáo HTML Chi Tiết"</strong> để mở file báo cáo đầy đủ lịch sử sạc xả PIN chính chủ từ Microsoft Windows.
             </div>
           </div>
@@ -763,30 +763,30 @@ function DiskTest() {
   if (loading) return <div className="text-white text-center p-20">Đang tải thông tin ổ cứng...</div>;
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950 p-8">
-      <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl w-full max-w-4xl shadow-2xl">
-        <h3 className="text-2xl font-black text-white mb-6 flex items-center gap-3">
-          <HardDrive className="text-blue-500 h-8 w-8" /> Thông tin Sức khỏe Ổ cứng S.M.A.R.T
+    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50 p-8">
+      <div className="bg-white border border-slate-200 p-8 rounded-3xl w-full max-w-4xl shadow-sm">
+        <h3 className="text-2xl font-black text-slate-900 mb-6 flex items-center gap-3">
+          <HardDrive className="text-blue-600 h-8 w-8" /> Thông tin Sức khỏe Ổ cứng S.M.A.R.T
         </h3>
         
         {data.length === 0 ? (
-          <div className="text-rose-400 font-bold p-4 bg-rose-500/10 rounded-lg">Không lấy được thông tin ổ cứng.</div>
+          <div className="text-rose-600 font-bold p-4 bg-rose-100 rounded-lg">Không lấy được thông tin ổ cứng.</div>
         ) : (
           <div className="space-y-4">
             {data.map((d, i) => (
-              <div key={i} className="flex items-center gap-5 bg-slate-800 p-5 rounded-xl border border-slate-700">
-                <div className="p-4 bg-slate-900 rounded-lg shrink-0">
-                  <HardDrive className="h-8 w-8 text-blue-400" />
+              <div key={i} className="flex items-center gap-5 bg-slate-50 p-5 rounded-xl border border-slate-200">
+                <div className="p-4 bg-slate-100 rounded-lg shrink-0">
+                  <HardDrive className="h-8 w-8 text-blue-600" />
                 </div>
                 <div className="flex-1 space-y-2">
-                  <div className="font-bold text-lg text-white">{d.FriendlyName || d.DeviceId || 'Unknown Disk'}</div>
+                  <div className="font-bold text-lg text-slate-900">{d.FriendlyName || d.DeviceId || 'Unknown Disk'}</div>
                   <div className="flex gap-4 text-sm font-medium">
-                    <span className="text-slate-400">Loại: <span className="text-white">{d.MediaType || 'Unknown'}</span></span>
-                    <span className="text-slate-400">Dung lượng: <span className="text-white">{d.Size ? (d.Size / 1073741824).toFixed(1) + ' GB' : 'N/A'}</span></span>
+                    <span className="text-slate-500">Loại: <span className="text-slate-900">{d.MediaType || 'Unknown'}</span></span>
+                    <span className="text-slate-500">Dung lượng: <span className="text-slate-900">{d.Size ? (d.Size / 1073741824).toFixed(1) + ' GB' : 'N/A'}</span></span>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className={`text-xl font-black uppercase ${d.HealthStatus === 'Healthy' ? 'text-emerald-400' : 'text-rose-500'}`}>
+                  <div className={`text-xl font-black uppercase ${d.HealthStatus === 'Healthy' ? 'text-blue-600' : 'text-rose-600'}`}>
                     {d.HealthStatus === 'Healthy' ? 'TỐT (OK)' : d.HealthStatus}
                   </div>
                   <div className="text-slate-500 text-xs mt-1">Trạng thái S.M.A.R.T</div>

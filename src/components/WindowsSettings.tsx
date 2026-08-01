@@ -98,7 +98,18 @@ export default function WindowsSettings() {
   const [applyingAdvanced, setApplyingAdvanced] = useState(false);
   const [advancedResult, setAdvancedResult] = useState<string | null>(null);
 
-  const [advancedOpts, setAdvancedOpts] = useState({
+  type AdvancedOpts = {
+    createRestorePoint: boolean;
+    disableHpet: boolean;
+    disableNetworkThrottling: boolean;
+    purgeStandbyRam: boolean;
+    disableBackgroundApps: boolean;
+    disableDeliveryOptimization: boolean;
+    enableGameMode: boolean;
+    disableStartupDelay: boolean;
+  };
+
+  const [advancedOpts, setAdvancedOpts] = useState<AdvancedOpts>({
     createRestorePoint: true,
     disableHpet: true,
     disableNetworkThrottling: true,
@@ -119,13 +130,14 @@ export default function WindowsSettings() {
         if (res && res.success) {
           setAdvancedResult("Đã áp dụng toàn bộ các cấu hình tối ưu nâng cao thành công!");
           const appliedList: string[] = [];
-          if (advancedOpts.disablePrintSpooler) appliedList.push("Tắt Dịch Vụ Máy In (Print Spooler)");
-          if (advancedOpts.disableSysMain) appliedList.push("Tắt Superfetch/SysMain");
-          if (advancedOpts.disableTelemetry) appliedList.push("Tắt Telemetry & Báo cáo lỗi");
-          if (advancedOpts.disableSearchIndexing) appliedList.push("Tắt Windows Search Indexing");
-          if (advancedOpts.disableWidgets) appliedList.push("Tắt Widgets & News Feeds");
-          if (advancedOpts.optimizeNetwork) appliedList.push("Tối ưu NetworkThrottlingIndex");
-          if (advancedOpts.purgeRam) appliedList.push("Giải phóng RAM WorkingSet Process");
+          if (advancedOpts.createRestorePoint) appliedList.push("Tạo điểm khôi phục hệ thống");
+          if (advancedOpts.disableHpet) appliedList.push("Tắt HPET & Dynamic Tick");
+          if (advancedOpts.disableNetworkThrottling) appliedList.push("Tắt Network Throttling");
+          if (advancedOpts.purgeStandbyRam) appliedList.push("Dọn dẹp Standby RAM");
+          if (advancedOpts.disableBackgroundApps) appliedList.push("Chặn Background Apps");
+          if (advancedOpts.disableDeliveryOptimization) appliedList.push("Tắt Delivery Optimization");
+          if (advancedOpts.enableGameMode) appliedList.push("Kích hoạt Game Mode");
+          if (advancedOpts.disableStartupDelay) appliedList.push("Bỏ thời gian chờ khởi động ứng dụng");
           updateSessionReport({ windowsOptimizations: appliedList });
         } else {
           setAdvancedResult("Lỗi khi áp dụng: " + (res?.error || "Không xác định"));
@@ -758,7 +770,7 @@ export default function WindowsSettings() {
                     <Info className="h-4 w-4 shrink-0 mt-0.5 text-fuchsia-600" />
                     <div>
                       <strong className="block mb-0.5">Sơ đồ ẩn Ultimate Performance:</strong>
-                      Kịch bản sẽ tự động mở khóa (unhide) sơ đồ này trên máy thật bằng GUID gốc của Microsoft.
+                      Nếu máy hỗ trợ, chế độ này sẽ được mở khóa bằng GUID Power Plan chính thức của Windows.
                     </div>
                   </div>
                 )}

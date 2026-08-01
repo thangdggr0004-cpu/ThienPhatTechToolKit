@@ -1,7 +1,7 @@
 {
   "name": "thienphat-techtoolkit",
   "private": true,
-  "version": "1.4.3",
+  "version": "1.4.5",
   "description": "Thien Phat Tech Toolkit Pro",
   "type": "module",
   "main": "electron.cjs",
@@ -9,17 +9,15 @@
     "dev": "vite --port=3000 --strictPort --host=127.0.0.1",
     "build": "vite build",
     "preview": "vite preview",
-    "clean": "rm -rf dist server.js dist-electron",
+    "clean": "npx rimraf dist dist-electron dist-release server.js",
     "lint": "tsc --noEmit",
     "test": "npx tsx src/tests/runTests.ts",
     "electron:dev": "concurrently -k \"npm run dev\" \"wait-on http://127.0.0.1:3000 && electron .\"",
     "electron:build": "npm run build && electron-builder",
+    "build:portable": "npm run build && electron-builder --win portable",
     "dist": "npm run electron:build"
   },
   "dependencies": {
-    "@google/genai": "^2.12.0",
-    "dotenv": "^17.2.3",
-    "express": "^4.21.2",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "react": "^19.0.1",
@@ -27,7 +25,6 @@
     "systeminformation": "^5.23.2"
   },
   "devDependencies": {
-    "@types/express": "^4.17.21",
     "@types/node": "^20.11.0",
     "autoprefixer": "^10.4.21",
     "concurrently": "^8.2.2",
@@ -36,6 +33,8 @@
     "esbuild": "^0.20.2",
     "rimraf": "^4.0.0",
     "tailwindcss": "^4.1.14",
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/plugin-react": "^4.3.1",
     "tsx": "^4.21.0",
     "typescript": "5.8.2",
     "vite": "^6.2.3",
@@ -44,15 +43,15 @@
   "build": {
     "appId": "com.thienphat.techtoolkit",
     "productName": "PCCareMasterPro",
-    "compression": "normal",
+    "compression": "store",
     "directories": {
       "output": "dist-release"
     },
     "files": [
       "dist/**/*",
-      "src/**/*.cjs",
-      "*.cjs",
-      "MAS_AIO.cmd"
+      "src/collectors/**/*",
+      "src/scripts/**/*",
+      "*.cjs"
     ],
     "extraResources": [
       "elevate.exe",
@@ -61,7 +60,7 @@
     "portable": {
       "artifactName": "PCCareMasterPro ${version}-Portable.exe",
       "requestExecutionLevel": "admin",
-      "unpackDirName": "PCCareMasterCache"
+      "unpackDirName": "PCCareMasterCacheV143"
     },
     "win": {
       "target": [
@@ -69,7 +68,9 @@
         "zip"
       ],
       "icon": "build/icon.png",
-      "requestedExecutionLevel": "requireAdministrator"
+      "requestedExecutionLevel": "requireAdministrator",
+      "certificateFile": "ThienPhatTech.pfx",
+      "certificatePassword": "ThienPhat2026"
     },
     "publish": {
       "provider": "github",
@@ -84,7 +85,6 @@
     }
   },
   "allowScripts": {
-    "@google/genai@2.12.0": true,
     "electron@28.3.3": true,
     "esbuild@0.28.1": true,
     "esbuild@0.25.12": true,

@@ -2476,7 +2476,13 @@ Write-Output "OK"
         $state.thisPc = (Get-RegDWord 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced' 'LaunchTo' 2) -eq 1
         $state.classicMenu = (Test-Path 'HKCU:\\Software\\Classes\\CLSID\\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\\InprocServer32')
         $state.photoViewer = (Test-Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows Photo Viewer\\Capabilities\\FileAssociations')
-        $state.hideTaskbarIcons = $false # Defaulting false for now
+        $state.hideTaskbarIcons = (Get-RegDWord 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer' 'EnableAutoTray' 0) -eq 1
+        try {
+            $languages = Get-WinUserLanguageList -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LanguageTag
+            $state.removeLangs = ($languages -contains 'en-US' -and $languages -contains 'vi' -and $languages.Count -le 2)
+        } catch {
+            $state.removeLangs = $false
+        }
         $state.disableAutoBrightness = (Get-RegDWord 'HKLM:\\SOFTWARE\\Intel\\Display\\igfxcui\\powersettings' 'FeatureTestControl' 0) -ne 0
         $state.removeLangs = $false
 
@@ -3475,7 +3481,9 @@ public class WinRamCleaner {
           latestVersion = relData.tag_name ? relData.tag_name.replace(/^v/, '') : null;
           releaseNotes = relData.body || '';
           if (relData.assets && relData.assets.length > 0) {
-            const exeAsset = relData.assets.find(a => a.name && a.name.endsWith('.exe')) || relData.assets[0];
+            const exeAsset = relData.assets.find(a => a.name && /portable/i.test(a.name) && a.name.endsWith('.exe'))
+              || relData.assets.find(a => a.name && a.name.endsWith('.exe'))
+              || relData.assets[0];
             downloadUrl = exeAsset.browser_download_url;
           }
         }
@@ -3490,11 +3498,10 @@ public class WinRamCleaner {
         if (response.ok) {
           const data = await response.json();
           latestVersion = data.version;
-          downloadUrl = data.downloadUrl;
+          downloadUrl = data.portableDownloadUrl || data.downloadUrl;
           if (!releaseNotes) releaseNotes = data.releaseNotes;
         }
       }
-
       const hasUpdate = latestVersion && latestVersion !== currentVersion && downloadUrl;
       
       if (hasUpdate) {

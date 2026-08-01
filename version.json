@@ -1,5 +1,6 @@
 {
-  "version": "1.4.2",
-  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/download/v1.4.2/PCCareMasterPro.1.4.2.exe",
-  "releaseNotes": "BIG UPDATE v1.4.2 - PC CARE MASTER PRO:\n- Đổi tên thương hiệu chính thức thành PC Care Master Pro.\n- Sửa triệt để lỗi thiếu module đóng gói Office Collectors (LicenseCollector, SPPCollector, AuthenticodeCollector,...).\n- Tên file tải về tự động lưu chuẩn 'PCCareMasterPro 1.4.2.exe'.\n- Nâng cấp Tiện Ích Máy In Epson: Quét real-time cổng USB, tự động dọn sạch Spooler kẹt & quy trình reset 3 pha.\n- Chuẩn hóa Thiết Lập Windows: Tích chọn = TẮT dịch vụ ngầm. Dịch vụ máy in mặc định BẬT kèm cảnh báo đỏ.\n- Tối ưu RAM thực sự bằng Win32 API C# EmptyWorkingSet.\n- Tích hợp 100% script tối ưu nâng cao và dọn rác giao diện mới."
+  "version": "1.4.5",
+  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/download/v1.4.5/PCCareMasterPro 1.4.5-Portable.exe",
+  "portableDownloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/download/v1.4.5/PCCareMasterPro 1.4.5-Portable.exe",
+  "releaseNotes": "BIG UPDATE v1.4.5 - PC CARE MASTER PRO:\n- Cập nhật portable 1.4.5 với file ký số sẵn, tăng tốc khởi động cho bản portable.\n- Đồng bộ version.json để tool cũ có thể tự kiểm tra và tải về bản mới.\n- Ưu tiên tự động cập nhật bản Portable nếu có trong GitHub Release.\n- Sửa lỗi Windows Settings đọc trạng thái tối ưu hóa và báo đúng.\n- Cải thiện nhãn Tiện ích Máy In, tránh hiểu nhầm tự động dọn đầu in.\n- Loại bỏ file frontend không dùng `AppSettings.tsx` và tinh gọn gói runtime.\n"
 }
