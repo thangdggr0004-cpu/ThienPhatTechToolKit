@@ -65,6 +65,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   rebuildIconCache:           ()        => ipcRenderer.invoke('rebuild-icon-cache'),
   applyAdvancedOptimization:  (opts)    => ipcRenderer.invoke('apply-advanced-optimization', opts),
   restoreAdvancedOptimization:()        => ipcRenderer.invoke('restore-advanced-optimization'),
+  restartExplorer:            ()        => ipcRenderer.invoke('restart-explorer'),
+  restartComputer:            ()        => ipcRenderer.invoke('restart-computer'),
+  createSystemRestorePoint:   (desc)    => ipcRenderer.invoke('create-system-restore-point', desc),
+  backupRegistryKeys:         ()        => ipcRenderer.invoke('backup-registry-keys'),
 
   // ─── Security ─────────────────────────────────────────────────────
   getDefenderStatus:    ()        => ipcRenderer.invoke('get-defender-status'),
