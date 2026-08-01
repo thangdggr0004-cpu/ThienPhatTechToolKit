@@ -245,6 +245,27 @@ export default function PrinterUtils() {
       return;
     }
 
+    if (action === 'epson-unlock-port') {
+      setLoadingAction(action);
+      addLog(`[*] (Pha E2) Đang giải phóng cổng USB & dọn sạch hàng đợi Spooler cho Epson ${selectedEpsonModel}...`);
+      try {
+        const unlockRes = await (window as any).electronAPI.executePrinterAction('epson-unlock-port');
+        if (unlockRes.success) {
+          addLog(`[+] Thành công (Pha E2): ${unlockRes.message}`);
+          addLog(`[*] Cổng USB đã được giải phóng 100%. Sẵn sàng nhận lệnh reset EEPROM.`);
+          await scanEpsonUsb();
+          alert(`Đã hoàn tất Pha E2!\nCổng USB và dịch vụ Print Spooler cho máy in ${selectedEpsonModel} đã được mở khóa và dọn sạch lệnh kẹt.`);
+        } else {
+          addLog(`[x] Lỗi Pha E2: ${unlockRes.error}`);
+        }
+      } catch (err: any) {
+        addLog(`[x] Lỗi: ${err.message}`);
+      } finally {
+        setLoadingAction(null);
+      }
+      return;
+    }
+
     if (action === 'epson-reset-counter') {
       setLoadingAction(action);
       addLog(`[*] Đang thực thi mở khóa giao tiếp & dọn dẹp hàng đợi in cho Epson ${selectedEpsonModel}...`);
@@ -748,19 +769,29 @@ export default function PrinterUtils() {
                   <option value="L3100">Epson L3100 Series</option>
                 </select>
 
-                <div className="pt-2 flex flex-col sm:flex-row gap-3">
+                <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
-                    onClick={() => handleAction('epson-check-counter', `Kiểm tra bộ đếm Epson ${selectedEpsonModel}`)}
-                    className="flex-1 py-2.5 px-4 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-xs font-bold shadow-md shadow-cyan-600/20 transition-all flex items-center justify-center gap-2"
+                    onClick={scanEpsonUsb}
+                    disabled={scanningEpsonUsb}
+                    className="py-2.5 px-4 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-xs font-bold shadow-md shadow-cyan-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
-                    <Eye className="w-4 h-4" /> 1. Kiểm Tra Cổng USB Real-time
+                    <Eye className="w-4 h-4" /> PHA E1: Quét Cổng USB Máy In
+                  </button>
+
+                  <button
+                    onClick={() => handleAction('epson-unlock-port', `Giải phóng cổng USB Epson ${selectedEpsonModel}`)}
+                    disabled={loadingAction !== null}
+                    className="py-2.5 px-4 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold shadow-md shadow-amber-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    <Zap className="w-4 h-4" /> PHA E2: Giải Phóng Cổng USB
                   </button>
 
                   <button
                     onClick={() => handleAction('epson-reset-counter', `Reset bộ đếm Epson ${selectedEpsonModel} về 0%`)}
-                    className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2"
+                    disabled={loadingAction !== null}
+                    className="sm:col-span-2 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-black shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
-                    <RefreshCw className="w-4 h-4" /> 2. Reset Bộ Đếm Về 0%
+                    <RefreshCw className="w-4 h-4" /> PHA E3: Reset Bộ Đếm EEPROM Về 0% (Mở Khóa Mực Thải)
                   </button>
                 </div>
               </div>

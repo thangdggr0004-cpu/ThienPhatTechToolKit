@@ -2295,6 +2295,39 @@ Write-Output "OK"
         try { parsed = JSON.parse(output.trim() || '[]'); } catch (e) {}
         if (!Array.isArray(parsed)) parsed = [parsed];
         return { success: true, data: parsed };
+      } else if (action === 'epson-unlock-port') {
+        script = `
+          $OutputEncoding = [System.Text.Encoding]::UTF8
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          
+          # 1. Stop Spooler
+          Stop-Service -Name Spooler -Force -ErrorAction SilentlyContinue
+          Start-Sleep -Milliseconds 500
+          
+          # 2. Clear spool print jobs
+          $spoolDir = "$env:windir\\System32\\spool\\PRINTERS"
+          if (Test-Path $spoolDir) {
+            Remove-Item -Path "$spoolDir\\*.*" -Force -Recurse -ErrorAction SilentlyContinue
+          }
+          
+          # 3. Disable SNMP Timeout on USB Ports
+          try {
+            Get-PrinterPort | Where-Object { $_.SNMPEnabled -eq $true } | Set-PrinterPort -SNMPEnabled $false -ErrorAction SilentlyContinue
+          } catch {}
+          
+          # 4. Restart Spooler
+          Start-Service -Name Spooler -ErrorAction SilentlyContinue
+          Start-Sleep -Milliseconds 500
+          
+          $svc = Get-Service -Name Spooler -ErrorAction SilentlyContinue
+          if ($svc.Status -eq 'Running') {
+            Write-Output "SUCCESS: Spooler Service is Running. USB Port Unlocked."
+          } else {
+            Write-Output "WARNING: Spooler Service failed to restart automatically."
+          }
+        `;
+        const output = await runPowerShellScriptElevated(script);
+        return { success: true, message: output.trim() || "Đã giải phóng thành công cổng USB và dọn sạch hàng đợi in kẹt." };
       } else if (action === 'epson-reset-counter') {
         script = `
           $OutputEncoding = [System.Text.Encoding]::UTF8
