@@ -207,7 +207,7 @@ export default function BackupManager() {
               className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-xs font-semibold transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed border border-slate-200"
             >
               {wifiLoading ? <Spinner /> : <Search className="h-3.5 w-3.5" />}
-              {wifiLoading ? '�?ang quét...' : 'Quét WiFi đã lưu'}
+              {wifiLoading ? 'Đang quét...' : 'Quét WiFi đã lưu'}
             </button>
             <button
               onClick={handleExportWifi}
@@ -215,7 +215,7 @@ export default function BackupManager() {
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-md text-xs font-semibold transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
             >
               {wifiExporting ? <Spinner /> : <Download className="h-3.5 w-3.5" />}
-              {wifiExporting ? '�?ang sao lưu...' : 'Sao lưu WiFi'}
+              {wifiExporting ? 'Đang sao lưu...' : 'Sao lưu WiFi'}
             </button>
             <button
               onClick={handleRestoreWifi}
@@ -223,7 +223,7 @@ export default function BackupManager() {
               className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-xs font-semibold transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
             >
               {wifiRestoring ? <Spinner /> : <Upload className="h-3.5 w-3.5" />}
-              {wifiRestoring ? '�?ang phục hồi...' : 'Phục hồi WiFi'}
+              {wifiRestoring ? 'Đang phục hồi...' : 'Phục hồi WiFi'}
             </button>
           </div>
 
@@ -291,7 +291,7 @@ export default function BackupManager() {
             <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
             <div>
               <span className="font-bold block">Lưu ý:</span>
-              <span>Quá trình sao lưu driver có thể mất vài phút và file backup có thể nặng vài trăm MB tùy số lượng driver đã cài. Windows 10/11 thư�?ng tự tải driver qua Windows Update — tính năng này hữu ích nhất khi máy không có mạng sau khi cài lại.</span>
+              <span>Quá trình sao lưu driver có thể mất vài phút và file backup có thể nặng vài trăm MB tùy số lượng driver đã cài. Windows 10/11 thường tự tải driver qua Windows Update — tính năng này hữu ích nhất khi máy không có mạng sau khi cài lại.</span>
             </div>
           </div>
 
@@ -303,7 +303,7 @@ export default function BackupManager() {
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-md text-xs font-semibold transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
             >
               {driverExporting ? <Spinner /> : <Download className="h-3.5 w-3.5" />}
-              {driverExporting ? '�?ang sao lưu driver...' : 'Sao lưu Driver'}
+              {driverExporting ? 'Đang sao lưu driver...' : 'Sao lưu Driver'}
             </button>
             <button
               onClick={handleRestoreDrivers}
@@ -311,14 +311,14 @@ export default function BackupManager() {
               className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-xs font-semibold transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
             >
               {driverRestoring ? <Spinner /> : <Upload className="h-3.5 w-3.5" />}
-              {driverRestoring ? '�?ang phục hồi (Admin)...' : 'Phục hồi Driver (Admin)'}
+              {driverRestoring ? 'Đang phục hồi (Admin)...' : 'Phục hồi Driver (Admin)'}
             </button>
           </div>
 
           {/* Info about driver restore */}
           <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-600 flex items-start gap-2">
             <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5 text-blue-500" />
-            <span>Phục hồi driver yêu cầu quy�?n <strong>Administrator</strong>. Sau khi phục hồi, khuyến nghị khởi động lại máy tính để driver hoạt động đầy đủ.</span>
+            <span>Phục hồi driver yêu cầu quyền <strong>Administrator</strong>. Sau khi phục hồi, khuyến nghị khởi động lại máy tính để driver hoạt động đầy đủ.</span>
           </div>
         </div>
       </div>
