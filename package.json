@@ -1,7 +1,7 @@
 {
   "name": "thienphat-techtoolkit",
   "private": true,
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Thien Phat Tech Toolkit Pro",
   "type": "module",
   "main": "electron.cjs",
@@ -13,14 +13,14 @@
     "lint": "tsc --noEmit",
     "test": "npx tsx src/tests/runTests.ts",
     "electron:dev": "concurrently -k \"npm run dev\" \"wait-on http://127.0.0.1:3000 && electron .\"",
-    "electron:build": "npm run build && electron-builder"
+    "electron:build": "npm run build && electron-builder",
+    "dist": "npm run electron:build"
   },
   "dependencies": {
     "@google/genai": "^2.12.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
     "dotenv": "^17.2.3",
-    "electron": "^28.3.3",
     "express": "^4.21.2",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
@@ -28,7 +28,6 @@
     "react-dom": "^19.0.1",
     "systeminformation": "^5.23.2",
     "vite": "^6.2.3",
-    "electron-builder": "^24.13.3",
     "esbuild": "^0.20.2"
   },
   "devDependencies": {
@@ -36,6 +35,7 @@
     "@types/node": "^20.11.0",
     "autoprefixer": "^10.4.21",
     "concurrently": "^8.2.2",
+    "electron": "^28.3.3",
     "electron-builder": "^24.13.3",
     "esbuild": "^0.20.2",
     "rimraf": "^4.0.0",
