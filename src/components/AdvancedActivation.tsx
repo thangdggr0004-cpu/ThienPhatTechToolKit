@@ -3,18 +3,18 @@ import { KeyRound, ShieldCheck, RefreshCw, Terminal, CheckCircle2, AlertTriangle
 
 export default function AdvancedActivation() {
   const [logs, setLogs] = useState<string[]>([]);
-  const [running, setRunning] = useState<boolean>(false);
+  const [activeAction, setActiveAction] = useState<string | null>(null);
   const [lastStatus, setLastStatus] = useState<string | null>(null);
 
   const handleAction = async (mode: string, title: string) => {
     const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
     
-    if (running) return;
+    if (activeAction !== null) return;
 
     const confirm = window.confirm(`Bạn có chắc chắn muốn thực hiện: "${title}"?`);
     if (!confirm) return;
 
-    setRunning(true);
+    setActiveAction(mode);
     setLastStatus(null);
     setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] Bắt đầu thực thi: ${title}...`]);
 
@@ -38,13 +38,13 @@ export default function AdvancedActivation() {
         setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] LỖI: ${err.message}`]);
         setLastStatus('LỖI');
       } finally {
-        setRunning(false);
+        setActiveAction(null);
       }
     } else {
       setTimeout(() => {
         setLogs(prev => [...prev, `[MÔ PHỎNG] ${title} thành công!`]);
         setLastStatus('THÀNH CÔNG (MÔ PHỎNG)');
-        setRunning(false);
+        setActiveAction(null);
       }, 1500);
     }
   };
@@ -89,10 +89,10 @@ export default function AdvancedActivation() {
           </div>
           <button
             onClick={() => handleAction('hwid', 'Kích hoạt Windows HWID Vĩnh viễn')}
-            disabled={running}
+            disabled={activeAction !== null}
             className="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
           >
-            {running ? (
+            {activeAction === 'hwid' ? (
               <>
                 <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                 Đang tải & xử lý...
@@ -120,10 +120,10 @@ export default function AdvancedActivation() {
           </div>
           <button
             onClick={() => handleAction('ohook', 'Kích hoạt Office Ohook Vĩnh viễn')}
-            disabled={running}
+            disabled={activeAction !== null}
             className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
           >
-            {running ? (
+            {activeAction === 'ohook' ? (
               <>
                 <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                 Đang tải & xử lý...
@@ -151,10 +151,10 @@ export default function AdvancedActivation() {
           </div>
           <button
             onClick={() => handleAction('kms38', 'Kích hoạt Windows KMS38')}
-            disabled={running}
+            disabled={activeAction !== null}
             className="w-full py-2 px-3 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white rounded text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
           >
-            {running ? (
+            {activeAction === 'kms38' ? (
               <>
                 <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                 Đang tải & xử lý...
@@ -182,10 +182,10 @@ export default function AdvancedActivation() {
           </div>
           <button
             onClick={() => handleAction('aio_menu', 'Mở Menu MAS AIO')}
-            disabled={running}
+            disabled={activeAction !== null}
             className="w-full py-2 px-3 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
           >
-            {running ? (
+            {activeAction === 'aio_menu' ? (
               <>
                 <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                 Đang tải & xử lý...
@@ -212,12 +212,21 @@ export default function AdvancedActivation() {
             </p>
           </div>
           <button
-            onClick={() => handleAction('clean', 'Gỡ bỏ bản quyền KMS lậu & Reset')}
-            disabled={running}
+            onClick={() => handleAction('clean', 'Gỡ Bỏ Key & Reset Gốc')}
+            disabled={activeAction !== null}
             className="w-full py-2 px-3 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
           >
-            {running ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-            Gỡ Bỏ Key &amp; Reset
+            {activeAction === 'clean' ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                Đang tải & xử lý...
+              </>
+            ) : (
+              <>
+                <Trash2 className="w-3.5 h-3.5" />
+                Gỡ Bỏ Key &amp; Reset
+              </>
+            )}
           </button>
         </div>
       </div>

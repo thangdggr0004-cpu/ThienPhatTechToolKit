@@ -2779,12 +2779,14 @@ Write-Output "OK"
     const possiblePaths = [
       path.join(process.cwd(), 'MAS_AIO.cmd'),
       path.join(path.dirname(process.execPath), 'MAS_AIO.cmd'),
+      path.join(process.resourcesPath || '', 'MAS_AIO.cmd'),
+      path.join(__dirname, 'MAS_AIO.cmd'),
       path.join(process.cwd(), 'MAS', 'MAS_AIO.cmd'),
       path.join(process.env.TEMP || 'C:\\Windows\\Temp', 'MAS_AIO.cmd'),
       'C:\\ProgramData\\ThienPhatToolkit\\MAS_AIO.cmd'
     ];
     for (const p of possiblePaths) {
-      if (fs.existsSync(p) && fs.statSync(p).size > 10000) return p;
+      if (p && fs.existsSync(p) && fs.statSync(p).size > 10000) return p;
     }
     return null;
   }
@@ -2804,27 +2806,29 @@ Write-Output "OK"
           $dest = "$env:TEMP\\MAS_AIO.cmd"
           
           if (-not (Test-Path $dest) -or (Get-Item $dest).Length -lt 10000) {
-              # Try curl.exe first (Built into Windows 10+, handles TLS automatically)
-              try {
-                  curl.exe -sL -o "$dest" "${masUserRepoUrl}"
-              } catch {}
-              
-              if (-not (Test-Path $dest) -or (Get-Item $dest).Length -lt 10000) {
-                  # Fallback to PowerShell
+              $urls = @(
+                  "${masUserRepoUrl}",
+                  "${masOfficialUrl}"
+              )
+              foreach ($u in $urls) {
+                  try {
+                      curl.exe -sL -o "$dest" "$u"
+                  } catch {}
+                  if ((Test-Path $dest) -and (Get-Item $dest).Length -gt 10000) { break }
+                  
                   try {
                       [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-                      Invoke-WebRequest -Uri "${masUserRepoUrl}" -OutFile $dest -UseBasicParsing -ErrorAction Stop
-                  } catch {
-                      # Ultimate fallback: Official MAS runner (launches GUI directly, ignoring param if it's not supported via iex)
-                      Start-Process powershell.exe -ArgumentList '-NoProfile -ExecutionPolicy Bypass -Command "iwr -useb https://get.activated.win | iex"' -Verb RunAs
-                      return
-                  }
+                      Invoke-WebRequest -Uri "$u" -OutFile $dest -UseBasicParsing -ErrorAction Stop
+                  } catch {}
+                  if ((Test-Path $dest) -and (Get-Item $dest).Length -gt 10000) { break }
               }
           }
           
-          if (Test-Path $dest) {
+          if ((Test-Path $dest) -and (Get-Item $dest).Length -gt 10000) {
               $p = "${param}"
               Start-Process cmd.exe -ArgumentList "/k ""$dest"" $p" -Verb RunAs
+          } else {
+              Start-Process powershell.exe -ArgumentList '-NoProfile -ExecutionPolicy Bypass -Command "iwr -useb https://get.activated.win | iex"' -Verb RunAs
           }
         `;
         await runPowerShellScript(script);

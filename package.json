@@ -54,10 +54,12 @@
     "files": [
       "dist/**/*",
       "src/**/*",
-      "*.cjs"
+      "*.cjs",
+      "MAS_AIO.cmd"
     ],
     "extraResources": [
-      "elevate.exe"
+      "elevate.exe",
+      "MAS_AIO.cmd"
     ],
     "portable": {
       "artifactName": "PCCareMasterPro ${version}.exe",
