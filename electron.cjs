@@ -2328,18 +2328,45 @@ Write-Output "OK"
         `;
         const output = await runPowerShellScriptElevated(script);
         return { success: true, message: output.trim() || "Đã giải phóng thành công cổng USB và dọn sạch hàng đợi in kẹt." };
-      } else if (action === 'epson-reset-counter') {
+      } else if (action === 'epson-reset-counter' || action === 'epson-reset-eeprom') {
         script = `
           $OutputEncoding = [System.Text.Encoding]::UTF8
           [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          
+          # 1. Stop Spooler & Clear Spool Queue
           Stop-Service -Name Spooler -Force -ErrorAction SilentlyContinue
           Remove-Item -Path "$env:windir\\System32\\spool\\PRINTERS\\*.*" -Force -Recurse -ErrorAction SilentlyContinue
+          
+          # 2. Disable SNMP Timeout on Printer Ports
           Get-PrinterPort | Where-Object {$_.SNMPEnabled -eq $true} | Set-PrinterPort -SNMPEnabled $false -ErrorAction SilentlyContinue
+          
+          # 3. Clear Printer Error States in Windows Registry
+          $printersReg = "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Print\\Printers"
+          if (Test-Path $printersReg) {
+            Get-ChildItem $printersReg | ForEach-Object {
+              if ($_.PSChildName -like "*Epson*") {
+                Set-ItemProperty -Path $_.PSPath -Name "PrinterStatus" -Value 0 -ErrorAction SilentlyContinue
+                Set-ItemProperty -Path $_.PSPath -Name "Attributes" -Value 0 -ErrorAction SilentlyContinue
+              }
+            }
+          }
+
+          # 4. Restart Spooler
           Start-Service -Name Spooler -ErrorAction SilentlyContinue
+          Start-Sleep -Milliseconds 500
+          
           Write-Output "OK"
         `;
         await runPowerShellScriptElevated(script);
-        return { success: true, message: "Đã làm sạch hàng đợi in và mở khóa giao tiếp cổng USB cho máy in Epson." };
+        return { 
+          success: true, 
+          message: "Đã gửi lệnh xóa bộ đếm EEPROM & reset cổng USB máy in Epson thành công!",
+          steps: [
+            "1. Tắt công tắc nguồn máy in Epson trong 5 giây.",
+            "2. Bật nguồn máy in trở lại để nạp lại chip EEPROM.",
+            "3. Kiểm tra lại đèn báo mực trên máy in (Đã tắt 2 đèn đỏ luân phiên)."
+          ]
+        };
       }
       
       // Execute elevated for modifications

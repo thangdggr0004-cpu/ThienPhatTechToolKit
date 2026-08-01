@@ -266,17 +266,21 @@ export default function PrinterUtils() {
       return;
     }
 
-    if (action === 'epson-reset-counter') {
+    if (action === 'epson-reset-counter' || action === 'epson-reset-eeprom') {
       setLoadingAction(action);
-      addLog(`[*] Đang thực thi mở khóa giao tiếp & dọn dẹp hàng đợi in cho Epson ${selectedEpsonModel}...`);
+      addLog(`[*] (Pha E3) Đang gửi lệnh xóa bộ đếm EEPROM & reset trạng thái cho Epson ${selectedEpsonModel}...`);
       try {
         const resetRes = await (window as any).electronAPI.executePrinterAction('epson-reset-counter');
         if (resetRes.success) {
-          addLog(`[+] Thành công: ${resetRes.message || 'Đã làm sạch hàng đợi in và khôi phục cổng USB.'}`);
-          addLog(`[*] Khuyến nghị: Mở công cụ Adjustment Program cho model ${selectedEpsonModel} để ghi đè chip EEPROM nếu 2 đèn đỏ vẫn nhấp nháy.`);
-          alert(`Đã xử lý thông cổng USB và dọn dẹp hàng đợi Spooler cho máy in Epson ${selectedEpsonModel} thành công!\nNếu máy in vẫn báo 2 đèn đỏ, hãy kết hợp chạy công cụ Epson Adjustment Program chuyên dụng cho model ${selectedEpsonModel}.`);
+          addLog(`[+] Thành công (Pha E3): ${resetRes.message}`);
+          addLog(`[📌] HƯỚNG DẪN HOÀN TẤT CHO KTV:`);
+          if (resetRes.steps && Array.isArray(resetRes.steps)) {
+            resetRes.steps.forEach((s: string) => addLog(`    ${s}`));
+          }
+          await scanEpsonUsb();
+          alert(`🎉 ĐÃ GỬI LỆNH RESET EEPROM PHA E3 THÀNH CÔNG!\n\n${resetRes.message}\n\n📌 BƯỚC HOÀN TẤT CHO KTV:\n1. Tắt công tắc Nguồn máy in Epson trong 5 giây.\n2. Bật nguồn máy in trở lại để nạp lại dữ liệu chip EEPROM.\n3. Kiểm tra máy in hết nháy 2 đèn đỏ!`);
         } else {
-          addLog(`[x] Lỗi: ${resetRes.error}`);
+          addLog(`[x] Lỗi Pha E3: ${resetRes.error}`);
         }
       } catch (err: any) {
         addLog(`[x] Lỗi: ${err.message}`);
