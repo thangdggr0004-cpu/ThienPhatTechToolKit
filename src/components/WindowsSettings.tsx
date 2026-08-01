@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Shield, Zap, Battery, Play, Download, CheckCircle, Info, Activity, Settings, RefreshCw, AlertTriangle, Monitor, HardDrive, Cpu, Terminal, Wrench, X } from 'lucide-react';
 import ProgressBarComponent from './ProgressBarComponent.js';
 import { useTaskManager } from '../context/TaskManagerContext.js';
+import { updateSessionReport } from '../utils/SessionAuditStore.js';
 
 type PowerModeType = 'battery' | 'balanced' | 'gaming' | 'performance' | 'ultimate';
 
@@ -117,6 +118,15 @@ export default function WindowsSettings() {
         const res = await (window as any).electronAPI.applyAdvancedOptimization(advancedOpts);
         if (res && res.success) {
           setAdvancedResult("Đã áp dụng toàn bộ các cấu hình tối ưu nâng cao thành công!");
+          const appliedList: string[] = [];
+          if (advancedOpts.disablePrintSpooler) appliedList.push("Tắt Dịch Vụ Máy In (Print Spooler)");
+          if (advancedOpts.disableSysMain) appliedList.push("Tắt Superfetch/SysMain");
+          if (advancedOpts.disableTelemetry) appliedList.push("Tắt Telemetry & Báo cáo lỗi");
+          if (advancedOpts.disableSearchIndexing) appliedList.push("Tắt Windows Search Indexing");
+          if (advancedOpts.disableWidgets) appliedList.push("Tắt Widgets & News Feeds");
+          if (advancedOpts.optimizeNetwork) appliedList.push("Tối ưu NetworkThrottlingIndex");
+          if (advancedOpts.purgeRam) appliedList.push("Giải phóng RAM WorkingSet Process");
+          updateSessionReport({ windowsOptimizations: appliedList });
         } else {
           setAdvancedResult("Lỗi khi áp dụng: " + (res?.error || "Không xác định"));
         }

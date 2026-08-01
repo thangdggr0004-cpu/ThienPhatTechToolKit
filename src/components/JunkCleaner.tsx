@@ -4,6 +4,7 @@ import { JunkCategory } from '../types.js';
 import { generateJunkCleanerScript, downloadFile } from '../utils/scriptGenerator.js';
 import ProgressBarComponent from './ProgressBarComponent.js';
 import { useTaskManager } from '../context/TaskManagerContext.js';
+import { updateSessionReport, getSessionReport } from '../utils/SessionAuditStore.js';
 
 const initialJunkCategories: JunkCategory[] = [
   {
@@ -186,6 +187,13 @@ export default function JunkCleaner() {
       setCleanProgress(100);
       setTotalReclaimed(mb);
       completeTask('junk-cleaner', `Đã dọn dẹp thành công ${mb} MB rác hệ thống!`);
+      const current = getSessionReport();
+      const prevMB = current.junkCleanedMB || 0;
+      const catNames = categories.filter(c => c.checked).map(c => c.name);
+      updateSessionReport({
+        junkCleanedMB: prevMB + mb,
+        junkCleanedCategories: Array.from(new Set([...(current.junkCleanedCategories || []), ...catNames]))
+      });
       setTimeout(() => {
         setCleaning(false);
         setCleaned(true);
