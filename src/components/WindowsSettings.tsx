@@ -315,6 +315,9 @@ export default function WindowsSettings() {
     setApplyingSection(type);
     setIsApplyingSettings(true);
     try {
+      // Phase 1 Safety: Auto backup Registry before tweak
+      try { await (window as any).electronAPI.backupRegistryKeys(); } catch (e) {}
+
       let res;
       let sectionName = '';
       if (type === 'system') {

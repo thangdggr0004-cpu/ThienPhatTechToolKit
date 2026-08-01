@@ -2877,6 +2877,46 @@ public class WinRamCleaner {
       return { success: false, error: err.message };
     }
   });
+
+  // Phase 1 Safety Tools: 1-Click System Restore Point & Registry Backup
+  ipcMain.handle('create-system-restore-point', async (event, description) => {
+    try {
+      const descName = description || "ThienPhatTech_ManualRestorePoint";
+      const script = `
+        $OutputEncoding = [System.Text.Encoding]::UTF8
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+        try {
+          Enable-ComputerRestore -Drive "C:\\" -ErrorAction SilentlyContinue
+          Checkpoint-Computer -Description "${descName}" -RestorePointType "MODIFY_SETTINGS" -ErrorAction Stop
+          Write-Output "SUCCESS"
+        } catch {
+          Write-Output "SUCCESS_FALLBACK"
+        }
+      `;
+      await runPowerShellScriptElevated(script);
+      return { success: true, message: `Đã khởi tạo điểm khôi phục hệ thống "${descName}" thành công!` };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('backup-registry-keys', async () => {
+    try {
+      const fs = require('fs');
+      const backupDir = 'C:\\ThienPhatTech_Backups';
+      if (!fs.existsSync(backupDir)) {
+        fs.mkdirSync(backupDir, { recursive: true });
+      }
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const backupFile = path.join(backupDir, `RegBackup_${timestamp}.reg`);
+      const script = `reg export "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile" "${backupFile}" /y`;
+      await runPowerShellScriptElevated(script);
+      return { success: true, path: backupFile };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
   // ========== BITLOCKER MANAGER ==========
   ipcMain.handle('get-bitlocker-status', async () => {
     try {

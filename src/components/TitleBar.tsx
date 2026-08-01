@@ -1,9 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { Minus, Square, X, Cpu, MemoryStick } from 'lucide-react';
+import { Minus, Square, X, Cpu, MemoryStick, Shield } from 'lucide-react';
 
 export default function TitleBar() {
   const [isHoverClose, setIsHoverClose] = useState(false);
   const [metrics, setMetrics] = useState<{ cpu: number; ram: number; ramTotal: number } | null>(null);
+  const [creatingRestorePoint, setCreatingRestorePoint] = useState(false);
+
+  const handleCreateRestorePoint = async () => {
+    const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
+    if (!isElectron) { alert("Chỉ hoạt động trên ứng dụng thật."); return; }
+    setCreatingRestorePoint(true);
+    try {
+      const res = await (window as any).electronAPI.createSystemRestorePoint("ThienPhatTech_1ClickRestorePoint");
+      if (res && res.success) {
+        alert("✅ " + res.message);
+      } else {
+        alert("⚠️ Không thể tạo điểm khôi phục: " + (res?.error || "Lỗi không xác định"));
+      }
+    } catch (e: any) {
+      alert("Lỗi: " + e.message);
+    } finally {
+      setCreatingRestorePoint(false);
+    }
+  };
 
   useEffect(() => {
     const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
@@ -137,6 +156,18 @@ export default function TitleBar() {
               />
             </div>
           </div>
+
+          {/* 1-Click System Restore Point */}
+          <div className="w-px h-3 bg-slate-600" />
+          <button
+            onClick={handleCreateRestorePoint}
+            disabled={creatingRestorePoint}
+            title="Tạo Điểm Khôi Phục Hệ Thống Windows (System Restore Point) 1-Click"
+            className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded-md transition-all cursor-pointer disabled:opacity-50"
+          >
+            <Shield className="w-3 h-3 text-emerald-400" />
+            <span>{creatingRestorePoint ? 'Đang tạo...' : 'Tạo Restore Point'}</span>
+          </button>
         </div>
       )}
 
