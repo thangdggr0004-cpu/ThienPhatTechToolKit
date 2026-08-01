@@ -133,10 +133,10 @@ export default function Sidebar({ activeSection, setActiveSection, isUnlocked }:
           </div>
           <div>
             <h1 className="text-sm font-extrabold text-slate-900 tracking-tight leading-none">
-              THIÊN PHÁT <span className="text-blue-600">TECH</span>
+              PC CARE <span className="text-blue-600">MASTER</span>
             </h1>
             <span className="text-[9px] text-blue-500 font-bold tracking-widest uppercase block mt-0.5">
-              TOOLKIT PRO
+              PRO SUITE
             </span>
           </div>
         </div>

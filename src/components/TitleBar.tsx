@@ -107,7 +107,7 @@ export default function TitleBar() {
           <div className="w-2 h-2 border border-white rounded-[1px]" />
         </div>
         <span className="text-[11px] font-bold text-slate-200 tracking-wide">
-          THIÊN PHÁT TECH TOOLKIT PRO
+          PC CARE MASTER PRO
         </span>
       </div>
 

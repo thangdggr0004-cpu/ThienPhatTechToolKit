@@ -47,7 +47,7 @@
   },
   "build": {
     "appId": "com.thienphat.techtoolkit",
-    "productName": "ThienPhatTechToolkit",
+    "productName": "PCCareMasterPro",
     "directories": {
       "output": "dist-electron"
     },
@@ -60,9 +60,9 @@
       "elevate.exe"
     ],
     "portable": {
-      "artifactName": "ThienPhatTechToolkit ${version}.exe",
+      "artifactName": "PCCareMasterPro ${version}.exe",
       "requestExecutionLevel": "admin",
-      "unpackDirName": "ThienPhatTechToolkitCache",
+      "unpackDirName": "PCCareMasterCache",
       "useZip": false
     },
     "win": {

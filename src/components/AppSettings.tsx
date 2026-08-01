@@ -471,7 +471,7 @@ export default function AppSettings() {
               {/* Manual Check button & Info Card */}
               <div className="p-4 bg-blue-50/60 rounded-xl border border-blue-200 flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-bold text-blue-900">Thiên Phát Tech Toolkit Pro</h4>
+                  <h4 className="text-sm font-bold text-blue-900">PC Care Master Pro</h4>
                   <p className="text-xs text-blue-700 mt-0.5">Phiên bản hiện tại: <span className="font-bold font-mono">v{packageJson.version}</span></p>
                 </div>
                 <button

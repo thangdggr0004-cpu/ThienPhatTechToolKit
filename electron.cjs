@@ -336,7 +336,7 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
-    title: "Thiên Phát Tech Toolkit Pro",
+    title: "PC Care Master Pro",
     icon: app.isPackaged ? path.join(__dirname, 'dist', 'logo.ico') : path.join(__dirname, 'public', 'logo.ico'),
     webPreferences: {
       nodeIntegration: false,
@@ -429,10 +429,10 @@ function createSystemTray(win) {
   try {
     const iconPath = app.isPackaged ? path.join(__dirname, 'dist', 'logo.ico') : path.join(__dirname, 'public', 'logo.ico');
     appTray = new Tray(iconPath);
-    appTray.setToolTip('Thiên Phát Tech Toolkit Pro');
+    appTray.setToolTip('PC Care Master Pro');
     const contextMenu = Menu.buildFromTemplate([
       {
-        label: 'Mở Thiên Phát Tech Toolkit',
+        label: 'Mở PC Care Master Pro',
         click: () => {
           if (win) {
             win.show();
