@@ -50,6 +50,7 @@
     },
     "files": [
       "dist/**/*",
+      "src/**/*.cjs",
       "*.cjs",
       "MAS_AIO.cmd"
     ],
