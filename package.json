@@ -1,7 +1,7 @@
 {
   "name": "thienphat-techtoolkit",
   "private": true,
-  "version": "1.4.2",
+  "version": "1.4.3",
   "description": "Thien Phat Tech Toolkit Pro",
   "type": "module",
   "main": "electron.cjs",
@@ -18,17 +18,13 @@
   },
   "dependencies": {
     "@google/genai": "^2.12.0",
-    "@tailwindcss/vite": "^4.1.14",
-    "@vitejs/plugin-react": "^5.0.4",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
-    "systeminformation": "^5.23.2",
-    "vite": "^6.2.3",
-    "esbuild": "^0.20.2"
+    "systeminformation": "^5.23.2"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
@@ -50,7 +46,7 @@
     "productName": "PCCareMasterPro",
     "compression": "normal",
     "directories": {
-      "output": "dist-electron"
+      "output": "dist-release"
     },
     "files": [
       "dist/**/*",
@@ -64,19 +60,15 @@
     "portable": {
       "artifactName": "PCCareMasterPro ${version}-Portable.exe",
       "requestExecutionLevel": "admin",
-      "unpackDirName": "PCCareMasterCache",
-      "useZip": false
+      "unpackDirName": "PCCareMasterCache"
     },
     "win": {
       "target": [
         "portable",
-        "nsis"
+        "zip"
       ],
       "icon": "build/icon.png",
-      "requestedExecutionLevel": "requireAdministrator",
-      "certificateFile": "ThienPhatTech.pfx",
-      "certificatePassword": "ThienPhat2026",
-      "timeStampServer": "http://timestamp.digicert.com"
+      "requestedExecutionLevel": "requireAdministrator"
     },
     "publish": {
       "provider": "github",
