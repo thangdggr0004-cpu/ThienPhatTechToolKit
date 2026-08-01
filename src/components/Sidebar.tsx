@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Cpu, ShieldAlert, Trash2, Wifi, AlignLeft, Monitor,
-  CheckCircle, Archive, Printer, Settings, Lock, Laptop, Activity, KeyRound, Sliders
+  CheckCircle, Archive, Printer, Settings, Lock, Laptop, Activity, KeyRound, Sliders, FileText
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -27,6 +27,7 @@ const systemItems: MenuItem[] = [
   { id: 'hardware',         name: 'Cấu Hình Chi Tiết', description: 'CPU, RAM, Ổ cứng',          icon: Cpu,       iconClass: 'icon-pastel-sky'     },
   { id: 'cleaner',          name: 'Dọn Dẹp Rác',      description: 'Giải phóng bộ nhớ đệm',     icon: Trash2,    iconClass: 'icon-pastel-rose'    },
   { id: 'windows-settings', name: 'Thiết Lập Windows', description: 'Tối ưu & Tùy biến',        icon: Settings,  iconClass: 'icon-pastel-slate'   },
+  { id: 'ktv-report',       name: 'Báo Cáo KTV',       description: 'Biên bản nghiệm thu KTV',   icon: FileText,  iconClass: 'icon-pastel-emerald' },
 ];
 
 const baseUtilityItems: MenuItem[] = [

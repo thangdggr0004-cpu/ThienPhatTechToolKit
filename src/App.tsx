@@ -37,6 +37,7 @@ const PrinterUtils = safeLazy(() => import('./components/PrinterUtils.js'));
 const LaptopTester = safeLazy(() => import('./components/LaptopTester.js'));
 const TouchScreenTester = safeLazy(() => import('./components/TouchScreenTester.js'));
 const AdvancedActivation = safeLazy(() => import('./components/AdvancedActivation.js'));
+const JobReportViewer = safeLazy(() => import('./components/JobReportViewer.js'));
 
 import { RefreshCw } from 'lucide-react';
 import AutoUpdater from './components/AutoUpdater.js';
@@ -83,7 +84,8 @@ export default function App() {
     | 'printer'
     | 'laptop-tester'
     | 'touch-tester'
-    | 'advanced-activation';
+    | 'advanced-activation'
+    | 'ktv-report';
 
   const [activeSection, setActiveSection] = useState<SectionId>('dashboard');
   const [mountedSections, setMountedSections] = useState<Set<SectionId>>(() => new Set<SectionId>(['dashboard']));
@@ -330,6 +332,7 @@ export default function App() {
             {renderSection('laptop-tester', <LaptopTester />)}
             {renderSection('touch-tester', <TouchScreenTester />)}
             {renderSection('advanced-activation', <AdvancedActivation />)}
+            {renderSection('ktv-report', <JobReportViewer />)}
           </main>
         </div>
 
