@@ -2358,19 +2358,33 @@ Write-Output "OK"
         $state.hideNews = (Get-RegDWord 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Feeds' 'EnableFeeds' 1) -eq 0
         $state.taskbarLeft = (Get-RegDWord 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced' 'TaskbarAl' 1) -eq 0
 
-        # System Optimization
-        $state.hibernate = (Get-RegDWord 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power' 'HibernateEnabled' 1) -eq 1
-        $state.fastStartup = (Get-RegDWord 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Power' 'HiberbootEnabled' 1) -eq 1
-        $state.prefetch = (Get-RegDWord 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management\\PrefetchParameters' 'EnablePrefetcher' 3) -ne 0
-        $state.sysMain = ((Get-Service -Name "SysMain" -ErrorAction SilentlyContinue).StartType -ne 'Disabled')
-        $state.remoteDesktop = (Get-RegDWord 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server' 'fDenyTSConnections' 1) -eq 0
-        $state.errorReporting = (Get-RegDWord 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting' 'Disabled' 0) -ne 1
-        $state.searchIndexing = ((Get-Service -Name "WSearch" -ErrorAction SilentlyContinue).StartType -ne 'Disabled')
-        $state.printSpooler = ((Get-Service -Name "Spooler" -ErrorAction SilentlyContinue).StartType -ne 'Disabled')
-        $state.defender = (Get-RegDWord 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender' 'DisableAntiSpyware' 0) -eq 0
-        $state.telemetry = (Get-RegDWord 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection' 'AllowTelemetry' 1) -ne 0
-        $state.xboxServices = ((Get-Service -Name "XboxGipSvc" -ErrorAction SilentlyContinue).StartType -ne 'Disabled')
-        $state.oneDrive = (Test-Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\OneDrive')
+        # System Optimization (True = Disabled for optimization)
+        $state.disableHibernate = (Get-RegDWord 'HKLM:\SYSTEM\CurrentControlSet\Control\Power' 'HibernateEnabled' 1) -eq 0
+        $state.disableFastStartup = (Get-RegDWord 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power' 'HiberbootEnabled' 1) -eq 0
+        $state.disablePrefetch = (Get-RegDWord 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters' 'EnablePrefetcher' 3) -eq 0
+        $state.disableSysMain = ((Get-Service -Name "SysMain" -ErrorAction SilentlyContinue).StartType -eq 'Disabled')
+        $state.disableRemoteDesktop = (Get-RegDWord 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server' 'fDenyTSConnections' 1) -eq 1
+        $state.disableErrorReporting = (Get-RegDWord 'HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting' 'Disabled' 0) -eq 1
+        $state.disableSearchIndexing = ((Get-Service -Name "WSearch" -ErrorAction SilentlyContinue).StartType -eq 'Disabled')
+        $state.disablePrintSpooler = ((Get-Service -Name "Spooler" -ErrorAction SilentlyContinue).StartType -eq 'Disabled')
+        $state.disableDefender = (Get-RegDWord 'HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender' 'DisableAntiSpyware' 0) -eq 1
+        $state.disableTelemetry = (Get-RegDWord 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection' 'AllowTelemetry' 1) -eq 0
+        $state.disableXboxServices = ((Get-Service -Name "XboxGipSvc" -ErrorAction SilentlyContinue).StartType -eq 'Disabled')
+        $state.disableOneDrive = (-not (Test-Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run\OneDrive'))
+
+        # Legacy backward compatibility mappings
+        $state.hibernate = (-not $state.disableHibernate)
+        $state.fastStartup = (-not $state.disableFastStartup)
+        $state.prefetch = (-not $state.disablePrefetch)
+        $state.sysMain = (-not $state.disableSysMain)
+        $state.remoteDesktop = (-not $state.disableRemoteDesktop)
+        $state.errorReporting = (-not $state.disableErrorReporting)
+        $state.searchIndexing = (-not $state.disableSearchIndexing)
+        $state.printSpooler = (-not $state.disablePrintSpooler)
+        $state.defender = (-not $state.disableDefender)
+        $state.telemetry = (-not $state.disableTelemetry)
+        $state.xboxServices = (-not $state.disableXboxServices)
+        $state.oneDrive = (-not $state.disableOneDrive)
 
         # Active Power Plan
         $activePower = (powercfg /getactivescheme)
@@ -2501,60 +2515,63 @@ Write-Output "OK"
         $OutputEncoding = [System.Text.Encoding]::UTF8
         [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
       `;
+
+      const isDisable = (disableKey, enableKey) => settings[disableKey] === true || settings[enableKey] === false;
+
       // 1. Hibernate
-      if (!settings.hibernate) script += `powercfg.exe /hibernate off\n`;
+      if (isDisable('disableHibernate', 'hibernate')) script += `powercfg.exe /hibernate off\n`;
       else script += `powercfg.exe /hibernate on\n`;
 
       // 2. SysMain (Superfetch)
-      if (!settings.sysMain) script += `Stop-Service -Name "SysMain" -Force -ErrorAction SilentlyContinue; Set-Service -Name "SysMain" -StartupType Disabled\n`;
+      if (isDisable('disableSysMain', 'sysMain')) script += `Stop-Service -Name "SysMain" -Force -ErrorAction SilentlyContinue; Set-Service -Name "SysMain" -StartupType Disabled\n`;
       else script += `Set-Service -Name "SysMain" -StartupType Automatic; Start-Service -Name "SysMain" -ErrorAction SilentlyContinue\n`;
 
       // 3. Defender Policy
-      if (!settings.defender) {
+      if (isDisable('disableDefender', 'defender')) {
         script += `New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender" -Force -ErrorAction SilentlyContinue | Out-Null; Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender" -Name "DisableAntiSpyware" -Value 1 -Force -ErrorAction SilentlyContinue\n`;
       } else {
         script += `Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender" -Name "DisableAntiSpyware" -Force -ErrorAction SilentlyContinue\n`;
       }
       
       // 4. Fast Startup
-      if (!settings.fastStartup) script += `Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Power" -Name "HiberbootEnabled" -Value 0 -Force -ErrorAction SilentlyContinue\n`;
+      if (isDisable('disableFastStartup', 'fastStartup')) script += `Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Power" -Name "HiberbootEnabled" -Value 0 -Force -ErrorAction SilentlyContinue\n`;
       else script += `Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Power" -Name "HiberbootEnabled" -Value 1 -Force -ErrorAction SilentlyContinue\n`;
 
       // 5. Remote Desktop
-      if (!settings.remoteDesktop) script += `Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server" -Name "fDenyTSConnections" -Value 1 -Force -ErrorAction SilentlyContinue\n`;
+      if (isDisable('disableRemoteDesktop', 'remoteDesktop')) script += `Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server" -Name "fDenyTSConnections" -Value 1 -Force -ErrorAction SilentlyContinue\n`;
       else script += `Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server" -Name "fDenyTSConnections" -Value 0 -Force -ErrorAction SilentlyContinue\n`;
 
       // 6. Error Reporting
-      if (!settings.errorReporting) {
+      if (isDisable('disableErrorReporting', 'errorReporting')) {
         script += `New-Item -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting" -Force -ErrorAction SilentlyContinue | Out-Null; Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting" -Name "Disabled" -Value 1 -Force -ErrorAction SilentlyContinue\n`;
       } else {
         script += `Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting" -Name "Disabled" -Value 0 -Force -ErrorAction SilentlyContinue\n`;
       }
 
       // 7. Telemetry
-      if (!settings.telemetry) {
+      if (isDisable('disableTelemetry', 'telemetry')) {
         script += `New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection" -Force -ErrorAction SilentlyContinue | Out-Null; Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection" -Name "AllowTelemetry" -Value 0 -Force -ErrorAction SilentlyContinue\n`;
       } else {
         script += `Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection" -Name "AllowTelemetry" -Value 1 -Force -ErrorAction SilentlyContinue\n`;
       }
 
       // 8. Prefetch
-      if (!settings.prefetch) {
+      if (isDisable('disablePrefetch', 'prefetch')) {
         script += `Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management\\PrefetchParameters" -Name "EnablePrefetcher" -Value 0 -Force -ErrorAction SilentlyContinue\n`;
       } else {
         script += `Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management\\PrefetchParameters" -Name "EnablePrefetcher" -Value 3 -Force -ErrorAction SilentlyContinue\n`;
       }
 
       // 9. Windows Search Indexing
-      if (!settings.searchIndexing) script += `Stop-Service -Name "WSearch" -Force -ErrorAction SilentlyContinue; Set-Service -Name "WSearch" -StartupType Disabled\n`;
+      if (isDisable('disableSearchIndexing', 'searchIndexing')) script += `Stop-Service -Name "WSearch" -Force -ErrorAction SilentlyContinue; Set-Service -Name "WSearch" -StartupType Disabled\n`;
       else script += `Set-Service -Name "WSearch" -StartupType Automatic; Start-Service -Name "WSearch" -ErrorAction SilentlyContinue\n`;
 
       // 10. Print Spooler
-      if (!settings.printSpooler) script += `Stop-Service -Name "Spooler" -Force -ErrorAction SilentlyContinue; Set-Service -Name "Spooler" -StartupType Disabled\n`;
+      if (isDisable('disablePrintSpooler', 'printSpooler')) script += `Stop-Service -Name "Spooler" -Force -ErrorAction SilentlyContinue; Set-Service -Name "Spooler" -StartupType Disabled\n`;
       else script += `Set-Service -Name "Spooler" -StartupType Automatic; Start-Service -Name "Spooler" -ErrorAction SilentlyContinue\n`;
 
       // 11. Xbox Services
-      if (!settings.xboxServices) {
+      if (isDisable('disableXboxServices', 'xboxServices')) {
         script += `
           Get-Service -Name "XboxGipSvc", "XblAuthManager", "XblGameSave", "XboxNetApiSvc" -ErrorAction SilentlyContinue | ForEach-Object {
             Stop-Service -Name $_.Name -Force -ErrorAction SilentlyContinue
@@ -2570,7 +2587,7 @@ Write-Output "OK"
       }
 
       // 12. OneDrive Auto-start
-      if (!settings.oneDrive) {
+      if (isDisable('disableOneDrive', 'oneDrive')) {
         script += `Remove-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" -Name "OneDrive" -Force -ErrorAction SilentlyContinue\n`;
       }
 

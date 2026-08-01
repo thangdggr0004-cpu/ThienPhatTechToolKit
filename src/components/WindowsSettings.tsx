@@ -172,19 +172,33 @@ export default function WindowsSettings() {
     hideNews: false,
     taskbarLeft: false, // false = Center, true = Left
     
-    // Optimization
-    hibernate: true,
-    fastStartup: true,
-    prefetch: true,
-    sysMain: true,
+    // Optimization (True = Disable service for optimization)
+    disableHibernate: false,
+    disableFastStartup: false,
+    disablePrefetch: false,
+    disableSysMain: true,
+    disableRemoteDesktop: false,
+    disableErrorReporting: true,
+    disableSearchIndexing: false,
+    disablePrintSpooler: false, // Default FALSE: Máy in KHÔNG bị chọn tắt mặc định!
+    disableDefender: false,
+    disableTelemetry: true,
+    disableXboxServices: true,
+    disableOneDrive: false,
+
+    // Backward compatibility aliases
+    hibernate: false,
+    fastStartup: false,
+    prefetch: false,
+    sysMain: false,
     remoteDesktop: false,
-    errorReporting: true,
-    searchIndexing: true,
-    printSpooler: true,
-    defender: true,
-    telemetry: true,
-    xboxServices: true,
-    oneDrive: true
+    errorReporting: false,
+    searchIndexing: false,
+    printSpooler: false,
+    defender: false,
+    telemetry: false,
+    xboxServices: false,
+    oneDrive: false
   });
 
   const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
@@ -528,48 +542,51 @@ export default function WindowsSettings() {
 
         {/* CARD 3: TỐI ƯU HỆ THỐNG */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="bg-slate-50 border-b border-slate-100 p-4">
+          <div className="bg-slate-50 border-b border-slate-100 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <h3 className="font-bold text-slate-800 flex items-center gap-2">
               <Zap className="w-5 h-5 text-emerald-600" />
-              Tối ưu hệ thống (Bật/Tắt Services)
+              Tối ưu hệ thống (Tắt dịch vụ ngầm)
             </h3>
+            <span className="text-[11px] font-semibold text-slate-500 bg-slate-200/60 px-2.5 py-1 rounded-full">
+              💡 Tích chọn = Chọn TẮT dịch vụ khi bấm áp dụng
+            </span>
           </div>
           <div className="p-5">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3">
-              {toggleCheckbox("Hibernate (Ngủ đông)", "hibernate")}
-              {toggleCheckbox("Remote Desktop", "remoteDesktop")}
-              {toggleCheckbox("Windows Defender", "defender")}
+              {toggleCheckbox("Tắt Ngủ đông (Hibernate)", "disableHibernate")}
+              {toggleCheckbox("Tắt Remote Desktop", "disableRemoteDesktop")}
+              {toggleCheckbox("Tắt Defender (DisableAntiSpyware)", "disableDefender")}
               
-              {toggleCheckbox("Fast Startup (Khởi động nhanh)", "fastStartup")}
-              {toggleCheckbox("Error Reporting (Báo lỗi)", "errorReporting")}
-              {toggleCheckbox("Telemetry (Thu thập dữ liệu)", "telemetry")}
+              {toggleCheckbox("Tắt Fast Startup (Khởi động nhanh)", "disableFastStartup")}
+              {toggleCheckbox("Tắt Error Reporting (Báo lỗi)", "disableErrorReporting")}
+              {toggleCheckbox("Tắt Telemetry (Thu thập dữ liệu)", "disableTelemetry")}
               
-              {toggleCheckbox("Prefetch (Tải trước ứng dụng)", "prefetch")}
-              {toggleCheckbox("Windows Search Indexing", "searchIndexing")}
-              {toggleCheckbox("Xbox Services", "xboxServices")}
+              {toggleCheckbox("Tắt Prefetch (Tải trước app)", "disablePrefetch")}
+              {toggleCheckbox("Tắt Windows Search Indexing", "disableSearchIndexing")}
+              {toggleCheckbox("Tắt Xbox Services", "disableXboxServices")}
               
-              {toggleCheckbox("Superfetch/SysMain", "sysMain")}
+              {toggleCheckbox("Tắt Superfetch/SysMain", "disableSysMain")}
               <div className="flex flex-col">
-                {toggleCheckbox("Print Spooler (Máy in)", "printSpooler")}
-                {!state.printSpooler ? (
+                {toggleCheckbox("Tắt Dịch vụ Máy in (Print Spooler)", "disablePrintSpooler")}
+                {state.disablePrintSpooler ? (
                   <span className="text-[10px] text-amber-600 font-bold ml-6 mt-0.5 flex items-center gap-1">
-                    <AlertTriangle className="w-3 h-3 text-amber-600" /> Sẽ TẮT (Ngừng in ấn)
+                    <AlertTriangle className="w-3 h-3 text-amber-600" /> Đang chọn TẮT (Ngừng in)
                   </span>
                 ) : (
-                  <span className="text-[10px] text-emerald-600 font-medium ml-6 mt-0.5">✓ BẬT (In ấn bình thường)</span>
+                  <span className="text-[10px] text-emerald-600 font-medium ml-6 mt-0.5">✓ Bỏ chọn = Giữ BẬT máy in</span>
                 )}
               </div>
-              {toggleCheckbox("OneDrive tự khởi động", "oneDrive")}
+              {toggleCheckbox("Tắt OneDrive tự khởi động", "disableOneDrive")}
             </div>
             
-            <p className="text-xs text-slate-400 mt-4 italic">💡 Tắt các dịch vụ không cần thiết giúp tăng hiệu năng và tiết kiệm RAM</p>
+            <p className="text-xs text-slate-400 mt-4 italic">💡 Tích chọn các mục để TẮT dịch vụ ngầm tương ứng nhằm giải phóng RAM & CPU khi bấm "Áp dụng tối ưu".</p>
 
-            {!state.printSpooler && (
+            {state.disablePrintSpooler && (
               <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 flex items-start gap-2.5 animate-fade-in">
                 <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <div className="space-y-0.5">
                   <strong className="font-bold text-amber-900 block">⚠️ Cảnh báo dịch vụ máy in (Print Spooler):</strong>
-                  <p>Bạn đang chọn TẮT dịch vụ máy in. Sau khi bấm áp dụng, máy tính sẽ <strong>không thể gửi lệnh in hoặc kết nối bất kỳ máy in LAN/USB nào</strong> cho tới khi bạn tích chọn BẬT lại.</p>
+                  <p>Bạn đang tích chọn <strong>TẮT dịch vụ máy in</strong>. Sau khi bấm "Áp dụng tối ưu", dịch vụ Print Spooler sẽ bị dừng. Máy tính sẽ <strong>không thể gửi lệnh in hoặc kết nối bất kỳ máy in LAN/USB nào</strong> cho tới khi bạn bỏ tích chọn mục này.</p>
                 </div>
               </div>
             )}
