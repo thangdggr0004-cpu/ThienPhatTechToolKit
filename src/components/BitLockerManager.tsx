@@ -88,6 +88,20 @@ export default function BitLockerManager() {
     loadStatus();
   };
 
+  const handleBackupKey = async (mountPoint: string) => {
+    if (!isElectron) return;
+    try {
+      const res = await (window as any).electronAPI.backupBitlockerKey(mountPoint);
+      if (res.success && res.key && res.key !== 'NO_KEY') {
+        alert(`🔑 KHÓA KHÔI PHỤC (RECOVERY KEY) Ổ ${mountPoint}:\n\n${res.key}\n\nHãy lưu lại mã 48 chữ số này ở nơi an toàn!`);
+      } else {
+        alert(`⚠️ Không tìm thấy Khóa Khôi Phục Recovery Key cho ổ ${mountPoint} (có thể ổ đĩa chưa từng được mã hóa).`);
+      }
+    } catch (e: any) {
+      alert("Lỗi: " + e.message);
+    }
+  };
+
   const renderStatus = (vol: BitLockerVolume) => {
     if (vol.VolumeStatus === 'FullyDecrypted') {
       return (
@@ -159,7 +173,6 @@ export default function BitLockerManager() {
         </div>
       )}
 
-      {/* DRIVES LIST */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="bg-slate-50 border-b border-slate-100 p-4 flex justify-between items-center">
           <h3 className="font-bold text-slate-800 flex items-center gap-2">
@@ -206,14 +219,25 @@ export default function BitLockerManager() {
                     </div>
                   </td>
                   <td className="p-4 text-right">
-                    <button
-                      onClick={() => handleDisable(vol.MountPoint)}
-                      disabled={vol.ProtectionStatus === 'Off' || vol.VolumeStatus === 'FullyDecrypted' || processingDrives[vol.MountPoint]}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 text-slate-700 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Shield className="w-3.5 h-3.5" />
-                      {processingDrives[vol.MountPoint] ? 'Đang gửi...' : 'Tắt BitLocker'}
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      {vol.ProtectionStatus === 'On' && (
+                        <button
+                          onClick={() => handleBackupKey(vol.MountPoint)}
+                          title="Xem và lưu mã Recovery Key 48 số"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-50 border border-amber-300 text-amber-800 hover:bg-amber-100 rounded text-xs font-bold transition cursor-pointer"
+                        >
+                          🔑 Key
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDisable(vol.MountPoint)}
+                        disabled={vol.ProtectionStatus === 'Off' || vol.VolumeStatus === 'FullyDecrypted' || processingDrives[vol.MountPoint]}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 text-slate-700 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Shield className="w-3.5 h-3.5" />
+                        {processingDrives[vol.MountPoint] ? 'Đang gửi...' : 'Tắt BitLocker'}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

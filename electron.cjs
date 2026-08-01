@@ -3067,6 +3067,33 @@ public class WinRamCleaner {
     }
   });
 
+  ipcMain.handle('backup-bitlocker-key', async (event, mountPoint) => {
+    try {
+      const script = `
+        $OutputEncoding = [System.Text.Encoding]::UTF8
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+        $b = Get-BitLockerVolume -MountPoint "${mountPoint}" -ErrorAction SilentlyContinue
+        if ($b -and $b.KeyProtector) {
+            $key = ($b.KeyProtector | Where-Object { $_.KeyProtectorType -eq 'RecoveryPassword' }).RecoveryPassword
+            if ($key) {
+                Write-Output $key
+                exit
+            }
+        }
+        $bdeOut = manage-bde -protectors -get "${mountPoint}"
+        if ($bdeOut -match "([0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6})") {
+            Write-Output $matches[1]
+            exit
+        }
+        Write-Output "NO_KEY"
+      `;
+      const key = await runPowerShellScriptElevated(script);
+      return { success: true, key: key.trim() };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
   let batteryCache = { ts: 0, data: null };
   ipcMain.handle('get-battery-health', async () => {
     if (batteryCache.data && Date.now() - batteryCache.ts < 10000) {
@@ -3172,16 +3199,45 @@ public class WinRamCleaner {
     }
     try {
       const script = `
-        $wmiDisks = Get-CimInstance Win32_DiskDrive -ErrorAction SilentlyContinue
+        $ErrorActionPreference = 'SilentlyContinue'
         $disks = @()
-        foreach ($d in $wmiDisks) {
-            $disks += @{
-                DeviceId = $d.DeviceID
-                FriendlyName = $d.Model
-                MediaType = if ($d.MediaType) { $d.MediaType } else { "Fixed hard disk" }
-                OperationalStatus = $d.Status
-                HealthStatus = if ($d.Status -eq "OK") { "Healthy" } else { "Unhealthy" }
-                Size = $d.Size
+        
+        # Method 1: Get-PhysicalDisk (Storage module for Win 8/10/11 - Accurate NVMe/SSD)
+        try {
+            $pDisks = Get-PhysicalDisk -ErrorAction SilentlyContinue
+            if ($pDisks) {
+                foreach ($pd in $pDisks) {
+                    $temp = $null
+                    try {
+                        $counter = Get-StorageReliabilityCounter -PhysicalDisk $pd -ErrorAction SilentlyContinue
+                        if ($counter -and $counter.Temperature) { $temp = $counter.Temperature }
+                    } catch {}
+
+                    $disks += @{
+                        DeviceId = "\\\\.\\PhysicalDrive" + $pd.DeviceId
+                        FriendlyName = $pd.FriendlyName
+                        MediaType = if ($pd.MediaType) { $pd.MediaType.ToString() } else { "SSD/HDD" }
+                        OperationalStatus = if ($pd.OperationalStatus) { $pd.OperationalStatus.ToString() } else { "OK" }
+                        HealthStatus = if ($pd.HealthStatus) { $pd.HealthStatus.ToString() } else { "Healthy" }
+                        Size = $pd.Size
+                        Temperature = $temp
+                    }
+                }
+            }
+        } catch {}
+
+        # Fallback: Win32_DiskDrive
+        if ($disks.Count -eq 0) {
+            $wmiDisks = Get-CimInstance Win32_DiskDrive -ErrorAction SilentlyContinue
+            foreach ($d in $wmiDisks) {
+                $disks += @{
+                    DeviceId = $d.DeviceID
+                    FriendlyName = $d.Model
+                    MediaType = if ($d.MediaType) { $d.MediaType } else { "Fixed hard disk" }
+                    OperationalStatus = $d.Status
+                    HealthStatus = if ($d.Status -eq "OK") { "Healthy" } else { "Unhealthy" }
+                    Size = $d.Size
+                }
             }
         }
         $disks | ConvertTo-Json -Compress
