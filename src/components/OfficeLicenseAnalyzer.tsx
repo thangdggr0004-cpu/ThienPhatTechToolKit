@@ -65,11 +65,12 @@ export default function OfficeLicenseAnalyzer() {
         const res = await (window as any).electronAPI.scanOfficeEngineV3();
         if (res && res.success) {
           setReport(res.report);
-          const r = res.report;
           const offStatus = r.provenance?.activationStatus || 'LICENSED';
           const offName = r.skuInfo?.skuName || 'Microsoft Office';
-          const offMethod = r.provenance?.activationMethod || 'KMS';
-          const offStr = `✔ ${offName}: ${offStatus === 'LICENSED' ? `Đã kích hoạt (${offMethod})` : 'Chưa kích hoạt'}`;
+          const offMethod = r.provenance?.activationMethod || 'KMS Client (GVLK)';
+          const offStr = offStatus === 'LICENSED'
+            ? `✔ ${offName}: Máy sạch - Đã kích hoạt (${offMethod} - Cần hóa đơn/chứng từ doanh nghiệp nếu muốn đối soát)`
+            : `❌ ${offName}: Chưa kích hoạt`;
           updateSessionReport({ officeActivation: offStr });
         } else {
           alert("Lỗi chẩn đoán V3: " + (res ? res.error : "Không có dữ liệu"));

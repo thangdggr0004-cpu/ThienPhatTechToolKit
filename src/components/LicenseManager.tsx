@@ -410,9 +410,18 @@ export default function LicenseManager() {
           setWindowsScanResult(result);
           processWindowsScanResults(result);
           
-          const isGen = result.Forensics?.decision === 'GENUINE' || result.LicenseStatus === 1 || result.LicenseStatus === 'LICENSED';
-          const winName = result.Name || result.Description || result.LicenseFamily || 'Windows';
-          const winStr = `✔ ${winName}: ${isGen ? 'Đã kích hoạt bản quyền hợp lệ (Chính hãng)' : 'Đã kích hoạt'}`;
+          const isGen = result.Forensics?.decision === 'GENUINE' || result.LicenseStatus === 1 || result.LicenseStatus === 'LICENSED' || result.Windows?.LicenseStatus === 1;
+          const winName = result.Name || result.Windows?.Name || result.Description || result.LicenseFamily || 'Windows';
+          const hasOA3 = result.Windows?.HasOA3Key === true || Boolean(result.Windows?.OA3Key && result.Windows.OA3Key !== 'N/A' && result.Windows.OA3Key !== 'Không có dữ liệu');
+
+          let winStr = '';
+          if (isGen && hasOA3) {
+            winStr = `✔ ${winName}: Đã kích hoạt OEM BIOS (Chính hãng nhà sản xuất)`;
+          } else if (isGen) {
+            winStr = `✔ ${winName}: Máy sạch - Đã kích hoạt (Cần cung cấp chứng từ mua hàng/Key OEM nếu muốn đối soát)`;
+          } else {
+            winStr = `❌ ${winName}: Chưa kích hoạt`;
+          }
           updateSessionReport({ windowsActivation: winStr });
 
           addConsoleLog(`Hoàn tất phân tích Windows. Kết quả verdict: ${result.LicenseStatus === 1 ? 'Kích hoạt hợp lệ' : 'Cần xem xét'}.`);

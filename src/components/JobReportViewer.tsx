@@ -68,9 +68,16 @@ export default function JobReportViewer() {
         try {
           const winRes = await (window as any).electronAPI.scanActivation({ type: 'windows' });
           if (winRes) {
-            const winName = winRes.Name || winRes.Description || winRes.LicenseFamily || 'Windows License';
+            const winName = winRes.Name || winRes.Description || winRes.LicenseFamily || 'Windows';
             const isGen = winRes.LicenseStatus === 1 || winRes.LicenseStatus === 'LICENSED';
-            winLic = `✔ ${winName}: ${isGen ? 'Đã kích hoạt bản quyền hợp lệ (Chính hãng)' : 'Đã kích hoạt'}`;
+            const hasOA3 = winRes.HasOA3Key === true || Boolean(winRes.OA3Key && winRes.OA3Key !== 'N/A' && winRes.OA3Key !== 'Không có dữ liệu');
+            if (isGen && hasOA3) {
+              winLic = `✔ ${winName}: Đã kích hoạt OEM BIOS (Chính hãng nhà sản xuất)`;
+            } else if (isGen) {
+              winLic = `✔ ${winName}: Máy sạch - Đã kích hoạt (Cần cung cấp chứng từ mua hàng/Key OEM nếu muốn đối soát)`;
+            } else {
+              winLic = `❌ ${winName}: Chưa kích hoạt`;
+            }
           }
         } catch (e) {}
 
@@ -80,17 +87,21 @@ export default function JobReportViewer() {
           if (offRes && offRes.report) {
             const r = offRes.report;
             const offName = r.skuInfo?.skuName || 'Microsoft Office';
-            const offMethod = r.provenance?.activationMethod || 'KMS';
+            const offMethod = r.provenance?.activationMethod || 'KMS Client (GVLK)';
             const offStatus = r.provenance?.activationStatus || 'LICENSED';
-            offLic = `✔ ${offName}: ${offStatus === 'LICENSED' ? `Đã kích hoạt (${offMethod})` : 'Chưa kích hoạt'}`;
+            if (offStatus === 'LICENSED') {
+              offLic = `✔ ${offName}: Máy sạch - Đã kích hoạt (${offMethod} - Cần hóa đơn/chứng từ doanh nghiệp nếu muốn đối soát)`;
+            } else {
+              offLic = `❌ ${offName}: Chưa kích hoạt`;
+            }
           }
         } catch (e) {}
 
         // Scan Disk & Network
         await fetchSystemSummary();
       } else {
-        winLic = '✔ Windows 11 Pro - Kích hoạt vĩnh viễn (OEM Digital License)';
-        offLic = '✔ Microsoft Office 2021 Professional Plus - Activated';
+        winLic = '✔ Windows 11 Pro: Máy sạch - Đã kích hoạt (Cần cung cấp chứng từ mua hàng/Key OEM nếu muốn đối soát)';
+        offLic = '✔ Microsoft Office 2021 ProPlus: Máy sạch - Đã kích hoạt (KMS Client GVLK - Cần hóa đơn/chứng từ doanh nghiệp nếu muốn đối soát)';
         netDns = '✔ DNS Cloudflare (1.1.1.1)';
       }
 
@@ -190,7 +201,7 @@ export default function JobReportViewer() {
   <div class="container">
     <div class="header">
       <h1>BIÊN BẢN BÀN GIAO & NGHIỆM THU KỸ THUẬT MÁY TÍNH</h1>
-      <p>Thiện Phát Tech Toolkit Pro • Hệ thống Chẩn đoán, Tối ưu & Chăm sóc Máy tính</p>
+      <p>Thiên Phát Tech Toolkit Pro • Hệ thống Chẩn đoán, Tối ưu & Chăm sóc Máy tính</p>
     </div>
 
     <div class="info-grid">
@@ -279,7 +290,7 @@ export default function JobReportViewer() {
     </div>
 
     <div class="footer">
-      Thiện Phát Tech Toolkit Pro • Hotline Hỗ Trợ Kỹ Thuật • Biên bản xuất tự động ngày ${dateStr}
+      Thiên Phát Tech Toolkit Pro • Hotline Hỗ Trợ Kỹ Thuật • Biên bản xuất tự động ngày ${dateStr}
     </div>
   </div>
 </body>
@@ -423,7 +434,7 @@ export default function JobReportViewer() {
           <div className="border border-slate-200 rounded-xl p-6 bg-slate-50 space-y-5 text-sm font-sans">
             <div className="text-center border-b border-slate-300 pb-3">
               <h4 className="font-black text-blue-950 text-xl tracking-wide">BIÊN BẢN BÀN GIAO & NGHIỆM THU KỸ THUẬT</h4>
-              <p className="text-xs text-slate-500 mt-1">Thiện Phát Tech Toolkit Pro • {new Date().toLocaleDateString('vi-VN')}</p>
+              <p className="text-xs text-slate-500 mt-1">Thiên Phát Tech Toolkit Pro • {new Date().toLocaleDateString('vi-VN')}</p>
             </div>
 
             {/* General Info Grid */}
