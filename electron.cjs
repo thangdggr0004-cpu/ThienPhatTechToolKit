@@ -3519,7 +3519,15 @@ public class WinRamCleaner {
         // We MUST download to the real directory and delete the real exe.
         const realExeDir = process.env.PORTABLE_EXECUTABLE_DIR || path.dirname(process.execPath);
         const targetDir = app.isPackaged ? realExeDir : path.join(os.homedir(), 'Desktop');
-        const fileName = `ThienPhatTechToolkit_v${updateDataGlobal.latestVersion}.exe`;
+        let fileName = `PCCareMasterPro_v${updateDataGlobal.latestVersion}.exe`;
+        try {
+          const urlObj = new URL(downloadUrl);
+          const baseName = path.basename(urlObj.pathname);
+          if (baseName && baseName.endsWith('.exe')) {
+            fileName = baseName;
+          }
+        } catch (e) {}
+        
         const destPath = path.join(targetDir, fileName);
         
         updateDataGlobal.newExePath = destPath;
