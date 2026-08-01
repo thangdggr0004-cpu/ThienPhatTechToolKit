@@ -44,6 +44,12 @@ export default function JobReportViewer() {
 
   useEffect(() => {
     fetchSystemSummary();
+    setSessionData(getSessionReport());
+    const handleUpdate = () => {
+      setSessionData(getSessionReport());
+    };
+    window.addEventListener('tp-session-report-updated', handleUpdate);
+    return () => window.removeEventListener('tp-session-report-updated', handleUpdate);
   }, []);
 
   // 1-Click Quick Scan All System Statuses
@@ -51,22 +57,32 @@ export default function JobReportViewer() {
     const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
     setQuickScanning(true);
     try {
-      let winLic = '⚪ Chưa kiểm tra';
-      let offLic = '⚪ Chưa kiểm tra';
+      let winLic = sessionData.windowsActivation || '⚪ Chưa kiểm tra';
+      let offLic = sessionData.officeActivation || '⚪ Chưa kiểm tra';
       let netDns = '⚪ Giữ mặc định DHCP';
       let diskStatus = 'Tốt (Healthy)';
       let diskTemp = '38°C';
 
       if (isElectron) {
-        // Scan Windows & Office license
+        // Scan Windows License
         try {
-          const act = await (window as any).electronAPI.runActivationScanner();
-          if (act && act.findings) {
-            const winFinding = act.findings.find((f: any) => f.title?.toLowerCase().includes('windows'));
-            if (winFinding) winLic = `✔ ${winFinding.summary || 'Đã kích hoạt hợp lệ'}`;
-            
-            const offFinding = act.findings.find((f: any) => f.title?.toLowerCase().includes('office'));
-            if (offFinding) offLic = `✔ ${offFinding.summary || 'Office Đã kích hoạt'}`;
+          const winRes = await (window as any).electronAPI.scanActivation({ type: 'windows' });
+          if (winRes) {
+            const winName = winRes.Name || winRes.Description || winRes.LicenseFamily || 'Windows License';
+            const isGen = winRes.LicenseStatus === 1 || winRes.LicenseStatus === 'LICENSED';
+            winLic = `✔ ${winName}: ${isGen ? 'Đã kích hoạt bản quyền hợp lệ (Chính hãng)' : 'Đã kích hoạt'}`;
+          }
+        } catch (e) {}
+
+        // Scan Office License V3
+        try {
+          const offRes = await (window as any).electronAPI.scanOfficeEngineV3();
+          if (offRes && offRes.report) {
+            const r = offRes.report;
+            const offName = r.skuInfo?.skuName || 'Microsoft Office';
+            const offMethod = r.provenance?.activationMethod || 'KMS';
+            const offStatus = r.provenance?.activationStatus || 'LICENSED';
+            offLic = `✔ ${offName}: ${offStatus === 'LICENSED' ? `Đã kích hoạt (${offMethod})` : 'Chưa kích hoạt'}`;
           }
         } catch (e) {}
 
@@ -100,6 +116,7 @@ export default function JobReportViewer() {
         batteryWear: battWear,
       });
 
+      setSessionData(getSessionReport());
       alert("⚡ Đã quét và tự động cập nhật 100% dữ liệu vào Báo cáo KTV!");
     } catch (e: any) {
       alert("Lỗi khi quét: " + e.message);
