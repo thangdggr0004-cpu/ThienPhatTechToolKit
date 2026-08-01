@@ -28,8 +28,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   cleanJunk: (cats)   => ipcRenderer.invoke('clean-junk', cats),
 
   // ─── Network ──────────────────────────────────────────────────────
-  diagnoseNetwork: ()     => ipcRenderer.invoke('diagnose-network'),
-  applyDns:        (opts) => ipcRenderer.invoke('apply-dns', opts),
+  diagnoseNetwork:   ()     => ipcRenderer.invoke('diagnose-network'),
+  applyDns:          (opts) => ipcRenderer.invoke('apply-dns', opts),
+  resetNetworkStack: ()     => ipcRenderer.invoke('reset-network-stack'),
 
   // ─── Office ───────────────────────────────────────────────────────
   applyOfficeStandard:     (opts) => ipcRenderer.invoke('apply-office-standard', opts),
@@ -70,11 +71,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   toggleDefenderStatus: (enable)  => ipcRenderer.invoke('toggle-defender-status', enable),
   getBitlockerStatus:   ()        => ipcRenderer.invoke('get-bitlocker-status'),
   disableBitlocker:     (mp)      => ipcRenderer.invoke('disable-bitlocker', mp),
+  backupBitlockerKey:   (mp)      => ipcRenderer.invoke('backup-bitlocker-key', mp),
 
   // ─── Laptop / Hardware Tests ──────────────────────────────────────
-  getBatteryHealth: () => ipcRenderer.invoke('get-battery-health'),
-  getDiskHealth:    () => ipcRenderer.invoke('get-disk-health'),
-  runDxDiag:        () => ipcRenderer.invoke('run-dxdiag'),
+  getBatteryHealth:      () => ipcRenderer.invoke('get-battery-health'),
+  openBatteryReportHtml: () => ipcRenderer.invoke('open-battery-report-html'),
+  getDiskHealth:         () => ipcRenderer.invoke('get-disk-health'),
+  runDxDiag:             () => ipcRenderer.invoke('run-dxdiag'),
 
   // ─── MAS (Advanced Activation) ────────────────────────────────────
   runMasAction: (mode) => ipcRenderer.invoke('run-mas-action', mode),

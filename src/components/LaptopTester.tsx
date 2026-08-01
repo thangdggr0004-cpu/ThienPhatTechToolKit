@@ -641,6 +641,7 @@ function TouchTest() {
 function BatteryTest() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [openingReport, setOpeningReport] = useState(false);
 
   useEffect(() => {
     const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
@@ -657,14 +658,12 @@ function BatteryTest() {
 
   if (loading) return <div className="text-white text-center p-20">Đang tải thông tin pin...</div>;
 
-  const design = parseInt(data.DesignCapacity) || 0;
-  const full = parseInt(data.FullChargeCapacity) || 0;
-  const cycleCount = data.CycleCount || 0;
+  const design = parseInt(data?.DesignCapacity) || 0;
+  const full = parseInt(data?.FullChargeCapacity) || 0;
+  const cycleCount = data?.CycleCount || 0;
   const health = design > 0 ? ((full / design) * 100).toFixed(1) : 'N/A';
   const wearNum = design > 0 ? Math.max(0, 100 - (full / design) * 100) : 0;
   const wear = design > 0 ? wearNum.toFixed(1) : 'N/A';
-
-  const [openingReport, setOpeningReport] = useState(false);
   const handleOpenHtmlReport = async () => {
     const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
     if (!isElectron) { alert("Chỉ hoạt động trên ứng dụng thật."); return; }
