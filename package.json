@@ -48,12 +48,12 @@
   "build": {
     "appId": "com.thienphat.techtoolkit",
     "productName": "PCCareMasterPro",
+    "compression": "normal",
     "directories": {
       "output": "dist-electron"
     },
     "files": [
       "dist/**/*",
-      "src/**/*",
       "*.cjs",
       "MAS_AIO.cmd"
     ],
@@ -62,14 +62,15 @@
       "MAS_AIO.cmd"
     ],
     "portable": {
-      "artifactName": "PCCareMasterPro ${version}.exe",
+      "artifactName": "PCCareMasterPro ${version}-Portable.exe",
       "requestExecutionLevel": "admin",
       "unpackDirName": "PCCareMasterCache",
       "useZip": false
     },
     "win": {
       "target": [
-        "portable"
+        "portable",
+        "nsis"
       ],
       "icon": "build/icon.png",
       "requestedExecutionLevel": "requireAdministrator",
