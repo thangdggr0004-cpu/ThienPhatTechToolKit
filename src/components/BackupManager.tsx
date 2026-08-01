@@ -106,11 +106,11 @@ export default function BackupManager() {
     if (!isElectron) return;
     setDriverExporting(true);
     setMessage(null);
-    showMessage('info', '�?ang sao lưu driver, vui lòng ch�?... (có thể mất vài phút)');
+    showMessage('info', 'Đang trích xuất toàn bộ Driver OEM, vui lòng chờ trong giây lát...');
     try {
       const result = await window.electronAPI.exportDrivers();
       if (result && result.success) {
-        showMessage('success', `�?ã sao lưu driver thành công vào: ${result.path}`);
+        showMessage('success', `Đã sao lưu thành công toàn bộ Driver vào: ${result.path}`);
       } else {
         showMessage('error', result?.error || 'Không thể sao lưu driver');
       }
@@ -132,11 +132,11 @@ export default function BackupManager() {
     if (!isElectron) return;
     setDriverRestoring(true);
     setMessage(null);
-    showMessage('info', '�?ang phục hồi driver (cần quy�?n Admin)...');
+    showMessage('info', 'Đang tự động nạp & nạp lại toàn bộ Driver (.inf) vào Windows...');
     try {
       const result = await window.electronAPI.restoreDrivers();
       if (result && result.success) {
-        showMessage('success', '�?ã phục hồi driver thành công! Khuyến nghị khởi động lại máy.');
+        showMessage('success', 'Đã cài đặt phục hồi Driver thành công! Khuyến nghị khởi động lại máy.');
       } else {
         showMessage('error', result?.error || 'Không thể phục hồi driver');
       }

@@ -659,41 +659,80 @@ function BatteryTest() {
 
   const design = parseInt(data.DesignCapacity) || 0;
   const full = parseInt(data.FullChargeCapacity) || 0;
+  const cycleCount = data.CycleCount || 0;
   const health = design > 0 ? ((full / design) * 100).toFixed(1) : 'N/A';
-  const wear = design > 0 ? (100 - (full / design) * 100).toFixed(1) : 'N/A';
+  const wearNum = design > 0 ? Math.max(0, 100 - (full / design) * 100) : 0;
+  const wear = design > 0 ? wearNum.toFixed(1) : 'N/A';
+
+  const [openingReport, setOpeningReport] = useState(false);
+  const handleOpenHtmlReport = async () => {
+    const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
+    if (!isElectron) { alert("Chỉ hoạt động trên ứng dụng thật."); return; }
+    setOpeningReport(true);
+    try {
+      const res = await (window as any).electronAPI.openBatteryReportHtml();
+      if (!res.success) alert("⚠️ Lỗi xuất báo cáo: " + res.error);
+    } catch (e: any) {
+      alert("Lỗi: " + e.message);
+    } finally {
+      setOpeningReport(false);
+    }
+  };
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950 p-8">
       <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl w-full max-w-2xl shadow-2xl">
-        <h3 className="text-2xl font-black text-white mb-6 flex items-center gap-3">
-          <Battery className="text-yellow-500 h-8 w-8" /> Thông tin sức khỏe Pin (Battery)
-        </h3>
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-2xl font-black text-white flex items-center gap-3">
+            <Battery className="text-yellow-500 h-8 w-8" /> Thông tin sức khỏe Pin (Battery)
+          </h3>
+          {design > 0 && (
+            <button
+              onClick={handleOpenHtmlReport}
+              disabled={openingReport}
+              className="px-4 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 border border-yellow-500/40 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              <span>{openingReport ? 'Đang xuất báo cáo...' : '📄 Báo Cáo HTML Chi Tiết'}</span>
+            </button>
+          )}
+        </div>
+
         {design === 0 ? (
           <div className="text-rose-400 font-bold flex items-center gap-2 p-4 bg-rose-500/10 rounded-lg">
             <AlertTriangle /> Không tìm thấy thông tin Pin. (Có thể máy tính là máy bàn hoặc lỗi driver Pin).
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="bg-slate-800 p-4 rounded-xl">
-                <div className="text-slate-400 text-sm mb-1">Dung lượng thiết kế ban đầu</div>
-                <div className="text-xl font-bold text-white">{design} mWh</div>
+                <div className="text-slate-400 text-xs mb-1">Dung lượng thiết kế</div>
+                <div className="text-lg font-bold text-white">{design} mWh</div>
               </div>
               <div className="bg-slate-800 p-4 rounded-xl">
-                <div className="text-slate-400 text-sm mb-1">Dung lượng sạc đầy hiện tại</div>
-                <div className="text-xl font-bold text-white">{full} mWh</div>
+                <div className="text-slate-400 text-xs mb-1">Sạc đầy hiện tại</div>
+                <div className="text-lg font-bold text-white">{full} mWh</div>
+              </div>
+              <div className="bg-slate-800 p-4 rounded-xl">
+                <div className="text-slate-400 text-xs mb-1">Số chu kỳ sạc</div>
+                <div className="text-lg font-bold text-amber-400">{cycleCount > 0 ? `${cycleCount} lần` : 'Chưa ghi nhận'}</div>
               </div>
             </div>
             
             <div className="bg-slate-800 p-6 rounded-xl flex items-center justify-between">
               <div>
                 <div className="text-slate-400 text-sm mb-1">Độ chai pin (Wear Level)</div>
-                <div className="text-3xl font-black text-rose-500">{wear}%</div>
+                <div className={`text-3xl font-black ${wearNum > 30 ? 'text-rose-500' : wearNum > 15 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                  {wear}%
+                </div>
               </div>
               <div className="text-right">
-                <div className="text-slate-400 text-sm mb-1">Sức khỏe còn lại (Health)</div>
+                <div className="text-slate-400 text-sm mb-1">Đánh giá sức khỏe (Health)</div>
                 <div className="text-3xl font-black text-emerald-400">{health}%</div>
               </div>
+            </div>
+
+            <div className="p-3 bg-slate-850 border border-slate-800 rounded-xl text-xs text-slate-400 italic">
+              💡 Bấm nút <strong>"📄 Báo Cáo HTML Chi Tiết"</strong> để mở file báo cáo đầy đủ lịch sử sạc xả PIN chính chủ từ Microsoft Windows.
             </div>
           </div>
         )}

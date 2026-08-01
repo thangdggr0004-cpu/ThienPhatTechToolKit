@@ -2113,7 +2113,7 @@ if (-not (Test-Path $exportPath)) { New-Item -ItemType Directory -Path $exportPa
 Export-WindowsDriver -Online -Destination $exportPath | Out-Null
 Write-Output "OK"
 `;
-      await runPowerShellScript(script);
+      await runPowerShellScriptElevated(script);
       return { success: true, path: exportPath };
     } catch (err) {
       console.error('Error exporting drivers:', err);
@@ -3112,6 +3112,19 @@ public class WinRamCleaner {
       return parsed;
     } catch {
       return { noBattery: true, DesignCapacity: 0, FullChargeCapacity: 0 };
+    }
+  });
+
+  ipcMain.handle('open-battery-report-html', async () => {
+    try {
+      const htmlPath = path.join(os.tmpdir(), 'battery-report.html');
+      const script = `powercfg /batteryreport /output "${htmlPath.replace(/\\/g, '\\\\')}"`;
+      await runPowerShellScript(script);
+      const { shell } = require('electron');
+      await shell.openExternal('file:///' + htmlPath.replace(/\\/g, '/'));
+      return { success: true, path: htmlPath };
+    } catch (err) {
+      return { success: false, error: err.message };
     }
   });
 
