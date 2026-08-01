@@ -7,20 +7,30 @@ interface DashboardProps {
 
 export default function Dashboard({ onNavigate }: DashboardProps) {
   const [defenderEnabled, setDefenderEnabled] = React.useState<boolean | null>(null);
+  const [defenderLoading, setDefenderLoading] = React.useState<boolean>(true);
   const [togglingDefender, setTogglingDefender] = React.useState<boolean>(false);
 
   React.useEffect(() => {
     const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
+    setDefenderLoading(true);
     if (isElectron && (window as any).electronAPI.getDefenderStatus) {
-      window.electronAPI.getDefenderStatus().then((res) => {
-        if (res && typeof res.enabled === 'boolean') {
-          setDefenderEnabled(res.enabled);
-        }
-      }).catch(() => {
-        setDefenderEnabled(true);
-      });
+      window.electronAPI.getDefenderStatus()
+        .then((res) => {
+          if (res && typeof res.enabled === 'boolean') {
+            setDefenderEnabled(res.enabled);
+          } else {
+            setDefenderEnabled(true);
+          }
+        })
+        .catch(() => {
+          setDefenderEnabled(true);
+        })
+        .finally(() => {
+          setDefenderLoading(false);
+        });
     } else {
       setDefenderEnabled(true);
+      setDefenderLoading(false);
     }
   }, []);
 
@@ -70,10 +80,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             Trình quản lý &amp; Chẩn đoán cao cấp
           </span>
           <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 leading-tight">
-            Tối ưu hóa &amp; Làm sạch toàn diện máy tính của bạn
+            Bảng điều khiển quản lý Windows & Office
           </h2>
           <p className="text-xs md:text-sm text-slate-600 leading-relaxed">
-            Hỗ trợ chẩn đoán bản quyền sâu, tối ưu cấu hình RAM, dọn rác tệp tin tạm thời, chuẩn hóa văn bản theo quy định nhà nước và điều khiển sơ đồ điện năng tối đa FPS cho game thủ.
+            Truy cập ngay các công cụ chẩn đoán, dọn dẹp, kiểm tra bản quyền, tối ưu hệ thống và sửa lỗi máy in với giao diện tinh giản, màu trắng sáng.
           </p>
           <div className="pt-2 flex flex-wrap gap-3">
             <button
@@ -91,28 +101,28 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             </button>
             <button
               onClick={handleToggleDefender}
-              disabled={togglingDefender}
+              disabled={togglingDefender || defenderLoading}
               className={`py-2 px-4 rounded text-xs font-semibold transition cursor-pointer shadow-sm flex items-center gap-1.5 border ${
                 defenderEnabled === false
-                  ? 'bg-rose-50 hover:bg-rose-100 border-rose-300 text-rose-700'
-                  : 'bg-emerald-50 hover:bg-emerald-100 border-emerald-300 text-emerald-700'
+                  ? 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700'
+                  : 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700'
               }`}
-              title="Bật/Tắt nhanh Windows Defender Real-time Protection"
+              title="Bật/Tắt nhanh Windows Defender"
             >
-              {togglingDefender ? (
+              {togglingDefender || defenderLoading ? (
                 <>
                   <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  Đang xử lý...
+                  {defenderLoading ? 'Đang kiểm tra Defender...' : 'Đang xử lý...'}
                 </>
               ) : defenderEnabled === false ? (
                 <>
-                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-                  🛡️ Bật Windows Defender
+                  <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                  🛡️ Bật Defender
                 </>
               ) : (
                 <>
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  🛡️ Tắt Windows Defender
+                  <span className="w-2 h-2 rounded-full bg-blue-500" />
+                  🛡️ Tắt Defender
                 </>
               )}
             </button>
@@ -128,14 +138,14 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           className="bg-white hover:bg-gradient-to-br hover:from-slate-50 hover:to-slate-100/80 p-5 rounded-xl border border-slate-200/80 hover:border-blue-400/40 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group space-y-4 hover:-translate-y-0.5"
         >
           <div className="flex justify-between items-start">
-            <div className="p-2 bg-amber-50 text-amber-600 rounded border border-amber-200 group-hover:scale-105 transition-transform shadow-sm">
+            <div className="p-2 bg-blue-50 text-blue-600 rounded border border-blue-200 group-hover:scale-105 transition-transform shadow-sm">
               <ShieldCheck className="h-5 w-5" />
             </div>
-            <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider bg-amber-50 px-2 py-0.5 rounded border border-amber-200">Kiểm tra lậu</span>
+            <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider bg-blue-50 px-2 py-0.5 rounded border border-blue-200">Kiểm tra bản quyền</span>
           </div>
           <div className="space-y-1">
-            <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Quét Windows / Office active</h3>
-            <p className="text-[11px] text-slate-500 leading-relaxed">Phát hiện bản quyền KMS lậu, hỗ trợ xoá key chuyên sâu dứt điểm.</p>
+            <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Quét Windows & Office bản quyền</h3>
+            <p className="text-[11px] text-slate-500 leading-relaxed">Phát hiện trạng thái bản quyền và hỗ trợ dọn sạch key KMS lậu.</p>
           </div>
           <div className="text-[10px] text-slate-400 font-semibold uppercase flex items-center gap-1 group-hover:text-blue-600 transition-colors">
             Chi tiết quét bản quyền <ArrowRight className="h-3 w-3" />
@@ -151,7 +161,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             <div className="p-2 bg-blue-50 text-blue-600 rounded border border-blue-200 group-hover:scale-105 transition-transform shadow-sm">
               <Cpu className="h-5 w-5" />
             </div>
-            <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider bg-blue-50 px-2 py-0.5 rounded border border-blue-200">Chi tiết 100%</span>
+            <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider bg-blue-50 px-2 py-0.5 rounded border border-blue-200">Chi tiết phần cứng</span>
           </div>
           <div className="space-y-1">
             <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Cấu hình phần cứng chi tiết</h3>
@@ -168,10 +178,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           className="bg-white hover:bg-gradient-to-br hover:from-slate-50 hover:to-slate-100/80 p-5 rounded-xl border border-slate-200/80 hover:border-blue-400/40 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group space-y-4 hover:-translate-y-0.5"
         >
           <div className="flex justify-between items-start">
-            <div className="p-2 bg-rose-50 text-rose-600 rounded border border-rose-200 group-hover:scale-105 transition-transform shadow-sm">
+            <div className="p-2 bg-blue-50 text-blue-600 rounded border border-blue-200 group-hover:scale-105 transition-transform shadow-sm">
               <Trash2 className="h-5 w-5" />
             </div>
-            <span className="text-[10px] font-bold text-rose-700 uppercase tracking-wider bg-rose-50 px-2 py-0.5 rounded border border-rose-200">Dọn dẹp nhanh</span>
+            <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider bg-blue-50 px-2 py-0.5 rounded border border-blue-200">Dọn dẹp nhanh</span>
           </div>
           <div className="space-y-1">
             <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Dọn dẹp rác chuyên sâu</h3>
@@ -188,10 +198,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           className="bg-white hover:bg-gradient-to-br hover:from-slate-50 hover:to-slate-100/80 p-5 rounded-xl border border-slate-200/80 hover:border-blue-400/40 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group space-y-4 hover:-translate-y-0.5"
         >
           <div className="flex justify-between items-start">
-            <div className="p-2 bg-indigo-50 text-indigo-600 rounded border border-indigo-200 group-hover:scale-105 transition-transform shadow-sm">
+            <div className="p-2 bg-blue-50 text-blue-600 rounded border border-blue-200 group-hover:scale-105 transition-transform shadow-sm">
               <Laptop className="h-5 w-5" />
             </div>
-            <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">All in One</span>
+            <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider bg-blue-50 px-2 py-0.5 rounded border border-blue-200">All in One</span>
           </div>
           <div className="space-y-1">
             <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Kiểm Tra Laptop Toàn Diện</h3>
@@ -208,10 +218,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           className="bg-white hover:bg-gradient-to-br hover:from-slate-50 hover:to-slate-100/80 p-5 rounded-xl border border-slate-200/80 hover:border-blue-400/40 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group space-y-4 hover:-translate-y-0.5"
         >
           <div className="flex justify-between items-start">
-            <div className="p-2 bg-fuchsia-50 text-fuchsia-600 rounded border border-fuchsia-200 group-hover:scale-105 transition-transform shadow-sm">
+            <div className="p-2 bg-blue-50 text-blue-600 rounded border border-blue-200 group-hover:scale-105 transition-transform shadow-sm">
               <Settings className="h-5 w-5" />
             </div>
-            <span className="text-[10px] font-bold text-fuchsia-700 uppercase tracking-wider bg-fuchsia-50 px-2 py-0.5 rounded border border-fuchsia-200">Tối ưu Win</span>
+            <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider bg-blue-50 px-2 py-0.5 rounded border border-blue-200">Tối ưu Windows</span>
           </div>
           <div className="space-y-1">
             <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Thiết lập Windows</h3>
@@ -228,10 +238,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           className="bg-white hover:bg-gradient-to-br hover:from-slate-50 hover:to-slate-100/80 p-5 rounded-xl border border-slate-200/80 hover:border-blue-400/40 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group space-y-4 hover:-translate-y-0.5"
         >
           <div className="flex justify-between items-start">
-            <div className="p-2 bg-purple-50 text-purple-600 rounded border border-purple-200 group-hover:scale-105 transition-transform shadow-sm">
+            <div className="p-2 bg-blue-50 text-blue-600 rounded border border-blue-200 group-hover:scale-105 transition-transform shadow-sm">
               <Wifi className="h-5 w-5" />
             </div>
-            <span className="text-[10px] font-bold text-purple-700 uppercase tracking-wider bg-purple-50 px-2 py-0.5 rounded border border-purple-200">DNS Changer</span>
+            <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider bg-blue-50 px-2 py-0.5 rounded border border-blue-200">Mạng & DNS</span>
           </div>
           <div className="space-y-1">
             <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Kiểm tra Mạng &amp; Đổi DNS</h3>
@@ -248,10 +258,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           className="bg-white hover:bg-gradient-to-br hover:from-slate-50 hover:to-slate-100/80 p-5 rounded-xl border border-slate-200/80 hover:border-blue-400/40 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group space-y-4 hover:-translate-y-0.5"
         >
           <div className="flex justify-between items-start">
-            <div className="p-2 bg-cyan-50 text-cyan-600 rounded border border-cyan-200 group-hover:scale-105 transition-transform shadow-sm">
+            <div className="p-2 bg-blue-50 text-blue-600 rounded border border-blue-200 group-hover:scale-105 transition-transform shadow-sm">
               <Printer className="h-5 w-5" />
             </div>
-            <span className="text-[10px] font-bold text-cyan-700 uppercase tracking-wider bg-cyan-50 px-2 py-0.5 rounded border border-cyan-200">Spooler Fix</span>
+            <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider bg-blue-50 px-2 py-0.5 rounded border border-blue-200">Máy In</span>
           </div>
           <div className="space-y-1">
             <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Tiện Ích Máy In</h3>
@@ -268,10 +278,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           className="bg-white hover:bg-gradient-to-br hover:from-slate-50 hover:to-slate-100/80 p-5 rounded-xl border border-slate-200/80 hover:border-blue-400/40 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group space-y-4 hover:-translate-y-0.5"
         >
           <div className="flex justify-between items-start">
-            <div className="p-2 bg-emerald-50 text-emerald-600 rounded border border-emerald-200 group-hover:scale-105 transition-transform shadow-sm">
+            <div className="p-2 bg-blue-50 text-blue-600 rounded border border-blue-200 group-hover:scale-105 transition-transform shadow-sm">
               <AlignLeft className="h-5 w-5" />
             </div>
-            <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Nghị định 30</span>
+            <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider bg-blue-50 px-2 py-0.5 rounded border border-blue-200">Văn bản chuẩn</span>
           </div>
           <div className="space-y-1">
             <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Tiện Ích Office</h3>
@@ -288,10 +298,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           className="bg-white hover:bg-gradient-to-br hover:from-slate-50 hover:to-slate-100/80 p-5 rounded-xl border border-slate-200/80 hover:border-blue-400/40 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group space-y-4 hover:-translate-y-0.5"
         >
           <div className="flex justify-between items-start">
-            <div className="p-2 bg-teal-50 text-teal-600 rounded border border-teal-200 group-hover:scale-105 transition-transform shadow-sm">
+            <div className="p-2 bg-blue-50 text-blue-600 rounded border border-blue-200 group-hover:scale-105 transition-transform shadow-sm">
               <Archive className="h-5 w-5" />
             </div>
-            <span className="text-[10px] font-bold text-teal-700 uppercase tracking-wider bg-teal-50 px-2 py-0.5 rounded border border-teal-200">Safe Backup</span>
+            <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider bg-blue-50 px-2 py-0.5 rounded border border-blue-200">Sao lưu</span>
           </div>
           <div className="space-y-1">
             <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Sao Lưu Chuyên Sâu</h3>
@@ -308,10 +318,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           className="bg-white hover:bg-gradient-to-br hover:from-slate-50 hover:to-slate-100/80 p-5 rounded-xl border border-slate-200/80 hover:border-blue-400/40 hover:shadow-md shadow-sm transition-all duration-200 cursor-pointer group space-y-4 hover:-translate-y-0.5"
         >
           <div className="flex justify-between items-start">
-            <div className="p-2 bg-slate-100 text-slate-600 rounded border border-slate-300 group-hover:scale-105 transition-transform shadow-sm">
+            <div className="p-2 bg-blue-50 text-blue-600 rounded border border-blue-200 group-hover:scale-105 transition-transform shadow-sm">
               <Lock className="h-5 w-5" />
             </div>
-            <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider bg-slate-100 px-2 py-0.5 rounded border border-slate-300">Unlock Drive</span>
+            <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider bg-blue-50 px-2 py-0.5 rounded border border-blue-200">Mã hóa ổ</span>
           </div>
           <div className="space-y-1">
             <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Tắt BitLocker</h3>
@@ -325,45 +335,38 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       </div>
 
       {/* Author and Donation Banner */}
-      <div className="bg-slate-100/60 p-4 rounded-lg border border-slate-200/80 shadow-sm flex flex-col gap-3">
+      <div className="bg-slate-100/50 p-4 rounded-lg border border-slate-200/70 shadow-sm flex flex-col gap-3">
         <div className="flex gap-3 items-start">
-          <div className="p-2 bg-orange-100 text-orange-600 rounded-full shrink-0">
+          <div className="p-2 bg-blue-50 text-blue-600 rounded-full shrink-0">
             <Coffee className="h-5 w-5" />
           </div>
           <div className="text-xs leading-relaxed text-slate-700">
-            <span className="font-bold text-slate-800 block mb-0.5 text-sm">Nếu thấy hay mời tác giả ly cafe ☕</span>
-            Donate qua số tài khoản Techcombank: <span className="font-mono font-bold text-blue-700 text-sm">386677889999</span>. Xin cảm ơn!
+            <span className="font-bold text-slate-800 block mb-0.5 text-sm">Ủng hộ tác giả nếu công cụ hữu ích</span>
+            Donate qua tài khoản Techcombank: <span className="font-mono font-bold text-blue-700 text-sm">386677889999</span>.
           </div>
         </div>
 
         <div className="h-px bg-slate-200 w-full my-1"></div>
 
-        <div className="flex flex-col gap-2 text-xs text-slate-600">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-600">
           <div className="flex items-center gap-2">
             <User className="h-4 w-4 text-slate-400" />
-            <span className="font-semibold text-slate-700">Người phát triển tool:</span>
+            <span className="font-semibold text-slate-700">Tác giả:</span>
             <span className="font-bold text-blue-700">ThắngĐG</span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <div className="flex items-center gap-1.5">
-              <Phone className="h-4 w-4 text-emerald-600" />
-              <span className="font-medium">SĐT: <span className="font-bold text-slate-800">0787 567 870</span></span>
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <div className="w-4 h-4 bg-blue-500 text-white rounded text-[9px] flex items-center justify-center font-bold">Z</div>
-              <span className="font-medium">Zalo: <span className="font-bold text-slate-800">0787567870</span></span>
-            </div>
-
-            <button
-              onClick={() => window.open('https://www.facebook.com/ThangDG/', '_blank')}
-              className="flex items-center gap-1.5 hover:bg-blue-50 px-2 py-1 -ml-2 rounded transition-colors cursor-pointer group"
-            >
-              <Facebook className="h-4 w-4 text-blue-600 group-hover:scale-110 transition-transform" />
-              <span className="font-medium">Facebook: <span className="font-bold text-blue-700 group-hover:underline">ThắngĐG</span></span>
-            </button>
+          <div className="flex items-center gap-1.5">
+            <Phone className="h-4 w-4 text-blue-500" />
+            <span className="font-medium">0787 567 870</span>
           </div>
+
+          <button
+            onClick={() => window.open('https://www.facebook.com/ThangDG/', '_blank')}
+            className="flex items-center gap-1.5 hover:bg-blue-50 px-2 py-1 rounded transition-colors cursor-pointer"
+          >
+            <Facebook className="h-4 w-4 text-blue-600" />
+            <span className="font-medium text-blue-700">ThắngĐG</span>
+          </button>
         </div>
       </div>
     </div>
