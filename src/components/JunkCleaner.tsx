@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, CheckCircle, Settings, Database, History, RefreshCw, FileWarning, List } from 'lucide-react';
+import { Trash2, CheckCircle, Settings, Database, History, RefreshCw, FileWarning } from 'lucide-react';
 import { JunkCategory } from '../types.js';
 import { useTaskManager } from '../context/TaskManagerContext.js';
 import { updateSessionReport, getSessionReport } from '../utils/SessionAuditStore.js';
@@ -119,47 +119,6 @@ export default function JunkCleaner() {
   const handleSelectAll = (check: boolean) => {
     setCategories(prev => prev.map(cat => ({ ...cat, checked: check })));
   };
-
-  // Modal to show files list for a category
-  const [filesModalOpen, setFilesModalOpen] = React.useState(false);
-  const [filesModalTitle, setFilesModalTitle] = React.useState('');
-  const [filesModalList, setFilesModalList] = React.useState<string[]>([]);
-
-  const openFilesModal = (catId: string) => {
-    const cat = categories.find(c => c.id === catId);
-    if (!cat) return;
-    setFilesModalTitle(cat.name);
-    setFilesModalList(Array.isArray(cat.filesList) ? cat.filesList : []);
-    setFilesModalOpen(true);
-  };
-
-  const closeFilesModal = () => {
-    setFilesModalOpen(false);
-    setFilesModalList([]);
-    setFilesModalTitle('');
-  };
-
-  const copyFilesToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(filesModalList.join('\n'));
-      alert('Đã sao chép danh sách file vào clipboard');
-    } catch (e) {
-      alert('Không thể sao chép — trình duyệt không cho phép');
-    }
-  };
-
-  const exportFilesList = () => {
-    const blob = new Blob([filesModalList.join('\n')], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${filesModalTitle.replace(/\s+/g,'_')}_files.txt`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  };
-
 
   const handleScan = async () => {
     setScanning(true);
@@ -362,15 +321,6 @@ export default function JunkCleaner() {
                     <h4 className="text-sm font-semibold text-slate-800 line-clamp-1">{cat.name}</h4>
                     <p className="text-[11px] text-slate-500 mt-1 line-clamp-2">{cat.description}</p>
                   </div>
-
-                  {/* small view details button */}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); openFilesModal(cat.id); }}
-                    title="Xem chi tiết danh sách file"
-                    className="ml-2 p-1 rounded-md bg-white border border-slate-200 hover:bg-slate-50 text-slate-600"
-                  >
-                    <List className="w-4 h-4" />
-                  </button>
                 </div>
 
                 <div className="mt-3 pt-3 border-t border-slate-100/50 flex items-center justify-between text-sm">
@@ -389,38 +339,7 @@ export default function JunkCleaner() {
             )
           })}
         </div>
-
-        {/* Files Modal */}
-        {filesModalOpen && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/40" onClick={closeFilesModal} />
-            <div className="relative bg-white w-[min(900px,95%)] max-h-[80vh] overflow-auto rounded-lg shadow-lg p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h3 className="text-lg font-semibold">{filesModalTitle}</h3>
-                  <p className="text-sm text-slate-500">Danh sách tệp được phát hiện ({filesModalList.length})</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={copyFilesToClipboard} className="px-3 py-1 rounded bg-slate-50 hover:bg-slate-100 border">Sao chép</button>
-                  <button onClick={exportFilesList} className="px-3 py-1 rounded bg-slate-50 hover:bg-slate-100 border">Xuất .txt</button>
-                  <button onClick={closeFilesModal} className="px-3 py-1 rounded bg-blue-600 text-white">Đóng</button>
-                </div>
-              </div>
-
-              <div className="mt-3">
-                {filesModalList.length === 0 ? (
-                  <div className="p-6 text-center text-slate-500">Không có tệp nào để hiển thị.</div>
-                ) : (
-                  <ul className="text-xs font-mono text-slate-700 space-y-1">
-                    {filesModalList.map((f, idx) => (
-                      <li key={idx} className="py-1 px-2 rounded hover:bg-slate-50">{f}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+      </div>
 
       {/* ACTION BAR */}
       <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
