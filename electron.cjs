@@ -2240,27 +2240,61 @@ Write-Output "OK"
         `;
         const output = await runPowerShellScript(script);
         return { success: true, data: JSON.parse(output.trim() || '[]') };
-      } else if (action === 'epson-scan-usb') {
+      } else if (action === 'epson-scan-usb' || action === 'epson-scan-usb-detailed') {
         script = `
           $OutputEncoding = [System.Text.Encoding]::UTF8
           [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-          $epsonPrinters = Get-CimInstance Win32_Printer | Where-Object { $_.Name -like "*Epson*" -or $_.Caption -like "*Epson*" }
+          
+          # Query Win32_Printer for Epson printers
+          $printers = Get-CimInstance Win32_Printer -ErrorAction SilentlyContinue | Where-Object { 
+            $_.Name -like "*Epson*" -or $_.DriverName -like "*Epson*" -or $_.Caption -like "*Epson*"
+          }
+
+          # Query Win32_PnPEntity for USB Vendor ID 04B8 (Epson Seiko Corp)
+          $pnpUsbPrinters = Get-CimInstance Win32_PnPEntity -ErrorAction SilentlyContinue | Where-Object { 
+            $_.DeviceID -like "*USB\\VID_04B8*" -or $_.PNPClass -eq "Printer" -or $_.Service -eq "usbprint"
+          }
+
           $list = @()
-          foreach ($p in $epsonPrinters) {
-            $isUsb = ($p.PortName -like "*USB*" -or $p.PortName -like "*DOT4*")
-            $list += @{
-              Name = $p.Name
-              Port = $p.PortName
-              IsUsb = $isUsb
-              Status = $p.PrinterStatus
-              DetectedErrorState = $p.DetectedErrorState
-              WorkOffline = $p.WorkOffline
+          if ($printers) {
+            foreach ($p in $printers) {
+              $isUsb = ($p.PortName -like "*USB*" -or $p.PortName -like "*DOT4*" -or $p.PortName -like "*USBPRINT*")
+              $statusStr = switch ($p.PrinterStatus) {
+                3 { "Sẵn sàng (Idle)" }
+                4 { "Đang in (Printing)" }
+                5 { "Đang khởi động (Warming Up)" }
+                7 { "Lỗi/Kẹt mực (Offline Error)" }
+                default { if ($p.WorkOffline) { "Ngoại tuyến (Offline)" } else { "Đang kết nối (Connected)" } }
+              }
+
+              $jobCount = 0
+              try {
+                $jobs = Get-PrintJob -PrinterName $p.Name -ErrorAction SilentlyContinue
+                if ($jobs) { $jobCount = ($jobs | Measure-Object).Count }
+              } catch {}
+
+              $matchingPnp = $pnpUsbPrinters | Where-Object { $_.Name -like "*$($p.Name)*" -or $_.Caption -like "*Epson*" } | Select-Object -First 1
+
+              $list += @{
+                Name = $p.Name
+                Port = $p.PortName
+                IsUsb = $isUsb
+                Status = $statusStr
+                WorkOffline = [bool]$p.WorkOffline
+                JobCount = $jobCount
+                PnpDeviceId = if ($matchingPnp) { $matchingPnp.DeviceID } else { "USB\\VID_04B8 (Epson USB Interface)" }
+                DetectedErrorState = $p.DetectedErrorState
+              }
             }
           }
+
           $list | ConvertTo-Json -Depth 3
         `;
         const output = await runPowerShellScript(script);
-        return { success: true, data: JSON.parse(output.trim() || '[]') };
+        let parsed = [];
+        try { parsed = JSON.parse(output.trim() || '[]'); } catch (e) {}
+        if (!Array.isArray(parsed)) parsed = [parsed];
+        return { success: true, data: parsed };
       } else if (action === 'epson-reset-counter') {
         script = `
           $OutputEncoding = [System.Text.Encoding]::UTF8

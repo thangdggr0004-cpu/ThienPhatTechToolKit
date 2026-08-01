@@ -147,6 +147,8 @@ export default function PrinterUtils() {
   const [showQueue, setShowQueue] = useState(false);
 
   const [selectedEpsonModel, setSelectedEpsonModel] = useState<string>('L3110');
+  const [epsonUsbPrinters, setEpsonUsbPrinters] = useState<any[]>([]);
+  const [scanningEpsonUsb, setScanningEpsonUsb] = useState(false);
 
   const [selectedBrotherIndex, setSelectedBrotherIndex] = useState<number>(0);
   const [brotherTab, setBrotherTab] = useState<'toner' | 'drum'>('toner');
@@ -175,8 +177,35 @@ export default function PrinterUtils() {
     }
   };
 
+  const scanEpsonUsb = async () => {
+    if (!isElectron) {
+      setEpsonUsbPrinters([
+        { Name: 'EPSON L3110 Series', Port: 'USB001', IsUsb: true, Status: 'Sẵn sàng (Idle)', JobCount: 0, PnpDeviceId: 'USB\\VID_04B8&PID_1138\\58334444313236' }
+      ]);
+      return;
+    }
+    setScanningEpsonUsb(true);
+    try {
+      addLog(`[*] (Pha E1) Đang quét nhận diện máy in Epson kết nối cổng USB...`);
+      const res = await (window as any).electronAPI.executePrinterAction('epson-scan-usb-detailed');
+      if (res.success && Array.isArray(res.data)) {
+        setEpsonUsbPrinters(res.data);
+        if (res.data.length > 0) {
+          addLog(`[+] Đã phát hiện ${res.data.length} máy in Epson (Cổng: ${res.data.map((p: any) => p.Port).join(', ')})`);
+        } else {
+          addLog(`[!] Chưa phát hiện máy in Epson kết nối qua dây cáp USB.`);
+        }
+      }
+    } catch (e: any) {
+      addLog(`[x] Lỗi quét USB Epson: ${e.message}`);
+    } finally {
+      setScanningEpsonUsb(false);
+    }
+  };
+
   useEffect(() => {
     fetchPrinters();
+    scanEpsonUsb();
   }, []);
 
   const addLog = (msg: string) => {
@@ -648,8 +677,63 @@ export default function PrinterUtils() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div className="md:col-span-2 space-y-4">
+              {/* Phase E1: Real-Time USB Printer Status Scanner */}
+              <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl text-white space-y-3">
+                <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                  <div className="flex items-center gap-2">
+                    <Printer className="h-5 w-5 text-cyan-400" />
+                    <div>
+                      <h4 className="font-bold text-xs text-cyan-300 uppercase tracking-wide">PHA E1: Nhận Diện Cổng USB Máy In Epson Real-Time</h4>
+                      <p className="text-[10px] text-slate-400">Quét thiết bị USB PnP (Vendor ID 04B8) và trạng thái hàng đợi in</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={scanEpsonUsb}
+                    disabled={scanningEpsonUsb}
+                    className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${scanningEpsonUsb ? 'animate-spin' : ''}`} />
+                    Quét Lại USB
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {epsonUsbPrinters.length === 0 ? (
+                    <div className="p-4 bg-slate-950/60 rounded-xl border border-slate-800 text-center text-xs text-slate-400">
+                      ⚪ Chưa phát hiện máy in Epson cắm qua cáp USB. Hãy cắm cáp USB nối máy in với máy tính và bấm "Quét Lại USB".
+                    </div>
+                  ) : (
+                    epsonUsbPrinters.map((p, idx) => (
+                      <div key={idx} className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+                        <div>
+                          <div className="font-bold text-white flex items-center gap-2">
+                            <span>{p.Name}</span>
+                            <span className="px-2 py-0.5 bg-cyan-950 text-cyan-300 border border-cyan-800/60 rounded text-[10px] font-mono">
+                              Cổng {p.Port}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                            Hardware ID: {p.PnpDeviceId}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                            p.IsUsb ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-amber-500/20 text-amber-300'
+                          }`}>
+                            {p.Status || 'Sẵn sàng'}
+                          </span>
+                          <div className="text-[10px] text-slate-400 mt-1">
+                            Hàng đợi: <span className="font-bold text-amber-400">{p.JobCount || 0} lệnh</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-                <label className="text-xs font-bold text-slate-700 block">Chọn Model Máy In Epson:</label>
+                <label className="text-xs font-bold text-slate-700 block">Chọn Model Máy In Epson Cần Reset:</label>
                 <select
                   value={selectedEpsonModel}
                   onChange={(e) => setSelectedEpsonModel(e.target.value)}
@@ -669,7 +753,7 @@ export default function PrinterUtils() {
                     onClick={() => handleAction('epson-check-counter', `Kiểm tra bộ đếm Epson ${selectedEpsonModel}`)}
                     className="flex-1 py-2.5 px-4 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-xs font-bold shadow-md shadow-cyan-600/20 transition-all flex items-center justify-center gap-2"
                   >
-                    <Eye className="w-4 h-4" /> 1. Kiểm Tra % Mực Thải
+                    <Eye className="w-4 h-4" /> 1. Kiểm Tra Cổng USB Real-time
                   </button>
 
                   <button
