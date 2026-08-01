@@ -223,6 +223,12 @@ export default function JunkCleaner() {
     return <FileWarning className="w-5 h-5" />;
   };
 
+  const formatSizeReadable = (mb: number) => {
+    if (!mb || mb <= 0) return '0 MB';
+    if (mb >= 1024) return `${(mb / 1024).toFixed(2)} GB`;
+    return `${Math.round(mb)} MB`;
+  };
+
   return (
     <div className="space-y-6 animate-fade-in pb-8">
       {/* HEADER & OVERVIEW STATS */}
@@ -286,37 +292,48 @@ export default function JunkCleaner() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {categories.map((cat) => {
             const isHeavy = cat.sizeMB > 500;
+            const filesCount = (cat.filesList && Array.isArray(cat.filesList)) ? cat.filesList.length : 0;
             return (
               <div 
                 key={cat.id}
                 onClick={() => { if (!scanning && !cleaning) handleToggle(cat.id) }}
-                className={`group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden ${
+                className={`group relative p-4 rounded-xl border transition-shadow duration-200 cursor-pointer overflow-hidden ${
                   cat.checked 
-                    ? 'bg-blue-50/50 border-blue-400 shadow-md -translate-y-1' 
-                    : 'bg-white border-slate-200 hover:border-blue-300 hover:shadow-sm'
-                }`}
-              >
-                {/* Custom Checkbox UI in top right */}
-                <div className={`absolute top-3 right-3 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                    ? 'bg-blue-50 border-blue-300 shadow' 
+                    : 'bg-white border-slate-200 hover:shadow-sm'
+                }`}>
+
+                {/* compact checkbox top-right */}
+                <div className={`absolute top-3 right-3 w-4 h-4 rounded-sm border-2 flex items-center justify-center transition-colors ${
                   cat.checked ? 'bg-blue-600 border-blue-600' : 'border-slate-300 group-hover:border-blue-400'
                 }`}>
-                  {cat.checked && <CheckCircle className="w-3.5 h-3.5 text-white" />}
+                  {cat.checked && <CheckCircle className="w-3 h-3 text-white" />}
                 </div>
 
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-transform duration-300 group-hover:rotate-6 ${
+                <div className={`w-10 h-10 rounded-md flex items-center justify-center mb-3 ${
                   cat.checked ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500'
                 }`}>
                   {getCategoryIcon(cat.id)}
                 </div>
-                
-                <h4 className="text-[13px] font-bold text-slate-800 pr-6 line-clamp-1">{cat.name}</h4>
-                <p className="text-[10px] text-slate-500 mt-1 line-clamp-2 h-[30px]">{cat.description}</p>
-                
-                <div className="mt-3 pt-3 border-t border-slate-100/50 flex items-center justify-between">
-                  <span className="text-[10px] font-semibold text-slate-400 uppercase">Dung lượng</span>
-                  <span className={`text-xs font-black font-mono ${cat.sizeMB > 0 ? (isHeavy ? 'text-rose-600' : 'text-blue-600') : 'text-emerald-500'}`}>
-                    {cat.sizeMB > 0 ? `${(cat.sizeMB / 1024).toFixed(2)} GB` : 'Sạch sẽ'}
-                  </span>
+
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-slate-800 line-clamp-1">{cat.name}</h4>
+                    <p className="text-[11px] text-slate-500 mt-1 line-clamp-2">{cat.description}</p>
+                  </div>
+                </div>
+
+                <div className="mt-3 pt-3 border-t border-slate-100/50 flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-slate-400 uppercase font-semibold">Dung lượng</span>
+                    <span className={`font-mono font-bold ${cat.sizeMB > 0 ? (isHeavy ? 'text-rose-600' : 'text-blue-600') : 'text-emerald-500'}`}>
+                      {cat.sizeMB > 0 ? formatSizeReadable(cat.sizeMB) : 'Sạch'}
+                    </span>
+                  </div>
+
+                  <div className="text-xs text-slate-500">
+                    {filesCount > 0 ? `${filesCount} tệp` : '—'}
+                  </div>
                 </div>
               </div>
             )
