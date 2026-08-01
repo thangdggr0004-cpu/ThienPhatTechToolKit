@@ -53,8 +53,7 @@
     },
     "files": [
       "dist/**/*",
-      "electron.cjs",
-      "preload.cjs"
+      "*.cjs"
     ],
     "extraResources": [
       "elevate.exe"
