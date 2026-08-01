@@ -9,9 +9,7 @@ import {
   ShieldCheck, 
   Lock,
   CheckCircle2,
-  Search,
-  RefreshCw,
-  ServerCrash
+  RefreshCw
 } from 'lucide-react';
 
 import { 
