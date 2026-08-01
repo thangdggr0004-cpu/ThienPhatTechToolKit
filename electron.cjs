@@ -1071,6 +1071,10 @@ $paths = @{
   "prefetch" = "$env:windir\\Prefetch"
   "win_update" = "$env:windir\\SoftwareDistribution\\Download"
   "system_logs" = "$env:windir\\Logs"
+  "bsod_dumps" = "$env:windir\\Minidump"
+  "chrome_cache" = "$env:LOCALAPPDATA\\Google\\Chrome\\User Data\\Default\\Cache"
+  "edge_cache" = "$env:LOCALAPPDATA\\Microsoft\\Edge\\User Data\\Default\\Cache"
+  "coccoc_cache" = "$env:LOCALAPPDATA\\CocCoc\\Browser\\User Data\\Default\\Cache"
 }
 
 $results = @{}
@@ -1176,6 +1180,10 @@ $paths = @{
   "prefetch" = "$env:windir\\Prefetch"
   "win_update" = "$env:windir\\SoftwareDistribution\\Download"
   "system_logs" = "$env:windir\\Logs"
+  "bsod_dumps" = "$env:windir\\Minidump"
+  "chrome_cache" = "$env:LOCALAPPDATA\\Google\\Chrome\\User Data\\Default\\Cache"
+  "edge_cache" = "$env:LOCALAPPDATA\\Microsoft\\Edge\\User Data\\Default\\Cache"
+  "coccoc_cache" = "$env:LOCALAPPDATA\\CocCoc\\Browser\\User Data\\Default\\Cache"
 }
 
 $logs = @()
@@ -1222,6 +1230,18 @@ foreach ($cat in $categories) {
     $cleared = Clean-Directory $path
     $totalClearedBytes += $cleared
     $logs += "[+] Đã dọn dẹp xong. Giải phóng $([math]::Round($cleared / 1MB, 2)) MB."
+  }
+}
+
+if ($categories -contains "bsod_dumps") {
+  $memDump = "$env:windir\\MEMORY.DMP"
+  if (Test-Path $memDump) {
+    try {
+      $len = (Get-Item $memDump).Length
+      Remove-Item $memDump -Force -ErrorAction Stop
+      $totalClearedBytes += $len
+      $logs += "[+] Đã xóa file Dump màn hình xanh MEMORY.DMP ($([math]::Round($len / 1MB, 2)) MB)."
+    } catch {}
   }
 }
 
@@ -1323,6 +1343,23 @@ if ($adapter) {
     } catch (err) {
       console.error("Error applying DNS:", err);
       return "Error: " + err.message;
+    }
+  });
+
+  ipcMain.handle('reset-network-stack', async () => {
+    try {
+      const script = `
+        $OutputEncoding = [System.Text.Encoding]::UTF8
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+        ipconfig /flushdns 2>&1 | Out-Null
+        netsh winsock reset 2>&1 | Out-Null
+        netsh int ip reset 2>&1 | Out-Null
+        Write-Output "SUCCESS"
+      `;
+      await runPowerShellScriptElevated(script);
+      return { success: true, message: 'Đã xóa đệm DNS & khôi phục chuỗi kết nối Winsock / TCP/IP thành công!' };
+    } catch (err) {
+      return { success: false, error: err.message };
     }
   });
 

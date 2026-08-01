@@ -22,6 +22,26 @@ export default function NetworkConfig() {
   const [diagResult, setDiagResult] = useState<NetworkDiagnosisResult | null>(null);
   const [applyingDns, setApplyingDns] = useState(false);
   const [dnsAppliedSuccess, setDnsAppliedSuccess] = useState(false);
+  const [resettingNetwork, setResettingNetwork] = useState(false);
+
+  const handleResetNetworkStack = async () => {
+    const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
+    if (!isElectron) { alert("Chỉ hoạt động trên ứng dụng thật."); return; }
+    setResettingNetwork(true);
+    try {
+      const res = await (window as any).electronAPI.resetNetworkStack();
+      if (res && res.success) {
+        alert("✅ " + res.message);
+        runDiagnosis();
+      } else {
+        alert("⚠️ Lỗi reset mạng: " + (res?.error || "Lỗi không xác định"));
+      }
+    } catch (e: any) {
+      alert("Lỗi: " + e.message);
+    } finally {
+      setResettingNetwork(false);
+    }
+  };
 
   // Auto diagnose on mount
   useEffect(() => {
@@ -331,7 +351,17 @@ export default function NetworkConfig() {
                 disabled={applyingDns || (isCustom && (!customPrimary || !customSecondary))}
                 className="flex-1 py-2.5 px-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-2 shadow-sm"
               >
-                {applyingDns ? 'Đang kích hoạt...' : 'Áp dụng cấu hình'}
+                {applyingDns ? 'Đang kích hoạt...' : 'Áp dụng cấu hình DNS'}
+              </button>
+
+              <button
+                onClick={handleResetNetworkStack}
+                disabled={resettingNetwork}
+                title="Flush DNS, Reset Winsock & TCP/IP stack 1-Click"
+                className="py-2.5 px-4 bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white rounded text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
+              >
+                <RotateCw className={`w-3.5 h-3.5 ${resettingNetwork ? 'animate-spin' : ''}`} />
+                <span>{resettingNetwork ? 'Đang Reset...' : '⚡ Reset Chuỗi Mạng 1-Click'}</span>
               </button>
             </div>
 

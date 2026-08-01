@@ -62,6 +62,38 @@ const initialJunkCategories: JunkCategory[] = [
     checked: true,
     filesList: [],
   },
+  {
+    id: 'bsod_dumps',
+    name: 'File Dump Màn Hình Xanh (Minidump)',
+    description: 'Báo cáo sự cố rác MEMORY.DMP chiếm từ vài trăm MB đến vài GB.',
+    sizeMB: 0,
+    checked: true,
+    filesList: [],
+  },
+  {
+    id: 'chrome_cache',
+    name: 'Cache Trình Duyệt Google Chrome',
+    description: 'Bộ nhớ đệm hình ảnh/web rác tích tụ của Chrome.',
+    sizeMB: 0,
+    checked: true,
+    filesList: [],
+  },
+  {
+    id: 'edge_cache',
+    name: 'Cache Trình Duyệt MS Edge',
+    description: 'Bộ nhớ đệm web rác của Microsoft Edge.',
+    sizeMB: 0,
+    checked: true,
+    filesList: [],
+  },
+  {
+    id: 'coccoc_cache',
+    name: 'Cache Trình Duyệt Cốc Cốc',
+    description: 'Bộ nhớ đệm rác từ trình duyệt Cốc Cốc.',
+    sizeMB: 0,
+    checked: true,
+    filesList: [],
+  },
 ];
 
 export default function JunkCleaner() {
