@@ -1,6 +1,8 @@
 {
   "version": "1.4.5",
-  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/download/v1.4.5/PCCareMasterPro 1.4.5-Portable.exe",
-  "portableDownloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/download/v1.4.5/PCCareMasterPro 1.4.5-Portable.exe",
+  "downloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/download/v1.4.5/PCCareMasterPro%201.4.5-Portable.exe",
+  "portableDownloadUrl": "https://github.com/thangdggr0004-cpu/ThienPhatTechToolKit/releases/download/v1.4.5/PCCareMasterPro%201.4.5-Portable.exe",
+  "checksumSHA256": "FC499C2466B2511DE5CD1806F85A79A9EC16383EC9A1406024FDED266E16F473",
+  "releaseDate": "2026-08-02T01:59:44.361+07:00",
   "releaseNotes": "BIG UPDATE v1.4.5 - PC CARE MASTER PRO:\n- Cập nhật portable 1.4.5 với file ký số sẵn, tăng tốc khởi động cho bản portable.\n- Đồng bộ version.json để tool cũ có thể tự kiểm tra và tải về bản mới.\n- Ưu tiên tự động cập nhật bản Portable nếu có trong GitHub Release.\n- Sửa lỗi Windows Settings đọc trạng thái tối ưu hóa và báo đúng.\n- Cải thiện nhãn Tiện ích Máy In, tránh hiểu nhầm tự động dọn đầu in.\n- Loại bỏ file frontend không dùng `AppSettings.tsx` và tinh gọn gói runtime.\n"
 }
